@@ -52,7 +52,7 @@ export const Notification: React.FC<NotificationProps> = ({
 }) => {
   const translateY = useRef(new Animated.Value(position === 'top' ? -200 : 200)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const typeConfig = {
     success: {

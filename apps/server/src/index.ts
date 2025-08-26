@@ -10,8 +10,8 @@ const CORS_HEADERS = {
 };
 
 // Export Durable Object classes
-export { HelloAgent } from "@agents/hello/index";
-export { TideProductivityAgent } from "@agents/tide-productivity-agent/index";
+export { HelloAgent } from "../../agents/hello/index";
+export { TideProductivityAgent } from "../../agents/tide-productivity-agent/index";
 
 // Agent request handler
 async function handleAgentRequest(

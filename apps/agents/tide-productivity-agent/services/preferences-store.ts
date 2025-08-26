@@ -41,8 +41,6 @@ export class PreferencesStore {
       const normalizedPreferences = this.validateAndNormalizePreferences(preferences);
       
       await this.storage.put(key, normalizedPreferences);
-      
-      console.log(`[PreferencesStore] Updated preferences for ${userId}`);
       return true;
 
     } catch (error) {
@@ -58,8 +56,6 @@ export class PreferencesStore {
     try {
       const key = `user_preferences:${userId}`;
       await this.storage.delete(key);
-      
-      console.log(`[PreferencesStore] Deleted preferences for ${userId}`);
       return true;
 
     } catch (error) {

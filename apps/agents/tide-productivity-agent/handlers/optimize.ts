@@ -66,6 +66,7 @@ export class OptimizeHandler {
 
       if (tides.length === 0) {
         console.warn(`[OptimizeHandler] No tides found for user ${userId}`);
+        // TODO: Suggest creating new tides or import from other productivity tools
         return [];
       }
 
@@ -128,11 +129,10 @@ export class OptimizeHandler {
       // Auto-implement high-confidence recommendations if enabled
       if (preferences.autoImplement && 
           analysis.confidence > (preferences.confidenceThreshold || 0.8)) {
+        // TODO: Add safety checks before auto-implementation
         await this.autoImplementOptimization(tideId, optimization);
         optimization.autoImplemented = true;
       }
-
-      console.log(`[OptimizeHandler] Generated optimization for tide ${tideId} (confidence: ${analysis.confidence})`);
 
       return optimization;
 
@@ -152,11 +152,12 @@ export class OptimizeHandler {
    * Auto-implement optimization (placeholder)
    */
   private async autoImplementOptimization(tideId: string, optimization: Optimization): Promise<void> {
-    console.log(`[OptimizeHandler] Auto-implementing optimization for tide ${tideId}`);
-    
     // TODO: Implement actual schedule changes
     // This would involve calling MCP tools to update tide settings
-    // For now, just log the action
+    // TODO: Add validation for schedule conflicts
+    // TODO: Implement rollback mechanism for failed optimizations
+    // TODO: Add user confirmation step for major schedule changes
+    // TODO: Log optimization actions for audit trail
   }
 
   /**

@@ -104,7 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       dispatch({ type: "SET_LOADING", payload: true });
 
       try {
-        const result = await authService.signInWithEmail({ email, password });
+        const result = await authService.signInWithEmail(email, password);
 
         if (result.error) {
           throw result.error;
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       dispatch({ type: "SET_LOADING", payload: true });
 
       try {
-        const result = await authService.signUpWithEmail({ email, password });
+        const result = await authService.signUpWithEmail(email, password);
 
         if (result.error) {
           throw result.error;

@@ -77,8 +77,6 @@ export class QuestionsHandler {
         tideId = relevantTideId;
       }
 
-      console.log(`[QuestionsHandler] Processing question for user ${userId}, tide ${tideId}: ${question}`);
-
       // Get custom analysis prompt
       const promptResponse = await this.mcpClient.getPrompt('custom_tide_analysis', {
         tide_id: tideId,
@@ -108,8 +106,6 @@ export class QuestionsHandler {
         };
       }
 
-      console.log(`[QuestionsHandler] Got prompt with ${promptResponse.result.messages.length} messages`);
-
       // Validate analysis request
       const validation = this.aiAnalyzer.validateAnalysisRequest(promptResponse.result.messages);
       if (!validation.valid) {
@@ -124,8 +120,6 @@ export class QuestionsHandler {
 
       // Analyze with AI
       const analysis = await this.aiAnalyzer.runAnalysis(promptResponse.result.messages);
-
-      console.log(`[QuestionsHandler] AI analysis complete for question: ${question.substring(0, 50)}...`);
 
       // Send real-time response via WebSocket
       await this.webSocketManager.broadcastToUser(userId, {
@@ -166,8 +160,6 @@ export class QuestionsHandler {
    */
   async handleGeneralConversation(userId: string, question: string, context?: string): Promise<any> {
     try {
-      console.log(`[QuestionsHandler] Handling general conversation: ${question}`);
-
       // Create a general productivity conversation prompt for Workers AI
       const conversationPrompt = [
         {
@@ -193,8 +185,6 @@ export class QuestionsHandler {
 
       // Get AI response for general conversation
       const analysis = await this.aiAnalyzer.runAnalysis(conversationPrompt);
-
-      console.log(`[QuestionsHandler] General conversation AI response generated`);
 
       // Send real-time response via WebSocket
       await this.webSocketManager.broadcastToUser(userId, {

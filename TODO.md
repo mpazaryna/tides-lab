@@ -43,20 +43,21 @@ review wher ethe rest of the options should go.
 
 
 # P0
-Finish refactor
-Run omit-code
-run /cleanproject
-run /format
+[x] Finish refactor
+[x] Run omit-code
+[x] run /cleanproject
+[x] run /format
 run /test
-run /fix-imports
+[x] run /fix-imports
 
 run /review
 run /security-scan
 run /predict-issues
 
 run /find-todos
-run /fix-todos
 run /create-todos
+run /fix-todos
+
 
 # P1
 review past UX notes and implement into p1's.

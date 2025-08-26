@@ -8,5 +8,9 @@ export * from './requests';
 // Analysis types
 export * from './analysis';
 
-// User types  
+// User types
 export * from './user';
+
+// Preferences types
+export * from './preferences';
+

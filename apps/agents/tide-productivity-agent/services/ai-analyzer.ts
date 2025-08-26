@@ -16,18 +16,18 @@ export class AIAnalyzer {
    * Run AI analysis using Workers AI
    */
   async runAnalysis(messages: any[], model: string = '@cf/meta/llama-3-8b-instruct'): Promise<AnalysisResult> {
+    // TODO: Add request rate limiting to prevent API abuse
+    // TODO: Implement request timeout handling
+    // TODO: Add cost tracking for AI usage
     try {
       if (!this.aiBinding) {
+        // TODO: Implement fallback analysis method when AI binding unavailable
         throw new Error('AI binding not available');
       }
-
-      console.log(`[AIAnalyzer] Running analysis with ${messages.length} messages`);
 
       const aiResponse = await this.aiBinding.run(model, {
         messages: messages
       });
-
-      console.log('[AIAnalyzer] AI analysis complete');
 
       const responseText = aiResponse.response || aiResponse;
       
@@ -55,8 +55,6 @@ export class AIAnalyzer {
    */
   async runBatchAnalysis(analysisRequests: { messages: any[]; context?: string }[]): Promise<AnalysisResult[]> {
     try {
-      console.log(`[AIAnalyzer] Running batch analysis of ${analysisRequests.length} requests`);
-
       const analyses = await Promise.allSettled(
         analysisRequests.map(request => this.runAnalysis(request.messages))
       );
@@ -100,6 +98,8 @@ export class AIAnalyzer {
    */
   getAvailableModels(): string[] {
     // Standard Cloudflare Workers AI models
+    // TODO: Query actual available models from Workers AI API
+    // TODO: Add model performance metrics and recommendations
     return [
       '@cf/meta/llama-3-8b-instruct',
       '@cf/meta/llama-2-7b-chat-int8',

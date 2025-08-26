@@ -44,17 +44,17 @@ export function useTypedNavigation() {
 
   return {
     // Root level navigation
-    toAuth: () => rootNavigation.navigate(Routes.root.auth),
-    toMain: () => rootNavigation.navigate(Routes.root.main),
+    toAuth: () => (rootNavigation as any).navigate(Routes.root.auth),
+    toMain: () => (rootNavigation as any).navigate(Routes.root.main),
     
     // Auth navigation
     toInitial: () => authNavigation.navigate(Routes.auth.initial),
     toCreateAccount: () => authNavigation.navigate(Routes.auth.createAccount),
     toAuthLoading: (params?: { email?: string }) => 
-      authNavigation.navigate(Routes.auth.authLoading, params),
+      authNavigation.navigate({ name: Routes.auth.authLoading, params: params || {} }),
     
     // Main navigation
-    toHome: () => mainNavigation.navigate(Routes.main.home),
+    toHome: () => (mainNavigation as any).navigate(Routes.main.home),
     toServer: () => mainNavigation.navigate(Routes.main.server),
     toMcp: () => mainNavigation.navigate(Routes.main.mcp),
     toSettings: () => mainNavigation.navigate(Routes.main.settings),

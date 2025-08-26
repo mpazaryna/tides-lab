@@ -6,6 +6,7 @@ import { Button, TouchableOpacity } from "react-native";
 import { AlignLeft } from "lucide-react-native";
 import Home from "../screens/Main/Home";
 import Settings from "../screens/Main/Settings";
+import TideDetails from "../screens/Main/TideDetails";
 import { MainStackParamList, Routes, NavigationOptions } from "./types";
 import { colors } from "../design-system/tokens";
 
@@ -68,6 +69,15 @@ export default function MainNavigator() {
           headerShadowVisible: false,
           title: "Settings",
           headerShown: true,
+        }}
+      />
+
+      <Stack.Screen
+        name={Routes.main.tideDetails}
+        component={TideDetails}
+        options={{
+          headerShown: false,
+          gestureEnabled: true,
         }}
       />
     </Stack.Navigator>

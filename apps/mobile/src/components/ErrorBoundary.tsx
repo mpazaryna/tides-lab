@@ -102,17 +102,17 @@ export class ErrorBoundary extends Component<
     return (
       <View style={styles.container} testID={testID}>
         <Card style={styles.errorCard}>
-          <Stack space={4} align="center">
+          <Stack spacing={4} align="center">
             {/* Error Icon */}
             <View style={styles.errorIcon}>
-              <Text variant="largeTitle" color={colors.error}>
+              <Text variant="h1" color={colors.error}>
                 ⚠️
               </Text>
             </View>
 
             {/* Error Title */}
             <Text
-              variant="title2"
+              variant="h2"
               weight="semibold"
               color={colors.text.primary}
               align="center"
@@ -137,9 +137,8 @@ export class ErrorBoundary extends Component<
             {__DEV__ && error && (
               <View style={styles.errorDetails}>
                 <Text
-                  variant="caption1"
+                  variant="mono"
                   color={colors.text.tertiary}
-                  family="mono"
                   testID={`${testID}-details`}
                 >
                   {error.message}

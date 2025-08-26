@@ -42,7 +42,3 @@ export const APP_CONFIG: AppConfig = {
   logging: LOGGING_CONFIG,
 } as const;
 
-// Legacy exports for backward compatibility
-// TODO: Remove these after updating all imports
-export const supabaseUrl = SUPABASE_CONFIG.url;
-export const supabaseAnonKey = SUPABASE_CONFIG.anonKey;

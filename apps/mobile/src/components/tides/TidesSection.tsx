@@ -6,11 +6,14 @@ import {
   StyleSheet 
 } from "react-native";
 import { Waves } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { MainStackScreenProps } from "../../navigation/types";
 import { Text } from "../Text";
 import { Card } from "../Card";
 import { colors, spacing } from "../../design-system/tokens";
 import { TideCard } from "./TideCard";
 import { loggingService } from "../../services/loggingService";
+import { Routes } from "../../navigation/types";
 import type { Tide } from "../../types";
 
 interface TidesSectionProps {
@@ -30,12 +33,18 @@ export const TidesSection: React.FC<TidesSectionProps> = ({
   refreshing,
   refreshTides,
 }) => {
+  const navigation = useNavigation<MainStackScreenProps<"Home">["navigation"]>();
+
   const handleTideCardPress = (tide: Tide) => {
     loggingService.info("TidesSection", "Tide card pressed", {
       tideId: tide.id,
       tideName: tide.name,
     });
-    // TODO: Navigate to tide detail screen
+    
+    navigation.navigate(Routes.main.tideDetails, {
+      tideId: tide.id,
+      mode: "view",
+    });
   };
 
   if (!isConnected) {
