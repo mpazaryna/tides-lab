@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { supabase } from "../../config/supabase.ts";
+import { authService } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 import { AuthNavigationParams } from "../../navigation/AuthNavigator";
 import { colors, spacing } from "../../design-system/tokens.ts";
 import { Text } from "../../components/Text.tsx";
@@ -27,6 +28,7 @@ export default function Initial({}: InitialScreenProps) {
   const [passwordError, setPasswordError] = useState("");
 
   const navigation = useNavigation<NavigationProp>();
+  const { signIn } = useAuth();
   const emailRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -70,13 +72,15 @@ export default function Initial({}: InitialScreenProps) {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password: password,
-    });
-
-    if (error) {
-    } else {
+    console.log('[Initial] Calling AuthContext.signIn');
+    
+    try {
+      await signIn(email.trim(), password);
+      console.log('[Initial] Sign in successful through AuthContext');
+      // Navigation will happen automatically through AuthContext
+    } catch (error) {
+      console.error('[Initial] Sign in failed:', error);
+      // TODO: Show error to user
     }
     setLoading(false);
   }

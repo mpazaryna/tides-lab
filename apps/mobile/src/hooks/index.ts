@@ -33,7 +33,3 @@ export {
   type AIAnalysisResult,
   type AISuggestionResult,
 } from "./useAIFeatures";
-
-export {
-  useDailyTide,
-} from "./useDailyTide";

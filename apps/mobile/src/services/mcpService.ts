@@ -26,10 +26,49 @@ interface MCPRequest {
 class MCPService {
   private requestId = 0;
   private baseUrl = '';
+  private urlProvider: (() => string) | null = null;
+
+  /**
+   * Configure the service with a URL provider from ServerEnvironment context
+   */
+  setUrlProvider(getServerUrl: () => string): void {
+    this.urlProvider = getServerUrl;
+    this.baseUrl = getServerUrl();
+  }
 
   async getConnectionStatus() {
-    const apiKey = await authService.getApiKey();
-    return { isConnected: !!apiKey, hasApiKey: !!apiKey };
+    const authToken = await authService.getAuthToken();
+    
+    if (!authToken || !this.baseUrl) {
+      return { isConnected: false, hasAuthToken: !!authToken };
+    }
+
+    // Validate auth token format (should be a UUID)
+    if (authToken.length < 10 || !authToken.match(/^[a-f0-9-]{8,}$/i)) {
+      console.error('[MCPService] Invalid auth token format:', { 
+        tokenLength: authToken.length,
+        tokenPrefix: authToken.substring(0, 8) + '...'
+      });
+      return { isConnected: false, hasAuthToken: false };
+    }
+
+    // Simple connectivity test with auth token
+    try {
+      const response = await fetch(`${this.baseUrl}/health`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      console.log(`[MCPService] Health check status: ${response.status} with auth token`);
+      return { isConnected: response.ok, hasAuthToken: !!authToken };
+    } catch (error) {
+      console.error(`[MCPService] Health check failed:`, error);
+      // If health check fails, still return true if we have auth token
+      // The actual MCP request will reveal the real connectivity issue
+      return { isConnected: false, hasAuthToken: !!authToken };
+    }
   }
 
   async updateServerUrl(url: string) {
@@ -37,9 +76,29 @@ class MCPService {
     await authService.setWorkerUrl(url);
   }
 
+  /**
+   * Get current server URL from provider or fallback
+   */
+  private getCurrentUrl(): string {
+    if (this.urlProvider) {
+      return this.urlProvider();
+    }
+    return this.baseUrl || 'https://tides-001.mpazbot.workers.dev';
+  }
+
   private async request(method: string, params?: any) {
-    const apiKey = await authService.getApiKey();
-    if (!apiKey) throw new Error('No API key');
+    const authToken = await authService.getAuthToken();
+    if (!authToken) throw new Error('No auth token');
+    
+    // Validate auth token format before making requests
+    if (authToken.length < 10 || !authToken.match(/^[a-f0-9-]{8,}$/i)) {
+      throw new Error('Invalid auth token format');
+    }
+    
+    const currentUrl = this.getCurrentUrl();
+    if (!currentUrl) {
+      throw new Error('MCP server URL not configured');
+    }
 
     const body: MCPRequest = {
       jsonrpc: '2.0',
@@ -48,22 +107,72 @@ class MCPService {
       params
     };
 
-    console.log(`[MCPService] Request to ${this.baseUrl}/mcp:`, {
+    console.log(`[MCPService] Request to ${currentUrl}/mcp:`, {
       method,
       params,
-      apiKeyPrefix: apiKey.substring(0, 10) + '...'
+      authTokenPrefix: authToken.substring(0, 10) + '...',
+      baseUrl: currentUrl
     });
 
-    const response = await fetch(`${this.baseUrl}/mcp`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(body)
-    });
+    // Retry logic for React Native network issues
+    const maxRetries = 3;
+    let lastError: unknown;
 
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[MCPService] Attempt ${attempt}/${maxRetries}`);
+        
+        // Add timeout and User-Agent for React Native compatibility
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+        const response = await fetch(`${currentUrl}/mcp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/event-stream',
+            'Authorization': `Bearer ${authToken}`,
+            'User-Agent': 'TidesMobile/1.0 React-Native/0.80.2'
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        
+        // If we get here, the request succeeded
+        console.log(`[MCPService] Request succeeded on attempt ${attempt}`);
+        return await this.handleResponse(response);
+        
+      } catch (networkError: unknown) {
+        lastError = networkError;
+        const errorMessage = networkError instanceof Error ? networkError.message : 'Unknown network error';
+        
+        console.error(`[MCPService] Attempt ${attempt} failed:`, errorMessage);
+        
+        if (attempt === maxRetries) {
+          console.error(`[MCPService] All ${maxRetries} attempts failed. Final error:`, {
+            name: networkError instanceof Error ? networkError.name : 'Unknown',
+            message: errorMessage,
+            stack: networkError instanceof Error ? networkError.stack : undefined,
+            url: `${currentUrl}/mcp`
+          });
+          break;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+        console.log(`[MCPService] Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    // If we get here, all retries failed
+    const errorMessage = lastError instanceof Error ? lastError.message : 'Unknown network error';
+    throw new Error(`Network request failed after ${maxRetries} attempts: ${errorMessage}`);
+  }
+
+  private async handleResponse(response: Response) {
     console.log(`[MCPService] Response status: ${response.status} ${response.statusText}`);
     const headers = Object.fromEntries(response.headers.entries());
     console.log(`[MCPService] Response headers:`, headers);

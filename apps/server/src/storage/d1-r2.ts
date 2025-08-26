@@ -68,7 +68,6 @@ export class D1R2HybridStorage implements TideStorage {
       flow_sessions: [],
       energy_updates: [],
       task_links: [],
-      metadata: input.metadata || undefined,
     };
 
     const r2Path = this.getUserR2Path(userId, tideId);

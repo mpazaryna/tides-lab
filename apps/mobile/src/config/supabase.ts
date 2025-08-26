@@ -9,17 +9,15 @@ import { SUPABASE_CONFIG } from "../constants";
 export const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
   auth: {
     storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
+    autoRefreshToken: false,  // Disabled - we use UUID auth, not session refresh
+    persistSession: false,   // Disabled - we use UUID storage, not session persistence  
     detectSessionInUrl: false,
   },
 });
 
-// Tells Supabase Auth to continuously refresh the session automatically
-// if the app is in the foreground. When this is added, you will continue
-// to receive `onAuthStateChange` events with the `TOKEN_REFRESHED` or
-// `SIGNED_OUT` event if the user's session is terminated. This should
-// only be registered once.
+// TODO: Auto-refresh disabled for UUID-only authentication
+// We don't need automatic session refresh since we use stored UUIDs
+/*
 AppState.addEventListener("change", (state) => {
   if (state === "active") {
     supabase.auth.startAutoRefresh();
@@ -27,3 +25,4 @@ AppState.addEventListener("change", (state) => {
     supabase.auth.stopAutoRefresh();
   }
 });
+*/

@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useMCP } from "../../context/MCPContext";
 import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
 import { ServerEnvironmentSelector } from "../../components/ServerEnvironmentSelector";
+import { secureStorage } from "../../services/secureStorage";
 
 import { getRobotoMonoFont } from "../../utils/fonts";
 import { Text } from "../../components/Text";
@@ -19,7 +20,7 @@ import { Button } from "../../components/Button";
 import { colors, spacing } from "../../design-system/tokens";
 
 export default function Settings() {
-  const { user, signOut, apiKey } = useAuth();
+  const { user, signOut, authToken } = useAuth();
   const { isConnected, loading, error, checkConnection, getCurrentServerUrl } =
     useMCP();
   const { getCurrentEnvironment } = useServerEnvironment();
@@ -55,6 +56,29 @@ export default function Settings() {
       await checkConnection();
     } catch (err) {
       // Error handling is done in checkConnection
+    }
+  };
+
+  const handleTestSecureStorage = async () => {
+    try {
+      console.log('[Settings] Testing SecureStorage...');
+      
+      // Test write
+      await secureStorage.setItem('test_key', 'test_value_' + Date.now());
+      console.log('✅ SecureStorage write successful');
+      
+      // Test read
+      const value = await secureStorage.getItem('test_key');
+      console.log('✅ SecureStorage read successful:', value);
+      
+      // Test remove
+      await secureStorage.removeItem('test_key');
+      console.log('✅ SecureStorage remove successful');
+      
+      alert('✅ SecureStorage test passed! Check console for details.');
+    } catch (error) {
+      console.error('❌ SecureStorage test failed:', error);
+      alert('❌ SecureStorage test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -98,11 +122,11 @@ export default function Settings() {
               </Text>
               <Text
                 variant="bodySmall"
-                color={apiKey ? "success" : "error"}
+                color={authToken ? "success" : "error"}
                 align="center"
-                style={styles.apiKeyStatusStyle}
+                style={styles.authTokenStatusStyle}
               >
-                API Key: {apiKey ? "✓ Available" : "✗ Missing"}
+                Auth Token: {authToken ? "✓ Available" : "✗ Missing"}
               </Text>
             </Card>
           )}
@@ -242,17 +266,17 @@ export default function Settings() {
                 <Text variant="body" weight="medium" style={styles.debugLabel}>
                   Authorization Token:
                 </Text>
-                {apiKey ? (
+                {authToken ? (
                   <Text
                     variant="mono"
                     color="success"
                     style={styles.debugTokenStyle}
                   >
-                    Bearer {apiKey}
+                    Bearer {authToken}
                   </Text>
                 ) : (
                   <Text variant="body" color="error" style={styles.debugValue}>
-                    No API key available
+                    No auth token available
                   </Text>
                 )}
               </View>
@@ -273,7 +297,7 @@ export default function Settings() {
                   color="tertiary"
                   style={styles.debugNote}
                 >
-                  Mobile clients use custom API keys for enhanced security.
+                  Mobile clients use UUID auth tokens for enhanced security.
                   Desktop clients use UUID-based Bearer tokens.
                 </Text>
               </View>
@@ -287,15 +311,34 @@ export default function Settings() {
                   color="info"
                   style={styles.debugValue}
                 >
-                  {apiKey && apiKey.startsWith("tides_")
+                  {authToken && authToken.startsWith("tides_")
                     ? "✓ Valid mobile client format"
-                    : apiKey
+                    : authToken
                     ? "⚠️ Non-standard format (may be desktop UUID)"
                     : "✗ No token available"}
                 </Text>
               </View>
             </Card>
           )}
+
+          {/* SecureStorage Test Section */}
+          <Card variant="outlined" padding={5} style={styles.sectionCardStyle}>
+            <Text variant="h3" style={styles.sectionTitleStyle}>
+              SecureStorage Test
+            </Text>
+            <Text variant="bodySmall" color="secondary" align="center" style={styles.testDescriptionStyle}>
+              Test if Keychain/SecureStorage is working on this device
+            </Text>
+            <Button
+              variant="secondary"
+              size="md"
+              onPress={handleTestSecureStorage}
+              fullWidth
+              style={styles.testButtonStyle}
+            >
+              Test SecureStorage
+            </Button>
+          </Card>
 
           {/* Sign Out Section */}
           <Button
@@ -341,7 +384,7 @@ const styles = StyleSheet.create({
   userEmailStyle: {
     marginBottom: spacing[2],
   },
-  apiKeyStatusStyle: {
+  authTokenStatusStyle: {
     marginTop: spacing[2],
   },
   serverConfigHeader: {
@@ -424,6 +467,12 @@ const styles = StyleSheet.create({
   debugNote: {
     fontStyle: "italic",
     lineHeight: 16,
+  },
+  testDescriptionStyle: {
+    marginBottom: spacing[3],
+  },
+  testButtonStyle: {
+    marginTop: spacing[2],
   },
   signOutButtonStyle: {
     marginTop: spacing[4],

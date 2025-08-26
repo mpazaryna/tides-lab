@@ -14,7 +14,7 @@ export const ChatMessages = forwardRef<ScrollView, ChatMessagesProps>(
   ({ messages }, ref) => {
     const renderEmptyState = () => (
       <View style={styles.emptyState}>
-        {/* <Text variant="h4" color="secondary" align="center">
+        <Text variant="h4" color="secondary" align="center">
           Welcome to Chat!
         </Text>
         <Text
@@ -58,7 +58,7 @@ export const ChatMessages = forwardRef<ScrollView, ChatMessagesProps>(
           <Text variant="bodySmall" color="tertiary">
             • /debug hide - Hide debug panel
           </Text>
-        </Stack> */}
+        </Stack>
       </View>
     );
 

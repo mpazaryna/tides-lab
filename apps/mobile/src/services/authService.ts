@@ -1,15 +1,20 @@
 import { supabase } from "../config/supabase";
-import { secureStorage } from "./secureStorage";
+import { SUPABASE_CONFIG } from "../constants";
+// import { secureStorage } from "./secureStorage"; // TODO: Re-enable once Keychain is fixed
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 
 class AuthService {
-  private currentUrl = "https://tides-001.mpazbot.workers.dev"; // Fallback to env001
+  private currentUrl = "https://tides-006.mpazbot.workers.dev"; // Fallback to env001
   private urlReady = false;
   private urlProvider: (() => string) | null = null;
 
   constructor() {
-    this.initUrl();
+    // Don't await in constructor - it's called synchronously
+    this.initUrl().catch(error => {
+      console.error('[AuthService] URL initialization failed:', error);
+      this.urlReady = true; // Mark as ready even if it fails
+    });
   }
 
   /**
@@ -43,68 +48,11 @@ class AuthService {
     await AsyncStorage.setItem("mcp_server_url", url);
   }
 
-  private generateApiKey(userId: string) {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let randomId = "";
-    for (let i = 0; i < 16; i++) {
-      randomId += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `tides_${userId}_${randomId}`;
+  private generateAuthToken(userId: string) {
+    // Use Supabase UUID directly as auth token (per auth-specs.md)
+    return userId;
   }
 
-  private async registerApiKeyWithServer(apiKey: string, userId: string, userEmail: string) {
-    await this.waitForUrlInitialization();
-    
-    try {
-      console.log('[AUTH] Attempting to register API key with server:', { 
-        url: `${this.currentUrl}/register-api-key`,
-        userId, 
-        email: userEmail,
-        hasApiKey: !!apiKey
-      });
-
-      const response = await fetch(`${this.currentUrl}/register-api-key`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          api_key: apiKey,
-          user_id: userId,
-          user_email: userEmail,
-          name: 'Mobile Generated Key'
-        })
-      });
-
-      console.log('[AUTH] Server response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('[AUTH] Server registration failed with response:', errorData);
-        throw new Error(`Server registration failed: ${errorData.error || response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('[AUTH] API key successfully registered with server:', { 
-        success: result.success, 
-        user_id: userId, 
-        email: userEmail,
-        serverResponse: result
-      });
-      return result;
-    } catch (error) {
-      console.error('[AUTH] Failed to register API key with server:', {
-        error: error instanceof Error ? error.message : String(error),
-        url: `${this.currentUrl}/register-api-key`,
-        userId,
-        email: userEmail
-      });
-      // Still don't throw - allow offline-first functionality
-      // But warn the user that server features may not work
-      console.warn('[AUTH] API key registration failed - server-based features may not work properly');
-    }
-  }
 
   async signUpWithEmail(email: string, password: string) {
     try {
@@ -112,11 +60,9 @@ class AuthService {
       if (error) throw new Error(error.message);
 
       if (data.user && data.session) {
-        const apiKey = this.generateApiKey(data.user.id);
-        await secureStorage.setItem("user_api_key", apiKey);
-        
-        // Register API key with server using real email
-        await this.registerApiKeyWithServer(apiKey, data.user.id, email);
+        const uuid = this.generateAuthToken(data.user.id);
+        // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
+        await AsyncStorage.setItem("user_uuid", uuid);
       }
 
       return { user: data.user, session: data.session };
@@ -127,28 +73,40 @@ class AuthService {
 
   async signInWithEmail(email: string, password: string) {
     try {
+      console.log('[AuthService] Attempting Supabase sign in...', { email });
+      console.log('[AuthService] Supabase URL:', SUPABASE_CONFIG.url);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      console.log('[AuthService] Supabase response:', { 
+        hasData: !!data, 
+        hasError: !!error, 
+        errorMessage: error?.message 
+      });
+      
       if (error) throw new Error(error.message);
 
       if (data.user && data.session) {
-        const apiKey = this.generateApiKey(data.user.id);
-        await secureStorage.setItem("user_api_key", apiKey);
-        
-        // Register API key with server using real email
-        await this.registerApiKeyWithServer(apiKey, data.user.id, email);
+        const uuid = this.generateAuthToken(data.user.id);
+        console.log('[AuthService] Generated UUID, storing...', { uuid: uuid.substring(0, 8) + '...' });
+        // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
+        await AsyncStorage.setItem("user_uuid", uuid);
+        console.log('[AuthService] UUID stored successfully');
       }
 
       return { user: data.user, session: data.session };
     } catch (error) {
+      console.error('[AuthService] Sign in failed:', error);
       return { user: null, session: null, error: error as Error };
     }
   }
 
   async signOut() {
-    await secureStorage.removeItem("user_api_key");
+    // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
+    await AsyncStorage.removeItem("user_uuid");
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(error.message);
   }
@@ -177,43 +135,59 @@ class AuthService {
     }
   }
 
-  async getApiKey() {
+  async getAuthToken() {
     try {
-      const debugKey = await AsyncStorage.getItem("debug_test_key");
-      if (debugKey) return debugKey;
-
-      let apiKey = await secureStorage.getItem("user_api_key");
-      if (!apiKey) {
+      console.log('[AuthService] getAuthToken called');
+      
+      let uuid = await AsyncStorage.getItem("user_uuid");
+      console.log('[AuthService] Retrieved UUID from storage:', { hasUuid: !!uuid, uuidLength: uuid?.length });
+      
+      // Migration: Check for legacy API key storage and migrate to UUID
+      if (!uuid) {
+        console.log('[AuthService] No UUID found, checking for migration');
+        const oldApiKey = await AsyncStorage.getItem("user_api_key");
+        console.log('[AuthService] Legacy API key check:', { hasOldKey: !!oldApiKey });
+        
+        if (oldApiKey) {
+          console.log('[AuthService] Removing legacy API key');
+          await AsyncStorage.removeItem("user_api_key");
+        }
+        
+        console.log('[AuthService] Getting current user for UUID generation');
         const user = await this.getCurrentUser();
+        console.log('[AuthService] Current user:', { hasUser: !!user, userId: user?.id });
+        
         if (user) {
-          apiKey = this.generateApiKey(user.id);
-          await secureStorage.setItem("user_api_key", apiKey);
+          uuid = this.generateAuthToken(user.id);
+          console.log('[AuthService] Generated UUID:', { uuid: uuid.substring(0, 8) + '...' });
+          await AsyncStorage.setItem("user_uuid", uuid);
+          console.log('[AuthService] Stored UUID in AsyncStorage');
+        } else {
+          console.log('[AuthService] No user available for UUID generation');
         }
       }
-      return apiKey;
-    } catch {
+      
+      console.log('[AuthService] Returning UUID:', { hasUuid: !!uuid, uuidLength: uuid?.length });
+      return uuid;
+    } catch (error) {
+      console.error('[AuthService] getAuthToken failed:', error);
       return null;
     }
   }
 
-  async setDebugTestKey(testKey: string) {
-    await AsyncStorage.setItem("debug_test_key", testKey);
-  }
+  // Debug test key removed - using UUID authentication only
 
   onAuthStateChange(
     callback: (event: string, session: Session | null) => void
   ) {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
-        const apiKey = this.generateApiKey(session.user.id);
-        await secureStorage.setItem("user_api_key", apiKey);
-        
-        // Register API key with server using real email from user session
-        if (session.user.email) {
-          await this.registerApiKeyWithServer(apiKey, session.user.id, session.user.email);
-        }
+        const uuid = this.generateAuthToken(session.user.id);
+        // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
+        await AsyncStorage.setItem("user_uuid", uuid);
       } else if (event === "SIGNED_OUT") {
-        await secureStorage.removeItem("user_api_key");
+        // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
+        await AsyncStorage.removeItem("user_uuid");
       }
       callback(event, session);
     });

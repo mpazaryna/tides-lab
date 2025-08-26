@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { supabase } from "../../config/supabase";
-import { AuthStackParamList, Routes } from "../../navigation/types";
+import { useAuth } from "../../context/AuthContext";
+import { AuthStackParamList } from "../../navigation/types";
 import { colors, spacing } from "../../design-system/tokens";
 import { Container } from "../../components/Container";
 import { Text } from "../../components/Text";
@@ -63,6 +63,7 @@ export default function CreateAccount({}: CreateAccountScreenProps) {
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
   const navigation = useNavigation<NavigationProp>();
+  const { signUp } = useAuth();
   const emailRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -153,20 +154,17 @@ export default function CreateAccount({}: CreateAccountScreenProps) {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password: password,
-    });
-
-    if (error) {
-      Alert.alert("Error", error.message);
-    } else {
-      // Navigate to email confirmation screen
-      navigation.navigate(Routes.auth.emailConfirmation, {
-        email: email.trim(),
-      });
+    console.log('[CreateAccount] Calling AuthContext.signUp');
+    
+    try {
+      await signUp(email.trim(), password);
+      console.log('[CreateAccount] Sign up successful through AuthContext');
+      // Navigation will happen automatically through AuthContext
+    } catch (error) {
+      console.error('[CreateAccount] Sign up failed:', error);
+      Alert.alert("Error", error instanceof Error ? error.message : "Sign up failed");
     }
-
+    
     setLoading(false);
   }
 

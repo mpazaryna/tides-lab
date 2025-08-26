@@ -6,22 +6,22 @@ export interface AuthStatusResult {
   isLoading: boolean;
   hasUser: boolean;
   hasSession: boolean;
-  hasApiKey: boolean;
+  hasAuthToken: boolean;
   userId: string | null;
   userEmail: string | null;
   error: string | null;
   hasError: boolean;
   isReady: boolean;
-  canMakeApiCalls: boolean;
+  canMakeApiRequests: boolean;
 }
 
 export function useAuthStatus(): AuthStatusResult {
-  const { user, session, loading, apiKey, error } = useAuth();
+  const { user, session, loading, authToken, error } = useAuth();
 
   return useMemo(() => {
     const hasUser = !!user;
     const hasSession = !!session;
-    const hasApiKey = !!apiKey;
+    const hasAuthToken = !!authToken;
     const isAuthenticated = hasUser && hasSession;
 
     return {
@@ -29,15 +29,15 @@ export function useAuthStatus(): AuthStatusResult {
       isLoading: loading,
       hasUser,
       hasSession,
-      hasApiKey,
+      hasAuthToken,
       userId: user?.id || null,
       userEmail: user?.email || null,
       error,
       hasError: !!error,
-      isReady: isAuthenticated && hasApiKey && !loading,
-      canMakeApiCalls: hasSession && hasApiKey,
+      isReady: isAuthenticated && hasAuthToken && !loading,
+      canMakeApiRequests: hasSession && hasAuthToken,
     };
-  }, [user, session, loading, apiKey, error]);
+  }, [user, session, loading, authToken, error]);
 }
 
 export function useIsAuthenticated(): boolean {

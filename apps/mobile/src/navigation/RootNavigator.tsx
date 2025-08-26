@@ -12,21 +12,23 @@ import { LoadingScreen } from "../components/Loading";
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  const { session, loading } = useAuth();
+  const { user, authToken, loading } = useAuth();
 
   // Show loading screen while determining auth state
   if (loading) {
     return <LoadingScreen message="Initializing app..." />;
   }
 
+  const isAuthenticated = user && authToken;
+
   return (
     <RootStack.Navigator
       screenOptions={{
         ...NavigationOptions.fullScreen,
-        animationTypeForReplace: session ? "push" : "pop",
+        animationTypeForReplace: isAuthenticated ? "push" : "pop",
       }}
     >
-      {session ? (
+      {isAuthenticated ? (
         <RootStack.Screen
           name={Routes.root.main}
           component={MainNavigator}

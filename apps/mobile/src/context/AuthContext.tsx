@@ -9,16 +9,15 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authService } from "../services/authService";
 import { loggingService } from "../services/loggingService";
 import { authReducer, initialAuthState, type AuthState } from "./authTypes";
-import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  refreshApiKey: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,57 +29,56 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
 
-  const updateAuthState = async (
-    user: User | null,
-    session: Session | null
-  ) => {
-    loggingService.info("AuthContext", "Updating auth state", {
-      hasUser: !!user,
-      hasSession: !!session,
-    });
-
-    let apiKey: string | null = null;
-    if (user && session) {
-      try {
-        apiKey = await authService.getApiKey();
-        loggingService.info("AuthContext", "Retrieved API key", {
-          hasApiKey: !!apiKey,
-        });
-      } catch (error) {
-        loggingService.error("AuthContext", "Failed to retrieve API key", {
-          error,
-        });
-      }
-    }
-
-    dispatch({
-      type: "SET_AUTH_SUCCESS",
-      payload: { user, session, apiKey },
-    });
-  };
 
   useEffect(() => {
     loggingService.info("AuthContext", "Initializing auth context", undefined);
 
-    // Get initial session
-    const getInitialSession = async () => {
+    // Check for UUID authentication (bypass Supabase)
+    const getInitialAuth = async () => {
       try {
-        const session = await authService.getCurrentSession();
-        await updateAuthState(session?.user || null, session);
+        loggingService.info("AuthContext", "Checking for stored UUID authentication", {});
+        
+        // Check if we have a stored UUID (our authentication token)
+        const uuid = await AsyncStorage.getItem("user_uuid");
+        
+        if (uuid) {
+          loggingService.info("AuthContext", "Found stored UUID, user is authenticated", { 
+            uuidLength: uuid.length 
+          });
+          
+          // Create a mock user object with the UUID
+          const mockUser = { id: uuid } as any;
+          
+          dispatch({
+            type: "SET_AUTH_SUCCESS",
+            payload: { 
+              user: mockUser, 
+              session: null, // We don't need Supabase session for UUID auth
+              authToken: uuid
+            }
+          });
+        } else {
+          loggingService.info("AuthContext", "No UUID found, user needs to authenticate", {});
+          
+          // No UUID means user is not authenticated
+          dispatch({ type: "CLEAR_AUTH" });
+        }
       } catch (error) {
-        loggingService.error("AuthContext", "Failed to get initial session", {
+        loggingService.error("AuthContext", "Failed to check UUID authentication", {
           error,
         });
         dispatch({
           type: "SET_ERROR",
-          payload: "Failed to initialize authentication",
+          payload: "Failed to check authentication",
         });
       }
     };
 
-    getInitialSession();
+    getInitialAuth();
 
-    // Listen for auth changes
+    // TODO: Auth state listener disabled for UUID-only authentication
+    // We don't need Supabase to watch for session changes since we use UUIDs
+    /*
     const {
       data: { subscription },
     } = authService.onAuthStateChange(async (event, session) => {
@@ -96,6 +94,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       );
       subscription.unsubscribe();
     };
+    */
   }, []);
 
   const signIn = useCallback(
@@ -105,14 +104,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         const result = await authService.signInWithEmail(email, password);
+        console.log('[AuthContext] Sign in service result:', {
+          hasUser: !!result.user,
+          hasSession: !!result.session,
+          hasError: !!result.error,
+          userId: result.user?.id
+        });
 
         if (result.error) {
           throw result.error;
         }
 
-        // State will be updated by the auth state change listener
+        // Manually update auth state since auth listener is disabled for UUID auth
+        if (result.user) {
+          console.log('[AuthContext] Getting auth token for signed in user...');
+          const authToken = await authService.getAuthToken();
+          console.log('[AuthContext] Retrieved auth token:', { 
+            hasAuthToken: !!authToken, 
+            authTokenLength: authToken?.length,
+            authTokenPrefix: authToken ? authToken.substring(0, 8) + '...' : 'null'
+          });
+          
+          console.log('[AuthContext] Dispatching SET_AUTH_SUCCESS...');
+          dispatch({
+            type: "SET_AUTH_SUCCESS",
+            payload: { 
+              user: result.user, 
+              session: result.session, 
+              authToken
+            }
+          });
+          console.log('[AuthContext] Auth state updated successfully');
+        } else {
+          console.log('[AuthContext] No user in result, cannot update auth state');
+        }
+
         loggingService.info("AuthContext", "Sign in successful", undefined);
       } catch (error) {
+        console.error('[AuthContext] Sign in error:', error);
         loggingService.error("AuthContext", "Sign in failed", { error });
         dispatch({ type: "SET_ERROR", payload: "Failed to sign in" });
         throw error;
@@ -128,14 +157,44 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       try {
         const result = await authService.signUpWithEmail(email, password);
+        console.log('[AuthContext] Sign up service result:', {
+          hasUser: !!result.user,
+          hasSession: !!result.session,
+          hasError: !!result.error,
+          userId: result.user?.id
+        });
 
         if (result.error) {
           throw result.error;
         }
 
-        // State will be updated by the auth state change listener
+        // Manually update auth state since auth listener is disabled for UUID auth
+        if (result.user) {
+          console.log('[AuthContext] Getting auth token for signed up user...');
+          const authToken = await authService.getAuthToken();
+          console.log('[AuthContext] Retrieved auth token:', { 
+            hasAuthToken: !!authToken, 
+            authTokenLength: authToken?.length,
+            authTokenPrefix: authToken ? authToken.substring(0, 8) + '...' : 'null'
+          });
+          
+          console.log('[AuthContext] Dispatching SET_AUTH_SUCCESS for sign up...');
+          dispatch({
+            type: "SET_AUTH_SUCCESS",
+            payload: { 
+              user: result.user, 
+              session: result.session, 
+              authToken
+            }
+          });
+          console.log('[AuthContext] Auth state updated successfully after sign up');
+        } else {
+          console.log('[AuthContext] No user in sign up result, cannot update auth state');
+        }
+
         loggingService.info("AuthContext", "Sign up successful", undefined);
       } catch (error) {
+        console.error('[AuthContext] Sign up error:', error);
         loggingService.error("AuthContext", "Sign up failed", { error });
         dispatch({ type: "SET_ERROR", payload: "Failed to sign up" });
         throw error;
@@ -159,39 +218,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  const refreshApiKey = useCallback(async (): Promise<void> => {
-    loggingService.info("AuthContext", "Refreshing API key", undefined);
-
-    if (!state.user) {
-      const error = new Error("No authenticated user");
-      loggingService.error(
-        "AuthContext",
-        "Cannot refresh API key without authenticated user",
-        { error }
-      );
-      throw error;
-    }
-
-    try {
-      // This will generate a new API key
-      const newApiKey = await authService.getApiKey();
-
-      dispatch({
-        type: "SET_API_KEY",
-        payload: newApiKey,
-      });
-
-      loggingService.info("AuthContext", "API key refreshed", {
-        hasApiKey: !!newApiKey,
-      });
-    } catch (error) {
-      loggingService.error("AuthContext", "Failed to refresh API key", {
-        error,
-      });
-      throw error;
-    }
-  }, [state.user]);
-
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo<AuthContextType>(
     () => ({
@@ -199,9 +225,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signIn,
       signUp,
       signOut,
-      refreshApiKey,
     }),
-    [state, signIn, signUp, signOut, refreshApiKey]
+    [state, signIn, signUp, signOut]
   );
 
   return (

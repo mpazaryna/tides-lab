@@ -6,18 +6,15 @@ export type AuthActionType =
   | "signIn"
   | "signUp"
   | "signOut"
-  | "refreshApiKey"
   | null;
 
 export interface AuthActionsResult {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  refreshApiKey: () => Promise<void>;
   isSigningIn: boolean;
   isSigningUp: boolean;
   isSigningOut: boolean;
-  isRefreshingApiKey: boolean;
   isPerformingAction: boolean;
   actionError: string | null;
   clearActionError: () => void;
@@ -41,22 +38,15 @@ export function useAuthActions(): AuthActionsResult {
     logData: { action: "signOut" },
   });
 
-  const refreshApiKeyAction = useAsyncAction(
-    () => authContext.refreshApiKey(),
-    { logContext: "useAuthActions", logData: { action: "refreshApiKey" } }
-  );
-
   const actionError = useMemo(
     () =>
       signInAction.error ||
       signUpAction.error ||
-      signOutAction.error ||
-      refreshApiKeyAction.error,
+      signOutAction.error,
     [
       signInAction.error,
       signUpAction.error,
       signOutAction.error,
-      refreshApiKeyAction.error,
     ]
   );
 
@@ -64,23 +54,19 @@ export function useAuthActions(): AuthActionsResult {
     signInAction.clearError();
     signUpAction.clearError();
     signOutAction.clearError();
-    refreshApiKeyAction.clearError();
   };
 
   return {
     signIn: signInAction.execute,
     signUp: signUpAction.execute,
     signOut: signOutAction.execute,
-    refreshApiKey: refreshApiKeyAction.execute,
     isSigningIn: signInAction.isLoading,
     isSigningUp: signUpAction.isLoading,
     isSigningOut: signOutAction.isLoading,
-    isRefreshingApiKey: refreshApiKeyAction.isLoading,
     isPerformingAction:
       signInAction.isLoading ||
       signUpAction.isLoading ||
-      signOutAction.isLoading ||
-      refreshApiKeyAction.isLoading,
+      signOutAction.isLoading,
     actionError,
     clearActionError,
   };

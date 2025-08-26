@@ -62,13 +62,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       )}
       
       <View style={styles.mainRow}>
-        <TouchableOpacity 
-          style={
-            styles.toolButton
-
-          } 
-          onPress={toggleToolMenu}
-        >
+        <TouchableOpacity style={styles.toolButton} onPress={toggleToolMenu}>
           <Animated.View
             style={{
               transform: [

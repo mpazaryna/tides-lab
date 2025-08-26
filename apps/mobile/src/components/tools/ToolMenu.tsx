@@ -1,10 +1,10 @@
 import React from "react";
-import {
-  View,
-  TouchableOpacity,
-  ScrollView,
-  Animated,
-  StyleSheet,
+import { 
+  View, 
+  TouchableOpacity, 
+  ScrollView, 
+  Animated, 
+  StyleSheet 
 } from "react-native";
 import {
   Plus,
@@ -25,17 +25,11 @@ import { colors, spacing } from "../../design-system/tokens";
 interface ToolMenuProps {
   showToolMenu: boolean;
   menuHeightAnim: Animated.Value;
-  handleToolSelect: (
-    toolName: string,
-    customParameters?: Record<string, any>
-  ) => Promise<void>;
+  handleToolSelect: (toolName: string, customParameters?: Record<string, any>) => Promise<void>;
   handleAgentCommand: (command: string) => Promise<void>;
   refreshTides: () => Promise<void>;
   toggleToolMenu: () => void;
-  getToolAvailability: (toolName: string) => {
-    available: boolean;
-    reason: string;
-  };
+  getToolAvailability: (toolName: string) => { available: boolean; reason: string };
 }
 
 interface ToolButtonProps {
@@ -43,10 +37,7 @@ interface ToolButtonProps {
   icon: any;
   title: string;
   handleToolSelect: (toolName: string) => Promise<void>;
-  getToolAvailability: (toolName: string) => {
-    available: boolean;
-    reason: string;
-  };
+  getToolAvailability: (toolName: string) => { available: boolean; reason: string };
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({
@@ -295,7 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     width: "100%",
     overflow: "hidden", // Important for smooth height animation
-    borderTopWidth: 0.5,
+     borderTopWidth: 0.5,
     borderTopColor: colors.neutral[200],
     shadowColor: "#000",
     shadowOffset: {

@@ -192,13 +192,14 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }
   }, [user, generateId, mcpConnected]);
 
-  // Configure agentService with current server URL
+  // Configure agentService with current server URL and MCP tool executor
   useEffect(() => {
     if (getCurrentServerUrl) {
       agentService.setUrlProvider(getCurrentServerUrl);
       loggingService.info("ChatContext", "AgentService configured with MCP URL provider");
     }
   }, [getCurrentServerUrl]);
+
 
   // Update connection statuses
   useEffect(() => {
@@ -399,6 +400,18 @@ export function ChatProvider({ children }: ChatProviderProps) {
       tides,
     ]
   );
+
+  // Configure agentService with MCP tool execution capability
+  useEffect(() => {
+    // Create a tool executor that uses our existing executeMCPTool function
+    const mcpToolExecutor = async (toolName: string, parameters: any) => {
+      // Execute the tool using existing MCP infrastructure
+      return await executeMCPTool(toolName, parameters);
+    };
+
+    agentService.setMCPToolExecutor(mcpToolExecutor);
+    loggingService.info("ChatContext", "AgentService configured with MCP tool executor");
+  }, [executeMCPTool]);
 
   // Handle slash commands for direct tool execution
   const handleSlashCommand = useCallback(

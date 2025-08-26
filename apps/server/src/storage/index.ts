@@ -11,7 +11,6 @@ export interface Tide {
   flow_sessions: FlowSession[];
   energy_updates: EnergyUpdate[];
   task_links: TaskLink[];
-  metadata?: Record<string, any>; // Flexible metadata for auto-created tides
 }
 
 export interface FlowSession {
@@ -45,7 +44,6 @@ export interface CreateTideInput {
   name: string;
   flow_type: "daily" | "weekly" | "project" | "seasonal";
   description?: string;
-  metadata?: Record<string, any>; // Optional metadata for auto-created tides
 }
 
 export interface TideFilter {

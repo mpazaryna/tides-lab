@@ -23,7 +23,7 @@ export type ConnectionStatus =
   | "needs-auth";
 
 export function useMCPConnection(): MCPConnectionResult {
-  const { user, session, apiKey } = useAuth();
+  const { user, session, authToken } = useAuth();
   const {
     isConnected,
     loading: mcpLoading,
@@ -31,7 +31,7 @@ export function useMCPConnection(): MCPConnectionResult {
     checkConnection: mcpCheckConnection,
   } = useMCP();
 
-  const hasValidAuth = !!(user && session && apiKey);
+  const hasValidAuth = !!(user && session && authToken);
   const needsAuthentication = !hasValidAuth;
   const canConnect = hasValidAuth && !mcpLoading;
 

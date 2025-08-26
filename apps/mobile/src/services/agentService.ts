@@ -54,6 +54,7 @@ class AgentService {
   private conversationId: string | null = null;
   private conversationHistory: Array<{ role: string; content: string }> = [];
   private getServerUrl: (() => string) | null = null;
+  private mcpToolExecutor: ((toolName: string, parameters: any) => Promise<any>) | null = null;
   private readonly AI_ENDPOINTS = {
     conversation: "/ai/conversation",
     classification: "/ai/classify-intent",
@@ -69,15 +70,43 @@ class AgentService {
     this.getServerUrl = getServerUrl;
   }
 
+  /**
+   * Configure the service with MCP tool executor from MCP context
+   */
+  setMCPToolExecutor(executor: (toolName: string, parameters: any) => Promise<any>): void {
+    this.mcpToolExecutor = executor;
+    loggingService.info(this.SERVICE_NAME, "MCP tool executor configured", {});
+  }
+
+  /**
+   * Execute an MCP tool directly from agent service
+   */
+  async executeMCPTool(toolName: string, parameters: any): Promise<any> {
+    if (!this.mcpToolExecutor) {
+      throw new Error("MCP tool executor not configured");
+    }
+
+    loggingService.info(this.SERVICE_NAME, "Executing MCP tool", { toolName, parameters });
+    
+    try {
+      const result = await this.mcpToolExecutor(toolName, parameters);
+      loggingService.info(this.SERVICE_NAME, "MCP tool executed successfully", { toolName, result });
+      return result;
+    } catch (error) {
+      loggingService.error(this.SERVICE_NAME, "MCP tool execution failed", { error, toolName, parameters });
+      throw error;
+    }
+  }
+
   private async makeRequest(
     endpoint: string,
     method: "GET" | "POST" = "POST",
     body?: any
   ): Promise<any> {
     try {
-      const apiKey = await authService.getApiKey();
-      if (!apiKey) {
-        throw new Error("No API key available");
+      const authToken = await authService.getAuthToken();
+      if (!authToken) {
+        throw new Error("No auth token available");
       }
 
       // Use configured server URL from MCP context with fallback to env001
@@ -94,52 +123,66 @@ class AgentService {
         requestBody: JSON.stringify(body, null, 2)
       });
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-        'Content-Type': 'application/json, text/event-stream',
-        'Authorization': `Bearer ${apiKey}`
-        },
-        ...(body && { body: JSON.stringify(body) }),
-      });
+      // Apply React Native network fixes with retry logic
+      const maxRetries = 3;
+      let lastError: unknown;
 
-      loggingService.info(this.SERVICE_NAME, `Response received`, { 
-        status: response.status, 
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          loggingService.info(this.SERVICE_NAME, `Attempt ${attempt}/${maxRetries}`, { url });
+          
+          // Add timeout and User-Agent for React Native compatibility
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        loggingService.error(this.SERVICE_NAME, `Agent request failed`, { 
-          status: response.status, 
-          errorText 
-        });
-        throw new Error(
-          `Agent request failed: ${response.status} ${errorText}`
-        );
+          const response = await fetch(url, {
+            method,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`,
+              'User-Agent': 'TidesMobile/1.0 React-Native/0.80.2'
+            },
+            ...(body && { body: JSON.stringify(body) }),
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+          
+          // If we get here, the request succeeded
+          loggingService.info(this.SERVICE_NAME, `Request succeeded on attempt ${attempt}`, { 
+            status: response.status, 
+            statusText: response.statusText 
+          });
+          
+          return await this.handleAgentResponse(response);
+          
+        } catch (networkError: unknown) {
+          lastError = networkError;
+          const errorMessage = networkError instanceof Error ? networkError.message : 'Unknown network error';
+          
+          loggingService.error(this.SERVICE_NAME, `Attempt ${attempt} failed`, { 
+            error: errorMessage,
+            url 
+          });
+          
+          if (attempt === maxRetries) {
+            loggingService.error(this.SERVICE_NAME, `All ${maxRetries} attempts failed`, {
+              finalError: errorMessage,
+              url
+            });
+            break;
+          }
+          
+          // Wait before retrying (exponential backoff)
+          const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+          loggingService.info(this.SERVICE_NAME, `Waiting ${delay}ms before retry...`, {});
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
 
-      const data = await response.json();
-      loggingService.info(this.SERVICE_NAME, `Agent response received`, { 
-        data, 
-        hasContent: !!data?.content,
-        responseKeys: Object.keys(data || {})
-      });
-      loggingService.debug(
-        this.SERVICE_NAME,
-        `Request to ${endpoint} successful`,
-        { status: response.status }
-      );
-
-      // Transform the response to match expected AgentResponse format
-      return {
-        content: data.result?.message || "No response from agent",
-        message: data.result?.message || "No response from agent", 
-        timestamp: new Date().toISOString(),
-        type: data.result?.error ? "error" : "success",
-        data: data
-      };
+      // If we get here, all retries failed
+      const errorMessage = lastError instanceof Error ? lastError.message : 'Unknown network error';
+      throw new Error(`Agent request failed after ${maxRetries} attempts: ${errorMessage}`);
     } catch (error) {
       loggingService.error(
         this.SERVICE_NAME,
@@ -152,6 +195,41 @@ class AgentService {
         }`
       );
     }
+  }
+
+  private async handleAgentResponse(response: Response): Promise<any> {
+    loggingService.info(this.SERVICE_NAME, `Response received`, { 
+      status: response.status, 
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      loggingService.error(this.SERVICE_NAME, `Agent request failed`, { 
+        status: response.status, 
+        errorText 
+      });
+      throw new Error(
+        `Agent request failed: ${response.status} ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+    loggingService.info(this.SERVICE_NAME, `Agent response received`, { 
+      data, 
+      hasContent: !!data?.content,
+      responseKeys: Object.keys(data || {})
+    });
+
+    // Transform the response to match expected AgentResponse format
+    return {
+      content: data.result?.message || "No response from agent",
+      message: data.result?.message || "No response from agent", 
+      timestamp: new Date().toISOString(),
+      type: data.result?.error ? "error" : "success",
+      data: data
+    };
   }
 
   async sendMessage(
@@ -167,19 +245,36 @@ class AgentService {
       });
       
       // Get userId from auth service
+      loggingService.info(this.SERVICE_NAME, "Getting current user from auth service", {});
+      
       const user = await authService.getCurrentUser();
+      loggingService.info(this.SERVICE_NAME, "Retrieved user from auth service", { 
+        hasUser: !!user, 
+        userId: user?.id 
+      });
+      
       const userId = user?.id;
       
       if (!userId) {
+        loggingService.error(this.SERVICE_NAME, "No user ID available", { user });
         throw new Error("User ID is required for agent communication");
       }
 
+      loggingService.info(this.SERVICE_NAME, "User ID confirmed, proceeding", { userId });
+
       // Initialize session and conversation IDs if not already set
+      loggingService.info(this.SERVICE_NAME, "Initializing session and conversation IDs", {
+        hasSessionId: !!this.sessionId,
+        hasConversationId: !!this.conversationId
+      });
+      
       if (!this.sessionId) {
         this.sessionId = this.generateSessionId();
+        loggingService.info(this.SERVICE_NAME, "Generated new session ID", { sessionId: this.sessionId });
       }
       if (!this.conversationId) {
         this.conversationId = this.generateConversationId();
+        loggingService.info(this.SERVICE_NAME, "Generated new conversation ID", { conversationId: this.conversationId });
       }
 
       // Add user message to history
@@ -198,6 +293,13 @@ class AgentService {
       });
 
       // Try AI conversation endpoint first
+      loggingService.info(this.SERVICE_NAME, "About to call sendConversationMessage", { 
+        endpoint: "conversation",
+        userId,
+        sessionId: this.sessionId,
+        conversationId: this.conversationId
+      });
+      
       try {
         const conversationResponse = await this.sendConversationMessage(message, {
           userId,
@@ -440,9 +542,9 @@ class AgentService {
     method: "GET" | "POST" = "POST",
     body?: any
   ): Promise<any> {
-    const apiKey = await authService.getApiKey();
-    if (!apiKey) {
-      throw new Error("No API key available for AI service");
+    const authToken = await authService.getAuthToken();
+    if (!authToken) {
+      throw new Error("No auth token available for AI service");
     }
 
     const baseUrl = this.getServerUrl?.() || "https://tides-001.mpazbot.workers.dev";
@@ -457,7 +559,7 @@ class AgentService {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${authToken}`
       },
       ...(body && { body: JSON.stringify(body) }),
     });

@@ -25,6 +25,8 @@ tides/
 
 ### Commands
 
+**DO NOT TRY TO RUN AN EMUALTOR YOURSELF, ASK FOR ME TO DO IT AND ALL MANUAL TESTING**
+
 #### Development
 
 ```bash
@@ -70,6 +72,7 @@ npm run build:mobile:ios
 **Auth**: Bearer tokens (`tides_{userId}_{randomId}` mobile, `{uuid}` desktop)
 
 **Data Storage:**
+
 - **Primary**: Cloudflare D1 (SQL) + R2 (Object Storage)
   - D1: User auth, API keys, tide metadata
   - R2: Full tide JSON data at `users/{userId}/tides/{tideId}.json`
