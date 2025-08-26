@@ -529,39 +529,29 @@ export function ChatProvider({ children }: ChatProviderProps) {
           let tideId = args[1];
           let energyLevel = args[0];
           
-          // If no tide ID provided, try to use the first available tide
+          // ADR-004: Use context-based tide operations - no dependency on user-created tides
           if (!tideId) {
             if (state.conversationContext.currentTideId) {
               tideId = state.conversationContext.currentTideId;
-            } else if (tides && tides.length > 0) {
-              // Use the most recent tide
-              tideId = tides[0].id;
-              loggingService.info("ChatContext", "Using most recent tide for energy update", {
-                tideId,
-                tideName: tides[0].name
-              });
             } else {
-              // No tides available
-              const errorMessage: ChatMessage = {
-                id: generateId(),
-                type: "system",
-                content: `No active tides found. Please create a tide first using '/tide create [name]' or specify a tide ID: '/energy [level] [tideId]'`,
-                timestamp: new Date(),
-                metadata: {
-                  conversationId: state.conversationContext.activeConversationId,
-                  error: true,
-                },
-              };
-              dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
-              dispatch({ type: "SET_LOADING", payload: false });
-              return;
+              // Use current context tide (daily/weekly/monthly) - always available
+              // This will be resolved by the MCP service to the current context
+              tideId = 'current-context';
+              loggingService.info("ChatContext", "Using current context tide for energy update (ADR-004 compliant)", {
+                contextBasedApproach: true,
+                fallbackTide: tideId
+              });
             }
           }
           
           parameters = {
             tideId: tideId,
             energyLevel: energyLevel || 'medium',
-            context: 'Chat command'
+            context: 'Chat command - context-based tide system',
+            // ADR-004: Add context metadata
+            useContextTide: tideId === 'current-context',
+            timestamp: new Date().toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           };
         } else if (mappedTool === 'tide_flow' && args[1]) {
           parameters = {
@@ -613,7 +603,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
         dispatch({ type: "SET_LOADING", payload: false });
       }
     },
-    [state.conversationContext, generateId, executeMCPTool, tides]
+    [state.conversationContext, generateId, executeMCPTool]
   );
 
   const sendMessage = useCallback(

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   StyleSheet,
   ScrollView,
@@ -27,11 +27,7 @@ export default function TideDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadTideDetails();
-  }, [tideId]);
-
-  const loadTideDetails = async () => {
+  const loadTideDetails = useCallback(async () => {
     if (!isConnected) {
       setError("Not connected to MCP server");
       setLoading(false);
@@ -72,7 +68,11 @@ export default function TideDetails() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tideId, isConnected, tides, getTideReport]);
+
+  useEffect(() => {
+    loadTideDetails();
+  }, [loadTideDetails]);
 
   const handleStartFlow = () => {
     if (!tide) return;

@@ -1,38 +1,24 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { StyleSheet, ScrollView, View, TouchableOpacity } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
-import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
-import { MainStackParamList } from "../../navigation/types";
 import { loggingService } from "../../services/loggingService";
 import { colors, spacing } from "../../design-system/tokens";
-import { useTidesManagement } from "../../hooks/useTidesManagement";
 import { useToolMenu } from "../../hooks/useToolMenu";
-import { useDebugPanel } from "../../hooks/useDebugPanel";
 import { useChatInput } from "../../hooks/useChatInput";
-import { useDailyTide } from "../../hooks/useDailyTide";
 import { useContextTide } from "../../hooks/useContextTide";
 import { ChatMessages } from "../../components/chat/ChatMessages";
 import { ChatInput } from "../../components/chat/ChatInput";
 import { ToolMenu } from "../../components/tools/ToolMenu";
-import { TideInfo } from "../../components/tides/TideInfo";
+// import { EnergyChart } from "../../components/tides/EnergyChart";
 
 import {
   createAgentContext,
   executeAgentCommand,
 } from "../../utils/agentCommandUtils";
 
-type NavigationProp = NativeStackNavigationProp<MainStackParamList, "Home">;
-
 export default function Home() {
-  const navigation = useNavigation<NavigationProp>();
-
-  const { getCurrentServerUrl, updateServerUrl, isConnected } = useMCP();
-  const { currentEnvironment, switchEnvironment, environments } =
-    useServerEnvironment();
+  const { getCurrentServerUrl, isConnected } = useMCP();
   const {
     messages,
     isLoading,
@@ -43,35 +29,23 @@ export default function Home() {
   } = useChat();
 
   const [_agentInitialized, setAgentInitialized] = useState(false);
-  const [isChatInputFocused, setIsChatInputFocused] = useState(false);
-
-  // Daily tide management - ensures hierarchical tides always exist
-  const {
-    dailyTide,
-    isReady: dailyTideReady,
-    loading: dailyTideLoading,
-    error: dailyTideError,
-    refreshDailyTide,
-  } = useDailyTide();
+  const [_isChatInputFocused, setIsChatInputFocused] = useState(false);
+  const [templateToInject, setTemplateToInject] = useState<string>('');
 
   // Context tide management - handles daily/weekly/monthly switching
-  const {
-    currentContext,
-    currentContextTide,
-    isToolExecuting,
-    contextSwitchingDisabled,
-    switchContext,
-    getCurrentContextTideId,
-    setToolExecuting,
-  } = useContextTide();
+  const { getCurrentContextTideId, setToolExecuting, currentContextTide } = useContextTide();
 
-  // Tides state management
-  const {
-    activeTides,
-    //  tidesLoading,
-    //   tidesError,
-    refreshTides,
-  } = useTidesManagement(isConnected);
+
+
+  // Template injection callback
+  const injectTemplate = useCallback((template: string) => {
+    setTemplateToInject(template);
+  }, []);
+
+  // Clear template after injection
+  const onTemplateInjected = useCallback(() => {
+    setTemplateToInject('');
+  }, []);
 
   // Tool menu state management - context-aware
   const {
@@ -87,23 +61,7 @@ export default function Home() {
     sendMessage,
     getCurrentContextTideId,
     setToolExecuting,
-  });
-
-  // Debug panel state management
-  const {
-    // showDebugPanel,
-    // debugTestResults,
-    setShowDebugPanel,
-    setDebugTestResults,
-    runDebugTests,
-    testEdgeCases,
-  } = useDebugPanel({
-    getCurrentServerUrl,
-    currentEnvironment,
-    isConnected,
-    environments,
-    switchEnvironment,
-    updateServerUrl,
+    injectTemplate,
   });
 
   // Chat input state management - context-aware
@@ -111,33 +69,13 @@ export default function Home() {
     inputMessage,
     setInputMessage,
     handleSendMessage,
-    toolSuggestion,
-    showSuggestion,
-    acceptSuggestion,
-    dismissSuggestion,
   } = useChatInput({
     getCurrentContextTideId, // ✅ Context-aware tide ID
     isConnected,
     getCurrentServerUrl,
     sendMessage,
-    runDebugTests,
-    testEdgeCases,
-    setShowDebugPanel,
-    setDebugTestResults,
     executeMCPTool,
   });
-
-  // AI features state management
-  // const {
-  //   insights,
-  //   suggestions,
-  //   isAnalyzing,
-  //   isGeneratingSuggestions,
-  //   error: aiError,
-  //   analyzeProductivity,
-  //   getFlowSuggestions,
-  //   clearAIState,
-  // } = useAIFeatures();
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -173,8 +111,8 @@ export default function Home() {
     async (command: string) => {
       const contextTideId = getCurrentContextTideId();
       const context = createAgentContext({
-        tideId: contextTideId, // ✅ Use context tide instead of route param
-        activeTides,           // Keep for backward compatibility with agent system
+        tideId: contextTideId || undefined,
+        currentContextTide,
         isConnected,
         getCurrentServerUrl,
       });
@@ -188,79 +126,13 @@ export default function Home() {
     },
     [
       getCurrentContextTideId,
-      activeTides,  // Keep for agent context compatibility
+      currentContextTide,
       isConnected,
       getCurrentServerUrl,
       sendAgentMessage,
       toggleToolMenu,
     ]
   );
-
-  // // AI feature handlers
-  // const handleAnalyzeProductivity = useCallback(async () => {
-  //   // Create sample sessions for demonstration
-  //   // In a real app, this would come from actual flow session data
-  //   const sampleSessions: TideSession[] = [
-  //     {
-  //       duration: 25,
-  //       energy_level: 8,
-  //       completed_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  //       productivity_score: 9,
-  //       intensity: 'moderate',
-  //       work_context: 'Development work'
-  //     },
-  //     {
-  //       duration: 30,
-  //       energy_level: 6,
-  //       completed_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  //       productivity_score: 7,
-  //       intensity: 'gentle',
-  //       work_context: 'Planning session'
-  //     },
-  //     {
-  //       duration: 20,
-  //       energy_level: 9,
-  //       completed_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  //       productivity_score: 8,
-  //       intensity: 'strong',
-  //       work_context: 'Creative work'
-  //     }
-  //   ];
-
-  //   await analyzeProductivity(sampleSessions, 'quick');
-  // }, [analyzeProductivity]);
-
-  // const handleGetFlowSuggestions = useCallback(async () => {
-  //   // Create sample recent sessions for demonstration
-  //   const recentSessions: TideSession[] = [
-  //     {
-  //       duration: 25,
-  //       energy_level: 8,
-  //       completed_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  //       productivity_score: 9,
-  //     },
-  //     {
-  //       duration: 30,
-  //       energy_level: 6,
-  //       completed_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-  //       productivity_score: 7,
-  //     }
-  //   ];
-
-  //   const userContext: UserContext = {
-  //     energy_level: 7, // Could be derived from latest session or user input
-  //     recent_sessions: recentSessions,
-  //     preferences: {
-  //       work_style: 'focused', // Could be stored in user preferences
-  //     },
-  //   };
-
-  //   await getFlowSuggestions(userContext);
-  // }, [getFlowSuggestions]);
-
-  // const handleClearAIError = useCallback(() => {
-  //   clearAIState();
-  // }, [clearAIState]);
 
   return (
     <View style={[styles.container]}>
@@ -274,31 +146,12 @@ export default function Home() {
         scrollEnabled={false}
       >
         {/* Tide Info Header */}
-        <View style={styles.tideInfoHeader}>
-          <TideInfo onPress={() => navigation.navigate("TidesList")} />
-        </View>
+        {/* <View style={styles.tideInfoHeader}>
+          <EnergyChart onPress={() => ""} />
+        </View> */}
 
         {/* Messages */}
         <ChatMessages messages={messages} />
-
-        {/* <View style={styles.hierarchicalToggle}>
-        <TouchableOpacity
-          style={[
-            styles.hierarchicalToggleButton,
-            showHierarchicalComponents && styles.hierarchicalToggleButtonActive,
-          ]}
-          onPress={toggleHierarchicalComponents}
-        >
-          <Text
-            style={[
-              styles.hierarchicalToggleText,
-              showHierarchicalComponents && styles.hierarchicalToggleTextActive,
-            ]}
-          >
-            {showHierarchicalComponents ? "Hide" : "Show"} Hierarchical
-          </Text>
-        </TouchableOpacity>
-      </View> */}
       </ScrollView>
 
       {/* Tool Menu Overlay */}
@@ -316,7 +169,6 @@ export default function Home() {
         menuHeightAnim={menuHeightAnim}
         handleToolSelect={handleToolSelect}
         handleAgentCommand={handleAgentCommand}
-        refreshTides={refreshTides}
         toggleToolMenu={toggleToolMenu}
         scrollable={true}
         getToolAvailability={getToolAvailability}
@@ -331,11 +183,9 @@ export default function Home() {
         toolButtonActive={toolButtonActive}
         rotationAnim={rotationAnim}
         toggleToolMenu={toggleToolMenu}
-        toolSuggestion={toolSuggestion}
-        showSuggestion={showSuggestion}
-        onAcceptSuggestion={acceptSuggestion}
-        onDismissSuggestion={dismissSuggestion}
         onFocusChange={setIsChatInputFocused}
+        templateToInject={templateToInject}
+        onTemplateInjected={onTemplateInjected}
       />
     </View>
   );
@@ -354,17 +204,8 @@ const styles = StyleSheet.create({
   },
   tideInfoInnerHeader: {
     flex: 1,
-
     borderWidth: 0.5,
-    // borderBottomWidth: 0.5,
     borderColor: colors.neutral[200],
-    // shadowColor: "#000",
-    // shadowOffset: {
-    //   width: 0,
-    //   height: 1.5,
-    // },
-    // shadowRadius: 1.5,
-    // shadowOpacity: 0.03,
     backgroundColor: colors.background.secondary,
     borderRadius: 20,
   },

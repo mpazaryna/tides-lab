@@ -28,6 +28,7 @@ export interface TextProps extends RNTextProps {
   color?: keyof typeof colors.text | string;
   weight?: keyof typeof typography.fontWeight;
   align?: "left" | "center" | "right";
+  backgroundColor?: string | null;
 }
 
 export const Text: React.FC<TextProps> = React.memo(
@@ -37,6 +38,7 @@ export const Text: React.FC<TextProps> = React.memo(
     color = "primary",
     weight,
     align = "left",
+    backgroundColor = null,
     style,
     ...props
   }) => {
@@ -71,7 +73,7 @@ export const Text: React.FC<TextProps> = React.memo(
             fontSize: typography.fontSize.xl,
             fontFamily: getInterFont("semiBold"),
             fontWeight: typography.fontWeight.semibold,
-            lineHeight: typography.fontSize.xl * typography.lineHeight.normal,
+            lineHeight: typography.fontSize.xl * typography.lineHeight.pro,
           };
             case "header":
           return {
@@ -92,14 +94,14 @@ export const Text: React.FC<TextProps> = React.memo(
             fontSize: typography.fontSize.sm,
             fontFamily: getInterFont("regular"),
             fontWeight: typography.fontWeight.normal,
-            lineHeight: typography.fontSize.sm * typography.lineHeight.normal,
+            lineHeight: typography.fontSize.sm * typography.lineHeight.pro,
           };
         case "caption":
           return {
             fontSize: typography.fontSize.xs,
             fontFamily: getInterFont("regular"),
             fontWeight: typography.fontWeight.normal,
-            lineHeight: typography.fontSize.xs * typography.lineHeight.normal,
+            lineHeight: typography.fontSize.xs * typography.lineHeight.pro,
           };
 
         case "captionSmall":
@@ -114,7 +116,7 @@ export const Text: React.FC<TextProps> = React.memo(
             fontSize: typography.fontSize.sm,
             fontFamily: getRobotoMonoFont("regular"),
             fontWeight: typography.fontWeight.normal,
-            lineHeight: typography.fontSize.sm * typography.lineHeight.normal,
+            lineHeight: typography.fontSize.sm * typography.lineHeight.pro,
           };
         default:
           return {};
@@ -157,6 +159,7 @@ export const Text: React.FC<TextProps> = React.memo(
           styles.base,
           variantStyle as any,
           {
+            backgroundColor: backgroundColor || undefined,
             color: textColor,
             fontFamily: getFontFamily(),
             fontWeight: (weight

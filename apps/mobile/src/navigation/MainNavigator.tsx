@@ -15,19 +15,15 @@ import {
   Sun,
   Waves,
   Moon,
-  Compass,
+  Lock,
 } from "lucide-react-native";
 import Home from "../screens/Main/Home";
 import Settings from "../screens/Main/Settings";
 import TideDetails from "../screens/Main/TideDetails";
-import TidesList from "../screens/Main/TidesList";
 import { MainStackParamList, Routes, NavigationOptions } from "./types";
 import { colors } from "../design-system/tokens";
 import { useTimeContext, TimeContextType } from "../context/TimeContext";
-import {
-  getContextDateRange,
-  getContextDateRangeWithOffset,
-} from "../utils/contextUtils";
+import { getContextDateRangeWithOffset } from "../utils/contextUtils";
 import { Text } from "../components/Text";
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -43,14 +39,13 @@ const SettingsHeaderButton = React.memo(({ navigation }: any) => (
 
 const TidesHeaderButton = React.memo(({ navigation }: any) => (
   <TouchableOpacity
-    onPress={() => navigation.navigate(Routes.main.tidesList)}
+    onPress={() => navigation.navigate(Routes.main.settings)}
     style={{ padding: 8 }}
   >
     <ChartLine size={24} color={colors.text.primary} />
   </TouchableOpacity>
 ));
 1;
-
 
 const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
   const {
@@ -67,13 +62,17 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
     ? `${route.params?.tideName || "Home"} (${route.params.tideId})`
     : getContextDateRangeWithOffset(currentContext, dateOffset);
 
-  const contextOptions: { label: string; value: TimeContextType; icon: any }[] =
-    [
-      { label: "Daily", value: "daily", icon: Sun },
-      { label: "Weekly", value: "weekly", icon: Waves },
-      { label: "Monthly", value: "monthly", icon: Moon },
-      { label: "Project", value: "project", icon: Compass },
-    ];
+  const contextOptions: {
+    label: string;
+    value: TimeContextType;
+    icon: any;
+    disabled?: boolean;
+  }[] = [
+    { label: "Daily", value: "daily", icon: Sun },
+    { label: "Weekly", value: "weekly", icon: Waves },
+    { label: "Monthly", value: "monthly", icon: Moon },
+    { label: "Project", value: "project", icon: ChartLine, disabled: true },
+  ];
 
   const handleTitlePress = () => {
     if (route.params?.tideId) return; // Don't show context switcher when viewing specific tide
@@ -83,7 +82,7 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
 
   const handleContextSelect = async (value: TimeContextType) => {
     if (contextSwitchingDisabled) return; // Prevent context switching during tool execution
-    
+
     if (currentContext === value && !isAtPresent) {
       // If clicking the same context and not at present, jump to present
       resetToPresent();
@@ -107,9 +106,14 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
         }}
         disabled={contextSwitchingDisabled}
       >
-        <View style={{ flexDirection: "column", alignItems: "center", marginTop: 2 }}>
+        <View
+          style={{
+            flexDirection: "column",
+            alignItems: "center",
+            marginTop: 2,
+          }}
+        >
           <Text color={colors.text.primary} variant="header">
-        
             {title}
           </Text>
 
@@ -138,10 +142,9 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
 
       <Modal visible={showTooltip} transparent animationType="fade">
         <TouchableWithoutFeedback onPress={() => setShowTooltip(false)}>
-          <View style={{ flex: 1, alignItems: 'center' }}>
+          <View style={{ flex: 1, alignItems: "center" }}>
             <View
               style={{
-     
                 marginTop: 60, // Adjust based on header height
               }}
             >
@@ -161,7 +164,7 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
                     borderRightColor: "transparent",
                     borderBottomColor: colors.neutral[200],
                     position: "absolute",
-                    top: -.5,
+                    top: -0.5,
                     left: -1,
                     zIndex: 0,
                   }}
@@ -181,10 +184,10 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
                     borderBottomColor: colors.background.secondary,
                     marginBottom: -1,
                     zIndex: 1001,
-                                      shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1.5 },
-                  shadowOpacity: 0.03,
-                  shadowRadius: 1.5,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1.5 },
+                    shadowOpacity: 0.03,
+                    shadowRadius: 1.5,
                   }}
                 />
               </View>
@@ -203,16 +206,17 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
                   shadowOpacity: 0.03,
                   shadowRadius: 1.5,
                   elevation: 4,
-                  borderWidth: .5,
+                  borderWidth: 0.5,
                   borderColor: colors.neutral[200],
-       gap: 8,
-       width: 296,
+                  gap: 8,
+                  width: 296,
                 }}
               >
                 {contextOptions.map((option) => {
                   const IconComponent = option.icon;
                   const isSelected = currentContext === option.value;
-                  const isDisabled = contextSwitchingDisabled;
+                  const isDisabled =
+                    contextSwitchingDisabled || option.disabled;
 
                   return (
                     <TouchableOpacity
@@ -228,35 +232,47 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
                           : "transparent",
                         alignItems: "center",
                         width: 64,
-                        opacity: isDisabled ? 0.5 : 1.0, // Visual feedback when disabled
+                        opacity: isDisabled ? 0.7 : 1.0, // Visual feedback when disabled
                       }}
                     >
                       <IconComponent
                         size={20}
                         color={
-                          isDisabled 
+                          isDisabled
                             ? colors.neutral[300]
-                            : isSelected 
-                            ? colors.text.primary 
+                            : isSelected
+                            ? colors.text.primary
                             : colors.text.tertiary
                         }
                         strokeWidth={2}
                         style={{ marginBottom: 2.5 }}
                       />
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: isSelected ? "500" : "400",
-                          color: isDisabled 
-                            ? colors.neutral[300]
-                            : isSelected
-                            ? colors.text.primary
-                            : colors.text.tertiary,
-                          textAlign: "center",
-                        }}
+                      <View
+                        style={{ flexDirection: "row", alignItems: "center" }}
                       >
-                        {option.label}
-                      </Text>
+                        {option.disabled && (
+                          <Lock
+                            size={8}
+                            color={colors.neutral[400]}
+                            strokeWidth={2}
+                            style={{ marginRight: 2 }}
+                          />
+                        )}
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: isSelected ? "500" : "400",
+                            color: isDisabled
+                              ? colors.neutral[300]
+                              : isSelected
+                              ? colors.text.primary
+                              : colors.text.tertiary,
+                            textAlign: "center",
+                          }}
+                        >
+                          {option.label}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -311,19 +327,6 @@ export default function MainNavigator() {
         component={TideDetails}
         options={{
           headerShown: false,
-          gestureEnabled: true,
-        }}
-      />
-
-      <Stack.Screen
-        name={Routes.main.tidesList}
-        component={TidesList}
-        options={{
-          presentation: "modal",
-          headerShown: true,
-          headerShadowVisible: false,
-          title: "Tides",
-          headerTintColor: colors.primary[900],
           gestureEnabled: true,
         }}
       />

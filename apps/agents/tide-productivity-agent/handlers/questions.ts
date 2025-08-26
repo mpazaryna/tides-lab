@@ -70,12 +70,17 @@ export class QuestionsHandler {
         const relevantTideId = await this.tideFetcher.getMostRelevantTide(question);
         
         if (!relevantTideId) {
-          // Instead of returning an error, provide general AI conversation
-          return await this.handleGeneralConversation(userId, question, context);
+          await this.sendErrorToUser(userId, question, 'No relevant tides found');
+          return { 
+            error: true, 
+            message: 'No relevant tides found for this question' 
+          };
         }
         
         tideId = relevantTideId;
       }
+
+      console.log(`[QuestionsHandler] Processing question for user ${userId}, tide ${tideId}: ${question}`);
 
       // Get custom analysis prompt
       const promptResponse = await this.mcpClient.getPrompt('custom_tide_analysis', {
@@ -106,6 +111,8 @@ export class QuestionsHandler {
         };
       }
 
+      console.log(`[QuestionsHandler] Got prompt with ${promptResponse.result.messages.length} messages`);
+
       // Validate analysis request
       const validation = this.aiAnalyzer.validateAnalysisRequest(promptResponse.result.messages);
       if (!validation.valid) {
@@ -120,6 +127,8 @@ export class QuestionsHandler {
 
       // Analyze with AI
       const analysis = await this.aiAnalyzer.runAnalysis(promptResponse.result.messages);
+
+      console.log(`[QuestionsHandler] AI analysis complete for question: ${question.substring(0, 50)}...`);
 
       // Send real-time response via WebSocket
       await this.webSocketManager.broadcastToUser(userId, {

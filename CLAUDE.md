@@ -129,6 +129,8 @@ npm run build:mobile:ios
 **Active**: 8 tide tools integration, hybrid auth optimization, feature expansion with maintainable codebase
 **Next**: Complete MCP integration, desktop UUID/QR setup
 
+**Recent ADR Implementation**: ADR-004 Eliminate Active Tides System - All tools now work with context-based tides (daily/weekly/monthly) that always exist, removing dependency on user-created "active tides"
+
 **Requirements**:
 
 1. Query Context7 MCP first
@@ -207,7 +209,7 @@ src/
 │   │   ├── ChatMessages.tsx        # Messages container with empty state
 │   │   └── MessageBubble.tsx       # Individual message display
 │   ├── tides/                      # Tides display components (NEW)
-│   │   ├── TidesSection.tsx        # Active tides section with loading states
+│   │   ├── TidesSection.tsx        # Context tides section with loading states
 │   │   └── TideCard.tsx            # Individual tide card with icons
 │   ├── tools/                      # Tool-related components (NEW)
 │   │   ├── ToolMenu.tsx            # Tool selection menu with animations
@@ -346,6 +348,7 @@ src/
 - ✅ Navigation
 - ✅ Supabase integration
 - ✅ MCP client
+- ✅ **Active tides elimination (ADR-004)** - Tools always available via context tides
 
 **Active:**
 

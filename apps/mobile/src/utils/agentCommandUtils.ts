@@ -1,19 +1,18 @@
-import type { Tide } from "../types";
 import { loggingService } from "../services/loggingService";
+
+type TideContext = 'daily' | 'weekly' | 'monthly';
+
+interface ContextTide {
+  id: string;
+  name: string;
+  context: TideContext;
+  created_at: string;
+  status: 'active';
+}
 
 interface AgentCommandContext {
   tideId?: string;
-  activeTides: Array<{
-    id: string;
-    name: string;
-    flow_type: string;
-    status: string;
-    created_at: string;
-    description?: string;
-    flow_count?: number;
-    last_flow?: string | null;
-  }>;
-  totalActiveTides: number;
+  currentContextTide: ContextTide | null;
   currentScreen: string;
   isConnected: boolean;
   currentServerUrl: string;
@@ -22,14 +21,14 @@ interface AgentCommandContext {
 
 interface CreateAgentContextParams {
   tideId?: string;
-  activeTides: Tide[];
+  currentContextTide: ContextTide | null;
   isConnected: boolean;
   getCurrentServerUrl: () => string;
 }
 
 export const createAgentContext = ({
   tideId,
-  activeTides,
+  currentContextTide,
   isConnected,
   getCurrentServerUrl,
 }: CreateAgentContextParams): AgentCommandContext => {
@@ -37,20 +36,10 @@ export const createAgentContext = ({
     // Current tide context (if navigated from a specific tide)
     ...(tideId && { tideId }),
 
-    // User's active tides for insights and analysis
-    activeTides: activeTides.map((tide) => ({
-      id: tide.id,
-      name: tide.name,
-      flow_type: tide.flow_type,
-      status: tide.status,
-      created_at: tide.created_at,
-      description: tide.description,
-      flow_count: tide.flow_count,
-      last_flow: tide.last_flow,
-    })),
+    // Current context tide (daily/weekly/monthly - always available)
+    currentContextTide,
 
-    // Current app state
-    totalActiveTides: activeTides.length,
+    // Current app state  
     currentScreen: "Home",
 
     // Connection state
@@ -81,7 +70,7 @@ export const executeAgentCommand = async ({
     loggingService.info("ToolMenu", "Sending agent command with context", {
       command,
       contextKeys: Object.keys(context),
-      activeTidesCount: context.activeTides.length,
+      currentContext: context.currentContextTide?.context || 'none',
     });
 
     await sendAgentMessage(command, context);

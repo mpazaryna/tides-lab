@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { Animated } from "react-native";
-import type { Tide } from "../types";
+// import type { Tide } from "../types"; // Unused import
 import { loggingService } from "../services/loggingService";
 
 interface UseToolMenuReturn {
@@ -24,13 +24,15 @@ interface UseToolMenuProps {
   sendMessage: (message: string) => Promise<void>;
   getCurrentContextTideId?: () => string | null;
   setToolExecuting?: (executing: boolean) => void;
+  injectTemplate?: (template: string) => void;
 }
 
 export const useToolMenu = ({
   executeMCPTool,
-  sendMessage,
+  sendMessage: _sendMessage,
   getCurrentContextTideId,
   setToolExecuting,
+  injectTemplate,
 }: UseToolMenuProps): UseToolMenuReturn => {
   // State management
   const [showToolMenu, setShowToolMenu] = useState(false);
@@ -193,44 +195,59 @@ export const useToolMenu = ({
 
   // Tool availability checking - All tools always available since hierarchical context tides always exist
   const getToolAvailability = useCallback(
-    (toolName: string) => {
+    (_toolName: string) => {
       // All tools available since hierarchical tides (daily/weekly/monthly) always exist
       return { available: true, reason: "" };
     },
     [] // No dependencies - tools always available
   );
 
-  // Handle tool selection with context-aware execution
+  // Generate tool parameter template for intellisense-style input
+  const generateToolTemplate = useCallback((toolName: string): string => {
+    switch (toolName) {
+      case 'tide_smart_flow':
+        return '/flow [what: ___] [energy: ___] [duration: ___] [type: ___]';
+      case 'tide_add_energy':
+        return '/energy [level: ___] [context: ___]';
+      case 'tide_link_task':
+        return '/link [task: ___] [url: ___] [type: ___]';
+      case 'tide_get_report':
+        return '/report [period: ___] [format: ___]';
+      default:
+        return `/${toolName} [params: ___]`;
+    }
+  }, []);
+
+  // Handle tool selection with template injection
   const handleToolSelect = useCallback(
     async (toolName: string, customParameters?: Record<string, any>) => {
       // All tools always available - no availability checking needed
       toggleToolMenu(); // Close menu first
       
+      // For tide_smart_flow and other parameterized tools, inject template instead of executing
+      if (toolName === 'tide_smart_flow' || 
+          toolName === 'tide_add_energy' || 
+          toolName === 'tide_link_task' ||
+          toolName === 'tide_get_report') {
+        
+        const template = generateToolTemplate(toolName);
+        
+        loggingService.info("ToolMenu", "Injecting tool parameter template", {
+          toolName,
+          template,
+        });
+        
+        // Inject template into chat input via callback (to be passed from parent)
+        if (injectTemplate) {
+          injectTemplate(template);
+          return;
+        }
+      }
+
       // Set tool execution state (disables context switching)
       setToolExecuting?.(true);
 
       try {
-        // Handle special case for tide_smart_flow
-        if (toolName === 'tide_smart_flow') {
-          const contextTideId = getCurrentContextTideId?.();
-          if (!contextTideId) {
-            throw new Error('No context tide available');
-          }
-          
-          // Import mcpService for smart flow
-          const { mcpService } = await import('../services/mcpService');
-          await mcpService.startSmartFlow();
-          
-          loggingService.info("ToolMenu", "Context-aware smart flow executed", {
-            toolName,
-            contextTideId,
-            timeOfDay: new Date().toLocaleTimeString(),
-          });
-          
-          sendMessage("🌊 Smart flow session started! Using current context tide with intelligent parameters.");
-          return;
-        }
-
         // Generate context-aware parameters for all tools
         const contextTideId = getCurrentContextTideId?.();
         
@@ -262,7 +279,8 @@ export const useToolMenu = ({
       getCurrentContextTideId,
       executeMCPTool,
       generateDefaultParams,
-      sendMessage,
+      injectTemplate,
+      generateToolTemplate,
     ]
   );
 

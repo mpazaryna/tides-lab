@@ -300,7 +300,7 @@ export const TOOL_PHRASES: ToolPhrase[] = [
   },
 ];
 
-export const CONFIDENCE_THRESHOLD = 0.7;
+export const CONFIDENCE_THRESHOLD = 0.8;
 
 export interface DetectedTool {
   toolId: string;

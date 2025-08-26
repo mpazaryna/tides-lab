@@ -28,9 +28,6 @@ export class MCPClient {
    * Get a prompt from the MCP server
    */
   async getPrompt(promptName: string, args: MCPPromptArgs): Promise<MCPResponse> {
-    // TODO: Add request caching to reduce MCP server load
-    // TODO: Implement exponential backoff for retries
-    // TODO: Add circuit breaker pattern for MCP availability
     try {
       const mcpRequest = {
         jsonrpc: "2.0",
@@ -41,6 +38,8 @@ export class MCPClient {
           arguments: args
         }
       };
+
+      console.log(`[MCPClient] Getting prompt: ${promptName} with args:`, args);
 
       const endpoint = this.getMCPEndpoint();
       const response = await fetch(endpoint, {
@@ -58,6 +57,8 @@ export class MCPClient {
       }
 
       const mcpResponse = await response.json() as MCPResponse;
+      console.log(`[MCPClient] MCP response received for ${promptName}`);
+
       return mcpResponse;
 
     } catch (error) {
@@ -83,6 +84,8 @@ export class MCPClient {
         }
       };
 
+      console.log(`[MCPClient] Calling tool: ${toolName} with args:`, args);
+
       const endpoint = this.getMCPEndpoint();
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -99,6 +102,8 @@ export class MCPClient {
       }
 
       const mcpResponse = await response.json() as MCPResponse;
+      console.log(`[MCPClient] MCP tool response received for ${toolName}`);
+
       return mcpResponse;
 
     } catch (error) {
@@ -134,8 +139,6 @@ export class MCPClient {
       return `Bearer ${this.userContext.authToken}`;
     }
     
-    // TODO: Remove hardcoded test tokens and implement proper auth
-    // TODO: Add token refresh mechanism for expired tokens
     const tokenMap = {
       'production': 'Bearer tides_testuser_001',
       'staging': 'Bearer tides_testuser_002', 
@@ -149,8 +152,6 @@ export class MCPClient {
    * Provide fallback prompts when MCP server is unavailable
    */
   private getFallbackPrompt(promptName: string, args: MCPPromptArgs): MCPResponse {
-    // TODO: Load fallback prompts from external config/database
-    // TODO: Add versioning for fallback prompts
     const fallbackPrompts = {
       'custom_tide_analysis': {
         result: {

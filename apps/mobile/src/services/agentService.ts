@@ -69,6 +69,21 @@ class AgentService {
    */
   setUrlProvider(getServerUrl: () => string): void {
     this.getServerUrl = getServerUrl;
+    
+    // Log current environment for debugging
+    const currentUrl = getServerUrl();
+    loggingService.info(this.SERVICE_NAME, "Server URL configured", { 
+      url: currentUrl,
+      hasAIEndpoints: this.checkAIEndpointsAvailable(currentUrl)
+    });
+  }
+
+  /**
+   * Check if AI endpoints are likely available on current server
+   */
+  private checkAIEndpointsAvailable(baseUrl: string): boolean {
+    // env006 and env001 are known to have AI endpoints
+    return baseUrl.includes('tides-006') || baseUrl.includes('tides-001');
   }
 
   /**
@@ -593,25 +608,89 @@ class AgentService {
     if (!this.getServerUrl) {
       loggingService.warn(this.SERVICE_NAME, "Using fallback URL (env001) - MCP context not configured");
     }
+    
+    // Warn if current environment might not have AI endpoints
+    if (!this.checkAIEndpointsAvailable(baseUrl)) {
+      loggingService.warn(this.SERVICE_NAME, "Current environment may not support AI endpoints", { 
+        baseUrl,
+        suggestedEnvs: ["env001", "env006"]
+      });
+    }
     const url = `${baseUrl}${endpoint}`;
     
     loggingService.info(this.SERVICE_NAME, `AI request to: ${url}`, { method });
 
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      ...(body && { body: JSON.stringify(body) }),
-    });
+    // Add timeout controller for AI requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json',
+          'User-Agent': 'TidesMobile/1.0 React-Native/0.80.2'
+        },
+        ...(body && { body: JSON.stringify(body) }),
+        signal: controller.signal
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`AI request failed: ${response.status} ${errorText}`);
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`AI request failed: ${response.status} ${errorText}`);
+      }
+
+      // Handle Server-Sent Events (text/event-stream) format
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/event-stream')) {
+        const text = await response.text();
+        loggingService.info(this.SERVICE_NAME, "Received SSE response", { contentType, textLength: text.length });
+        
+        // Parse SSE format: "event: message\ndata: {...}\n\n"
+        const lines = text.split('\n');
+        let jsonData = '';
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            jsonData = line.substring(6); // Remove 'data: ' prefix
+            break;
+          }
+        }
+        
+        if (jsonData) {
+          try {
+            const parsed = JSON.parse(jsonData);
+            loggingService.info(this.SERVICE_NAME, "Parsed SSE JSON", { hasResult: !!parsed.result });
+            return parsed;
+          } catch (parseError) {
+            loggingService.warn(this.SERVICE_NAME, "Failed to parse SSE JSON data", { jsonData, parseError });
+            throw new Error(`Invalid JSON in SSE response: ${parseError}`);
+          }
+        } else {
+          throw new Error('No data found in SSE response');
+        }
+      }
+
+      // Regular JSON response
+      return await response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // Enhanced error handling
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('AI request timed out (15s)');
+        }
+        if (error.message === 'Network request failed') {
+          throw new Error('Network connection failed - check server availability');
+        }
+      }
+      throw error;
     }
-
-    return await response.json();
   }
 
   /**

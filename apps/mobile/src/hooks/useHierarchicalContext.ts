@@ -43,7 +43,7 @@ export const useHierarchicalContext = (
 ): UseHierarchicalContextReturn => {
   const {
     switchTideContext,
-    listTideContexts,
+    // listTideContexts, // Currently unused
     getTodaysSummary,
     startHierarchicalFlow: mcpStartHierarchicalFlow,
     isConnected,

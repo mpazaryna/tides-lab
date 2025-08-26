@@ -7,7 +7,6 @@ import {
   StyleSheet,
 } from "react-native";
 import {
-  Waves,
   CheckCircle,
   Zap,
   Link,
@@ -33,7 +32,6 @@ interface ToolMenuProps {
     customParameters?: Record<string, any>
   ) => Promise<void>;
   handleAgentCommand: (command: string) => Promise<void>;
-  refreshTides: () => Promise<void>;
   toggleToolMenu: () => void;
   scrollable?: boolean;
   getToolAvailability: (toolName: string) => {
@@ -92,8 +90,8 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
   showToolMenu,
   menuHeightAnim,
   handleToolSelect,
-  refreshTides,
-  toggleToolMenu,
+  handleAgentCommand: _handleAgentCommand,
+  toggleToolMenu: _toggleToolMenu,
   scrollable = true,
   getToolAvailability,
 }) => {
@@ -138,26 +136,6 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
             getToolAvailability={getToolAvailability}
           />
 
-          <TouchableOpacity
-            style={styles.toolMenuItem}
-            onPress={() => {
-              refreshTides();
-              toggleToolMenu();
-            }}
-          >
-            <View style={styles.toolMenuItemIcon}>
-              <Waves size={18} color={colors.primary[500]} />
-            </View>
-            <View style={styles.toolMenuItemContent}>
-              <Text
-                variant="body"
-                color="primary"
-                style={styles.toolMenuItemTitle}
-              >
-                Refresh Tides
-              </Text>
-            </View>
-          </TouchableOpacity>
         </View>
 
         {/* Context Management */}

@@ -1,10 +1,10 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { LineGraph } from "react-native-graph";
+// import { LineGraph } from "react-native-graph"; // Temporarily unused
 import { colors, spacing } from "../../design-system/tokens";
 import { Text } from "../Text";
-import { useEnergyData } from "../../hooks/useEnergyData";
-import { useLocationData } from "../../hooks/useLocationData";
+// import { useEnergyData } from "../../hooks/useEnergyData"; // Temporarily unused
+// import { useLocationData } from "../../hooks/useLocationData"; // Temporarily unused
 
 interface EnergyChartProps {
   tideId?: string;
@@ -12,32 +12,38 @@ interface EnergyChartProps {
 }
 
 export const EnergyChart: React.FC<EnergyChartProps> = ({
-  tideId,
-  height = 250,
+  tideId: _tideId,
+  height: _height = 250,
 }) => {
-  const { points, error } = useEnergyData(tideId);
-  const { locationInfo } = useLocationData();
-  const yValues = points.map((p: any) => p.value);
-  const minY = Math.max(1, Math.min(...yValues) - 1);
-  const maxY = Math.min(10, Math.max(...yValues) + 1);
-
-
-
+  // Temporarily commented out until chart is fully implemented
+  // const { points, error } = useEnergyData(tideId);
+  // const { locationInfo } = useLocationData();
+  // const yValues = points.map((p: any) => p.value);
+  // const minY = Math.max(1, Math.min(...yValues) - 1);
+  // const maxY = Math.min(10, Math.max(...yValues) + 1);
 
   // Get energy check positions from points data
-  const getEnergyCheckPositions = () => {
-    return points.map((point: any) => {
-      const pointTime = new Date(point.x);
-      const hour = pointTime.getHours() + pointTime.getMinutes() / 60;
-      return (hour / 24) * 100; // Convert to percentage
-    });
-  };
+  // const getEnergyCheckPositions = () => {
+  //   return points.map((point: any) => {
+  //     const pointTime = new Date(point.x);
+  //     const hour = pointTime.getHours() + pointTime.getMinutes() / 60;
+  //     return (hour / 24) * 100; // Convert to percentage
+  //   });
+  // };
 
   return (
-   
+    <View style={styles.container}>
+      <Text variant="caption" color="tertiary">
+        Energy Chart (Temporarily Hidden)
+      </Text>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  
+  container: {
+    padding: spacing[3],
+    backgroundColor: colors.background.secondary,
+    borderRadius: 8,
+  },
 });

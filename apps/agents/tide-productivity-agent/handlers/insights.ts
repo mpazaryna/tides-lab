@@ -41,8 +41,6 @@ export class InsightsHandler {
 
     } catch (error) {
       console.error('[InsightsHandler] Request failed:', error);
-      // TODO: Implement proper error tracking and alerting
-      // TODO: Add retry mechanism for transient failures
       return this.errorResponse('Failed to generate insights');
     }
   }
@@ -65,7 +63,6 @@ export class InsightsHandler {
 
       if (tides.length === 0) {
         console.warn(`[InsightsHandler] No tides found for user ${userId}`);
-        // TODO: Return helpful message or suggestions for getting started
         return;
       }
 
@@ -92,11 +89,10 @@ export class InsightsHandler {
           // Analyze with AI
           const analysis = await this.aiAnalyzer.runAnalysis(promptResponse.result.messages);
 
+          console.log(`[InsightsHandler] Generated insights for tide ${tide.id} (confidence: ${analysis.confidence})`);
+
           // TODO: Store insights in agent storage for retrieval
           // TODO: Send notification if insights are actionable
-          // TODO: Add caching mechanism to avoid re-analyzing same timeframe
-          // TODO: Implement insights retention policy (e.g., keep last 30 days)
-          // TODO: Add insights comparison across different timeframes
 
         } catch (error) {
           console.error(`[InsightsHandler] Failed to generate insights for tide ${tide.id}:`, error);

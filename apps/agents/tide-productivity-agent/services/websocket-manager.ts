@@ -24,6 +24,8 @@ export class WebSocketManager {
 
     // Set up event listeners
     this.setupEventListeners(webSocket);
+
+    console.log(`[WebSocketManager] New connection established. Total: ${this.connectedClients.size}`);
   }
 
   /**
@@ -100,6 +102,8 @@ export class WebSocketManager {
       userId: message.userId,
       timestamp: new Date().toISOString()
     });
+
+    console.log(`[WebSocketManager] User ${message.userId} authenticated`);
   }
 
   /**
@@ -111,6 +115,8 @@ export class WebSocketManager {
 
     this.connectedClients.delete(webSocket);
     this.userSessions.delete(webSocket);
+
+    console.log(`[WebSocketManager] User ${userId} disconnected. Remaining: ${this.connectedClients.size}`);
   }
 
   /**
@@ -245,6 +251,7 @@ export class WebSocketManager {
       }
     }
 
+    console.log(`[WebSocketManager] Cleaned up ${cleaned} inactive connections`);
     return cleaned;
   }
 }

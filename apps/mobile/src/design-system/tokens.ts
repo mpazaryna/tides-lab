@@ -29,6 +29,7 @@ export const colors = {
     900: "#272f35",
   },
 
+
   // Neutral - Dark Text
   neutral: {
     50: "#f9fafb", // Background 1
@@ -54,6 +55,12 @@ export const colors = {
     primary: "#F9FAFB", // Background 1
     secondary: "#FFFFFF", // Background 2
     tertiary: "#f4f5f6",
+  },
+
+  // Highlight: 
+  highlight: {
+    foreground: "#4871A8",
+    background: "#EDF1F7"
   },
 
   // Text
