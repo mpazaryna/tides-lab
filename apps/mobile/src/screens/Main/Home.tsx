@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { StyleSheet, ScrollView, View } from "react-native";
-import { useRoute, RouteProp } from "@react-navigation/native";
+import { StyleSheet, ScrollView, View, TouchableOpacity } from "react-native";
+import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
 import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
+import { useTimeContext } from "../../context/TimeContext";
 import { MainStackParamList } from "../../navigation/types";
 import { loggingService } from "../../services/loggingService";
 import { colors, spacing } from "../../design-system/tokens";
@@ -12,29 +14,28 @@ import { useTidesManagement } from "../../hooks/useTidesManagement";
 import { useToolMenu } from "../../hooks/useToolMenu";
 import { useDebugPanel } from "../../hooks/useDebugPanel";
 import { useChatInput } from "../../hooks/useChatInput";
-// import { useAIFeatures, TideSession, UserContext } from "../../hooks/useAIFeatures";
-// import { TidesSection } from "../../components/tides/TidesSection";
-// import { ToolCallDisplay } from "../../components/tools/ToolCallDisplay";
-// import { DebugPanel } from "../../components/debug/DebugPanel";
 import { ChatMessages } from "../../components/chat/ChatMessages";
 import { ChatInput } from "../../components/chat/ChatInput";
 import { ToolMenu } from "../../components/tools/ToolMenu";
 import { TideInfo } from "../../components/tides/TideInfo";
-// import { AIInsightsSection } from "../../components/ai/AIInsightsSection";
+
 import {
   createAgentContext,
   executeAgentCommand,
 } from "../../utils/agentCommandUtils";
 
 type HomeScreenRouteProp = RouteProp<MainStackParamList, "Home">;
+type NavigationProp = NativeStackNavigationProp<MainStackParamList, "Home">;
 
 export default function Home() {
   const route = useRoute<HomeScreenRouteProp>();
+  const navigation = useNavigation<NavigationProp>();
   const { tideId } = route.params || {};
 
   const { getCurrentServerUrl, updateServerUrl, isConnected } = useMCP();
   const { currentEnvironment, switchEnvironment, environments } =
     useServerEnvironment();
+  const { currentContext } = useTimeContext();
   const {
     messages,
     isLoading,
@@ -245,68 +246,41 @@ export default function Home() {
 
   return (
     <View style={[styles.container]}>
-      {/* <View style={styles.headerBedWetter} /> */}
-      <View style={styles.tideInfoHeader}>
-        <View style={styles.tideInfoInnerHeader}>
-          <TideInfo />
+      <ScrollView
+        ref={scrollViewRef}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        scrollEnabled={false}
+      >
+        {/* Tide Info Header */}
+        <View style={styles.tideInfoHeader}>
+          <TideInfo onPress={() => navigation.navigate("TidesList")} />
         </View>
-      </View>
-      {/* Error Display
-      {error && (
-        <Card variant="outlined" padding={3} style={styles.errorCard}>
-          <Text variant="body" color="error">
-            {error}
-          </Text>
-          <TouchableOpacity
-            onPress={() => checkConnections()}
-            style={styles.retryButton}
+
+        {/* Messages */}
+        <ChatMessages messages={messages} />
+
+        {/* <View style={styles.hierarchicalToggle}>
+        <TouchableOpacity
+          style={[
+            styles.hierarchicalToggleButton,
+            showHierarchicalComponents && styles.hierarchicalToggleButtonActive,
+          ]}
+          onPress={toggleHierarchicalComponents}
+        >
+          <Text
+            style={[
+              styles.hierarchicalToggleText,
+              showHierarchicalComponents && styles.hierarchicalToggleTextActive,
+            ]}
           >
-            <Text variant="bodySmall" color="primary">
-              Retry Connection
-            </Text>
-          </TouchableOpacity>
-        </Card>
-      )} */}
-
-      {/* Active Tides Section */}
-      {/* <TidesSection
-        isConnected={isConnected}
-        activeTides={activeTides}
-        tidesLoading={tidesLoading}
-        tidesError={tidesError}
-        refreshing={refreshing}
-        refreshTides={refreshTides}
-      /> */}
-
-      {/* AI Insights Section */}
-      {/* {isConnected && (
-        <AIInsightsSection
-          insights={insights}
-          suggestions={suggestions}
-          isAnalyzing={isAnalyzing}
-          isGeneratingSuggestions={isGeneratingSuggestions}
-          error={aiError}
-          onAnalyzePress={handleAnalyzeProductivity}
-          onSuggestionsPress={handleGetFlowSuggestions}
-          onClearError={handleClearAIError}
-        />
-      )} */}
-
-      {/* Messages */}
-      <ChatMessages ref={scrollViewRef} messages={messages} />
-
-      {/* Debug Panel */}
-      {/* <DebugPanel
-        showDebugPanel={showDebugPanel}
-        debugTestResults={debugTestResults}
-        setShowDebugPanel={setShowDebugPanel}
-        setDebugTestResults={setDebugTestResults}
-      /> */}
-
-      {/* Pending Tool Calls */}
-      {/* {pendingToolCalls.map((toolCall) => (
-        <ToolCallDisplay key={toolCall.id} toolCall={toolCall} />
-      ))} */}
+            {showHierarchicalComponents ? "Hide" : "Show"} Hierarchical
+          </Text>
+        </TouchableOpacity>
+      </View> */}
+      </ScrollView>
 
       {/* Tool Menu */}
       <ToolMenu
@@ -318,8 +292,8 @@ export default function Home() {
         toggleToolMenu={toggleToolMenu}
         getToolAvailability={getToolAvailability}
       />
+      {/* Chat Input with Hierarchical Toggle */}
 
-      {/* Chat Input */}
       <ChatInput
         inputMessage={inputMessage}
         setInputMessage={setInputMessage}
@@ -338,13 +312,14 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+  },
   tideInfoHeader: {
-    height: 300,
-    maxHeight: 300,
-    paddingTop: 0,
+    paddingTop: 10,
     backgroundColor: colors.background.primary,
     paddingVertical: 12,
-    paddingBottom: 16,
+    paddingBottom: 10,
     paddingHorizontal: 16,
   },
   tideInfoInnerHeader: {
@@ -375,5 +350,42 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: spacing[2],
+  },
+  hierarchicalSection: {
+    maxHeight: 400,
+    backgroundColor: colors.background.secondary,
+  },
+  hierarchicalContent: {
+    paddingVertical: spacing[2],
+  },
+  hierarchicalToggle: {
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[2],
+    alignItems: "center",
+  },
+  hierarchicalToggleButton: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
+    backgroundColor: colors.neutral[100],
+    borderRadius: spacing[3],
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+  },
+  hierarchicalToggleButtonActive: {
+    backgroundColor: colors.primary[500],
+    borderColor: colors.primary[500],
+  },
+  hierarchicalToggleText: {
+    color: colors.neutral[700],
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  hierarchicalToggleTextActive: {
+    color: colors.neutral[50],
+  },
+  contextSwitcherSection: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
+    backgroundColor: colors.background.primary,
   },
 });

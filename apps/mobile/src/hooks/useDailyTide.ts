@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
 import { useMCP } from "../context/MCPContext";
-import { mcpService } from "../services/mcpService";
 import { loggingService } from "../services/loggingService";
 import type { Tide } from "../types";
 
@@ -23,7 +22,7 @@ interface UseDailyTideReturn {
  * methods to interact with it
  */
 export const useDailyTide = (): UseDailyTideReturn => {
-  const { isConnected } = useMCP();
+  const { isConnected, getOrCreateDailyTide } = useMCP();
   const [dailyTide, setDailyTide] = useState<Tide | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,16 +48,14 @@ export const useDailyTide = (): UseDailyTideReturn => {
       // Get user's timezone
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-      loggingService.info("useDailyTide", "Calling tide_get_or_create_daily", {
+      loggingService.info("useDailyTide", "Getting or creating daily tide via MCPContext", {
         timezone,
         currentDate: new Date().toISOString(),
         localDate: new Date().toLocaleDateString(),
         localTime: new Date().toLocaleTimeString(),
       });
 
-      const result = await mcpService.callTool("tide_get_or_create_daily", {
-        timezone,
-      });
+      const result = await getOrCreateDailyTide(timezone);
 
       if (result.success && result.tide) {
         setDailyTide(result.tide);
@@ -85,7 +82,7 @@ export const useDailyTide = (): UseDailyTideReturn => {
     } finally {
       setLoading(false);
     }
-  }, [isConnected]);
+  }, [isConnected, getOrCreateDailyTide]);
 
   // Refresh daily tide (useful for pull-to-refresh)
   const refreshDailyTide = useCallback(async () => {
@@ -129,7 +126,7 @@ export const useDailyTide = (): UseDailyTideReturn => {
     if (isConnected && !dailyTide) {
       initializeDailyTide();
     }
-  }, [isConnected, initializeDailyTide, dailyTide]);
+  }, [isConnected, dailyTide, initializeDailyTide]);
 
   return {
     // State

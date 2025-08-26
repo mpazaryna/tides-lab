@@ -44,6 +44,40 @@ interface MCPContextType extends MCPState {
   refreshTides: () => Promise<void>;
   selectTide: (tide: Tide | null) => void;
 
+  // Hierarchical context management
+  getOrCreateDailyTide: (
+    timezone?: string
+  ) => Promise<TideCreateResponse & { tide?: Tide; created?: boolean }>;
+  switchTideContext: (
+    contextType: "daily" | "weekly" | "monthly" | "project",
+    date?: string
+  ) => Promise<{
+    success: boolean;
+    tide?: Tide;
+    context?: string;
+    created?: boolean;
+    error?: string;
+  }>;
+  listTideContexts: (date?: string) => Promise<{
+    success: boolean;
+    contexts?: Array<{
+      context: string;
+      tide_id?: string;
+      tide_name?: string;
+      flow_count: number;
+      total_minutes: number;
+      available: boolean;
+    }>;
+    error?: string;
+  }>;
+  getTodaysSummary: (date?: string) => Promise<{
+    success: boolean;
+    contexts?: Array<any>;
+    total_flow_sessions?: number;
+    total_minutes?: number;
+    error?: string;
+  }>;
+
   // Flow session management
   startTideFlow: (
     tideId: string,
@@ -52,6 +86,24 @@ interface MCPContextType extends MCPState {
     initialEnergy?: "low" | "medium" | "high",
     workContext?: string
   ) => Promise<FlowSessionResponse>;
+  startHierarchicalFlow: (
+    intensity?: "gentle" | "moderate" | "strong",
+    duration?: number,
+    initialEnergy?: "low" | "medium" | "high",
+    workContext?: string,
+    date?: string
+  ) => Promise<{
+    success: boolean;
+    session_id?: string;
+    contexts?: Array<{
+      context: string;
+      tide_id: string;
+      tide_name: string;
+      session_id: string;
+      created: boolean;
+    }>;
+    error?: string;
+  }>;
 
   // Energy tracking
   addEnergyToTide: (
@@ -96,12 +148,15 @@ export function MCPProvider({ children }: MCPProviderProps) {
     useServerEnvironment();
   const [state, dispatch] = useReducer(mcpReducer, initialMCPState);
 
-  // Configure authService and mcpService with current server URL  
+  // Configure authService and mcpService with current server URL
   useEffect(() => {
     if (getEnvironmentServerUrl) {
       authService.setUrlProvider(getEnvironmentServerUrl);
       mcpService.setUrlProvider(getEnvironmentServerUrl);
-      loggingService.info("MCPContext", "AuthService and MCPService configured with environment URL provider");
+      loggingService.info(
+        "MCPContext",
+        "AuthService and MCPService configured with environment URL provider"
+      );
     }
   }, [getEnvironmentServerUrl]);
 
@@ -538,6 +593,224 @@ export function MCPProvider({ children }: MCPProviderProps) {
     []
   );
 
+  // Hierarchical context management functions
+  const getOrCreateDailyTide = useCallback(async (timezone?: string) => {
+    loggingService.info("MCPContext", "Getting or creating daily tide", {
+      timezone,
+    });
+    dispatch({ type: "SET_LOADING", payload: true });
+
+    try {
+      const response = await mcpService.callTool("tide_get_or_create_daily", {
+        timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+
+      if (response.success) {
+        if (response.tide) {
+          // Update tides list with new tide if created
+          if (response.created) {
+            dispatch({ type: "ADD_TIDE", payload: response.tide });
+          }
+        }
+        loggingService.info(
+          "MCPContext",
+          response.created ? "Created daily tide" : "Retrieved daily tide",
+          {
+            tideId: response.tide?.id,
+            tideName: response.tide?.name,
+          }
+        );
+        return response;
+      } else {
+        throw new Error(response.error || "Failed to get or create daily tide");
+      }
+    } catch (error) {
+      loggingService.error("MCPContext", "Failed to get or create daily tide", {
+        error,
+        timezone,
+      });
+      dispatch({
+        type: "SET_ERROR",
+        payload: "Failed to get or create daily tide.",
+      });
+      throw error;
+    }
+  }, []);
+
+  const switchTideContext = useCallback(
+    async (
+      contextType: "daily" | "weekly" | "monthly" | "project",
+      date?: string
+    ) => {
+      loggingService.info("MCPContext", "Switching tide context", {
+        contextType,
+        date,
+      });
+      dispatch({ type: "SET_LOADING", payload: true });
+
+      try {
+        const response = await mcpService.callTool("tide_switch_context", {
+          context_type: contextType,
+          date: date || new Date().toISOString().split("T")[0],
+        });
+
+        if (response.success) {
+          // Update selected tide if a tide was returned
+          if (response.tide) {
+            dispatch({ type: "SELECT_TIDE", payload: response.tide });
+            // Add to tides list if newly created
+            if (response.created) {
+              dispatch({ type: "ADD_TIDE", payload: response.tide });
+            }
+          }
+
+          loggingService.info("MCPContext", "Context switched successfully", {
+            contextType,
+            tideId: response.tide?.id,
+            created: response.created,
+          });
+          return response;
+        } else {
+          throw new Error(response.error || "Failed to switch context");
+        }
+      } catch (error) {
+        loggingService.error("MCPContext", "Failed to switch tide context", {
+          error,
+          contextType,
+          date,
+        });
+        dispatch({ type: "SET_ERROR", payload: "Failed to switch context." });
+        throw error;
+      }
+    },
+    []
+  );
+
+  const listTideContexts = useCallback(async (date?: string) => {
+    loggingService.info("MCPContext", "Listing tide contexts", { date });
+    dispatch({ type: "SET_LOADING", payload: true });
+
+    try {
+      const response = await mcpService.callTool("tide_list_contexts", {
+        date: date || new Date().toISOString().split("T")[0],
+      });
+
+      if (response.success) {
+        loggingService.info("MCPContext", "Listed tide contexts", {
+          contextsCount: response.contexts?.length || 0,
+          date,
+        });
+        return response;
+      } else {
+        throw new Error(response.error || "Failed to list contexts");
+      }
+    } catch (error) {
+      loggingService.error("MCPContext", "Failed to list tide contexts", {
+        error,
+        date,
+      });
+      dispatch({ type: "SET_ERROR", payload: "Failed to list contexts." });
+      throw error;
+    }
+  }, []);
+
+  const getTodaysSummary = useCallback(async (date?: string) => {
+    loggingService.info("MCPContext", "Getting today's summary", { date });
+    dispatch({ type: "SET_LOADING", payload: true });
+
+    try {
+      const response = await mcpService.callTool("tide_get_todays_summary", {
+        date: date || new Date().toISOString().split("T")[0],
+      });
+
+      if (response.success) {
+        loggingService.info("MCPContext", "Retrieved today's summary", {
+          totalSessions: response.total_flow_sessions,
+          totalMinutes: response.total_minutes,
+          contextsCount: response.contexts?.length || 0,
+        });
+        return response;
+      } else {
+        throw new Error(response.error || "Failed to get today's summary");
+      }
+    } catch (error) {
+      loggingService.error("MCPContext", "Failed to get today's summary", {
+        error,
+        date,
+      });
+      dispatch({
+        type: "SET_ERROR",
+        payload: "Failed to get today's summary.",
+      });
+      throw error;
+    }
+  }, []);
+
+  const startHierarchicalFlow = useCallback(
+    async (
+      intensity?: "gentle" | "moderate" | "strong",
+      duration?: number,
+      initialEnergy?: "low" | "medium" | "high",
+      workContext?: string,
+      date?: string
+    ) => {
+      loggingService.info("MCPContext", "Starting hierarchical flow", {
+        intensity,
+        duration,
+        initialEnergy,
+        workContext,
+        date,
+      });
+      dispatch({ type: "SET_LOADING", payload: true });
+
+      try {
+        const response = await mcpService.callTool(
+          "tide_start_hierarchical_flow",
+          {
+            intensity: intensity || "moderate",
+            duration: duration || 25,
+            initial_energy: initialEnergy || "medium",
+            work_context: workContext || "General work",
+            date: date || new Date().toISOString().split("T")[0],
+          }
+        );
+
+        if (response.success) {
+          // Refresh tides to get updated data
+          await refreshTides();
+
+          loggingService.info("MCPContext", "Hierarchical flow started", {
+            sessionId: response.session_id,
+            contextsCount: response.contexts?.length || 0,
+          });
+          return response;
+        } else {
+          throw new Error(
+            response.error || "Failed to start hierarchical flow"
+          );
+        }
+      } catch (error) {
+        loggingService.error(
+          "MCPContext",
+          "Failed to start hierarchical flow",
+          {
+            error,
+            intensity,
+            duration,
+            initialEnergy,
+            workContext,
+          }
+        );
+        dispatch({
+          type: "SET_ERROR",
+          payload: "Failed to start hierarchical flow.",
+        });
+        throw error;
+      }
+    },
+    [refreshTides]
+  );
+
   // Effect to handle environment changes
   useEffect(() => {
     const handleEnvironmentChange = async () => {
@@ -714,6 +987,12 @@ export function MCPProvider({ children }: MCPProviderProps) {
       linkTaskToTide,
       getTaskLinks,
       getTideParticipants,
+      // Hierarchical context management
+      getOrCreateDailyTide,
+      switchTideContext,
+      listTideContexts,
+      getTodaysSummary,
+      startHierarchicalFlow,
     }),
     [
       state,
@@ -729,6 +1008,12 @@ export function MCPProvider({ children }: MCPProviderProps) {
       linkTaskToTide,
       getTaskLinks,
       getTideParticipants,
+      // Hierarchical context management
+      getOrCreateDailyTide,
+      switchTideContext,
+      listTideContexts,
+      getTodaysSummary,
+      startHierarchicalFlow,
     ]
   );
 

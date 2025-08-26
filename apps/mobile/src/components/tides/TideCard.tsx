@@ -6,31 +6,80 @@ import {
   Target,
   PauseCircle,
   CheckCircle,
+  Calendar,
+  CalendarDays,
+  Layers,
 } from "lucide-react-native";
 import { Text } from "../Text";
 import { Card } from "../Card";
-import { colors, spacing } from "../../design-system/tokens";
+import { colors, spacing, borderRadius } from "../../design-system/tokens";
 import type { Tide } from "../../types";
 
 interface TideCardProps {
   tide: Tide;
   onPress?: () => void;
+  showHierarchy?: boolean;
+  compact?: boolean;
 }
 
-export const TideCard: React.FC<TideCardProps> = ({ tide, onPress }) => {
+export const TideCard: React.FC<TideCardProps> = ({
+  tide,
+  onPress,
+  showHierarchy = false,
+}) => {
   const getFlowTypeIcon = (flowType: string) => {
     switch (flowType) {
       case "daily":
         return Clock;
       case "weekly":
-        return Waves;
+        return Calendar;
+      case "monthly":
+        return CalendarDays;
       case "project":
         return Target;
       case "seasonal":
-        return PauseCircle;
+        return Layers;
       default:
         return Waves;
     }
+  };
+
+  const getHierarchyInfo = () => {
+    if (!showHierarchy) return null;
+
+    const info: string[] = [];
+
+    if (tide.auto_created) {
+      info.push("Auto-created");
+    }
+
+    if (tide.parent_tide_id) {
+      info.push("Child tide");
+    }
+
+    if (tide.children && tide.children.length > 0) {
+      info.push(
+        `${tide.children.length} child${
+          tide.children.length === 1 ? "" : "ren"
+        }`
+      );
+    }
+
+    if (tide.date_start && tide.date_end) {
+      const start = new Date(tide.date_start);
+      const end = new Date(tide.date_end);
+      if (start.toDateString() === end.toDateString()) {
+        info.push(start.toLocaleDateString());
+      } else {
+        info.push(
+          `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`
+        );
+      }
+    } else if (tide.date_start) {
+      info.push(new Date(tide.date_start).toLocaleDateString());
+    }
+
+    return info.length > 0 ? info.join(" • ") : null;
   };
 
   const getStatusIcon = (status: string) => {
@@ -71,6 +120,21 @@ export const TideCard: React.FC<TideCardProps> = ({ tide, onPress }) => {
     }
   };
 
+  const formatDateRange = () => {
+    if (tide.date_start && tide.date_end) {
+      const start = new Date(tide.date_start);
+      const end = new Date(tide.date_end);
+      if (start.toDateString() === end.toDateString()) {
+        return start.toLocaleDateString();
+      } else {
+        return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+      }
+    } else if (tide.date_start) {
+      return new Date(tide.date_start).toLocaleDateString();
+    }
+    return null;
+  };
+
   return (
     <TouchableOpacity onPress={onPress} style={styles.tideCard}>
       <Card variant="outlined" padding={4}>
@@ -109,10 +173,22 @@ export const TideCard: React.FC<TideCardProps> = ({ tide, onPress }) => {
           </Text>
         )}
 
+        {showHierarchy && getHierarchyInfo() && (
+          <View style={styles.hierarchyInfo}>
+            <Text variant="caption" style={styles.hierarchyText}>
+              {getHierarchyInfo()}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.tideCardFooter}>
           <View style={styles.tideCardMeta}>
             <Text variant="caption" color="tertiary">
-              {tide.flow_type} • Created {formatDate(tide.created_at)}
+              {tide.flow_type}
+              {formatDateRange() && ` • ${formatDateRange()}`}
+              {!formatDateRange() &&
+                ` • Created ${formatDate(tide.created_at)}`}
+              {tide.auto_created && " • Auto"}
             </Text>
           </View>
           <View style={styles.tideCardStats}>
@@ -170,5 +246,19 @@ const styles = StyleSheet.create({
   },
   tideCardStats: {
     alignItems: "flex-end",
+  },
+  hierarchyInfo: {
+    marginBottom: spacing[2],
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+    backgroundColor: colors.primary[50],
+    borderRadius: borderRadius.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary[300],
+  },
+  hierarchyText: {
+    color: colors.primary[700],
+    fontSize: 11,
+    fontWeight: "500",
   },
 });

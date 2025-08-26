@@ -22,10 +22,18 @@ export interface Tide {
   last_flow?: string | null;
   created_at: string;
   updated_at: string;
+  // Hierarchical tide fields
+  parent_tide_id?: string | null;
+  date_start?: string | null; // ISO date (YYYY-MM-DD)
+  date_end?: string | null;   // ISO date (YYYY-MM-DD)
+  auto_created?: boolean;
+  // Computed hierarchical properties
+  children?: Tide[];
+  parent?: Tide;
 }
 
 export type TideStatus = 'active' | 'completed' | 'paused';
-export type FlowType = 'daily' | 'weekly' | 'project' | 'seasonal';
+export type FlowType = 'daily' | 'weekly' | 'monthly' | 'project' | 'seasonal';
 export type FlowIntensity = 'gentle' | 'moderate' | 'strong';
 export type EnergyLevel = 'low' | 'medium' | 'high' | 'completed';
 

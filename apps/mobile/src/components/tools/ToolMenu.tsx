@@ -104,7 +104,7 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
         {
           height: menuHeightAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, 700], // Max height of 700px
+            outputRange: [0, 300], // Max height of 700px
           }),
         },
       ]}
@@ -305,6 +305,12 @@ const styles = StyleSheet.create({
     shadowRadius: 0.5,
     shadowOpacity: 0.03,
     maxHeight: 500,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    /* TODO: make sure paddingBottom matchign the ChatInput*/
+    paddingBottom: 56,
   },
   toolMenuScroll: {
     flex: 1,

@@ -49,7 +49,7 @@ export function registerTideTools(server: McpServer, storage: TideStorage) {
       description: "Create a new tidal workflow for rhythmic productivity. Use when users want to start a new workflow, project, or productivity cycle. Accepts name, flow type (daily/weekly/project/seasonal), and optional description. Returns tide ID and scheduling info for follow-up actions.",
       inputSchema: {
         name: z.string().describe("Human-readable name for the tide"),
-        flow_type: z.enum(["daily", "weekly", "project", "seasonal"]).describe("Type of tide rhythm"),
+        flow_type: z.enum(["daily", "weekly", "monthly", "project", "seasonal"]).describe("Type of tide rhythm"),
         description: z.string().optional().describe("Detailed description of the tide's purpose"),
       },
     },
@@ -306,6 +306,175 @@ export function registerTideTools(server: McpServer, storage: TideStorage) {
     },
     async ({ status_filter, date_from, date_to, limit }) => {
       const result = await tideTools.getParticipants({ status_filter, date_from, date_to, limit }, storage);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  // =============================================================================
+  // Hierarchical Tide Tools (ADR-003 Implementation)
+  // =============================================================================
+
+  /**
+   * MCP Tool: tide_get_or_create_daily
+   * 
+   * CRITICAL: This tool fixes the mobile app production errors. Mobile apps
+   * depend on this tool for automatic daily tide management and seamless UX.
+   * 
+   * Following service_noun_verb pattern: tide_get_or_create_daily
+   */
+  server.registerTool(
+    "tide_get_or_create_daily",
+    {
+      title: "Get or Create Daily Tide",
+      description: "Get or create a daily tide for today (or specified date). This is the key tool for mobile apps to automatically manage daily workflows without user intervention. Ensures a daily tide exists and returns it with hierarchical context when available.",
+      inputSchema: {
+        timezone: z.string().optional().describe("User's timezone for date calculation"),
+        date: z.string().optional().describe("Specific date in YYYY-MM-DD format (defaults to today)"),
+      },
+    },
+    async ({ timezone, date }) => {
+      const result = await tideTools.tideGetOrCreateDaily({ timezone, date }, storage);
+      return {
+        content: [
+          {
+            type: "text", 
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  /**
+   * MCP Tool: tide_switch_context
+   * 
+   * Switches between daily, weekly, and monthly tide contexts for the same
+   * underlying workflow data. Core functionality for hierarchical tide navigation.
+   * 
+   * Following service_noun_verb pattern: tide_switch_context
+   */
+  server.registerTool(
+    "tide_switch_context",
+    {
+      title: "Switch Tide Context",
+      description: "Switch between daily, weekly, and monthly views of the same workflow data. Enables seamless navigation between different time-scale perspectives with automatic context creation and hierarchical relationships.",
+      inputSchema: {
+        context: z.enum(["daily", "weekly", "monthly"]).describe("Target time context to switch to"),
+        date: z.string().optional().describe("ISO date for context (defaults to today)"),
+        create_if_missing: z.boolean().optional().default(true).describe("Create context if it doesn't exist"),
+      },
+    },
+    async ({ context, date, create_if_missing }) => {
+      const result = await tideTools.tideSwitchContext({ context, date, create_if_missing }, storage);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  /**
+   * MCP Tool: tide_list_contexts
+   * 
+   * Lists available tide contexts for a given date with metadata about
+   * each context's content and activity levels.
+   * 
+   * Following service_noun_verb pattern: tide_list_contexts
+   */
+  server.registerTool(
+    "tide_list_contexts", 
+    {
+      title: "List Tide Contexts",
+      description: "List available tide contexts (daily, weekly, monthly) for a given date with activity metadata. Shows which contexts exist, their flow session counts, and creation availability for context navigation UI.",
+      inputSchema: {
+        date: z.string().optional().describe("ISO date to check contexts for (defaults to today)"),
+        include_empty: z.boolean().optional().default(true).describe("Include contexts with no flow sessions"),
+      },
+    },
+    async ({ date, include_empty }) => {
+      const result = await tideTools.tideListContexts({ date, include_empty }, storage);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  /**
+   * MCP Tool: tide_start_hierarchical_flow
+   * 
+   * Starts a flow session that automatically distributes across all relevant
+   * hierarchical contexts (daily, weekly, monthly). This is the enhanced flow
+   * function that implements the core ADR-003 hierarchical tide pattern.
+   * 
+   * Following service_noun_verb pattern: tide_start_hierarchical_flow
+   */
+  server.registerTool(
+    "tide_start_hierarchical_flow",
+    {
+      title: "Start Hierarchical Flow",
+      description: "Start a flow session that automatically distributes to daily, weekly, and monthly contexts simultaneously. Implements the hierarchical tide pattern where one flow session contributes to all relevant time scales with automatic context creation.",
+      inputSchema: {
+        intensity: z.enum(["gentle", "moderate", "strong"]).optional().default("moderate").describe("Work intensity level"),
+        duration: z.number().optional().default(25).describe("Session duration in minutes"),
+        initial_energy: z.string().optional().default("medium").describe("Starting energy level"),
+        work_context: z.string().optional().default("General work").describe("Description of work being done"),
+        date: z.string().optional().describe("Date for the session (defaults to today)"),
+      },
+    },
+    async ({ intensity, duration, initial_energy, work_context, date }) => {
+      const result = await tideTools.startHierarchicalFlow({ 
+        intensity, 
+        duration, 
+        initial_energy, 
+        work_context, 
+        date 
+      }, storage);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  /**
+   * MCP Tool: tide_get_todays_summary
+   * 
+   * Gets a summary of today's hierarchical tide contexts showing activity
+   * across daily, weekly, and monthly views for dashboard displays.
+   * 
+   * Following service_noun_verb pattern: tide_get_todays_summary
+   */
+  server.registerTool(
+    "tide_get_todays_summary",
+    {
+      title: "Get Today's Context Summary",
+      description: "Get a summary of today's hierarchical tide contexts showing flow sessions and activity across daily, weekly, and monthly views. Perfect for dashboard displays and activity overviews.",
+      inputSchema: {
+        date: z.string().optional().describe("Date to get context summary for (defaults to today)"),
+      },
+    },
+    async ({ date }) => {
+      const result = await tideTools.getTodaysContextSummary({ date }, storage);
       return {
         content: [
           {

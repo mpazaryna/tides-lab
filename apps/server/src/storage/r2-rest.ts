@@ -5,7 +5,7 @@ interface TideIndex {
   tides: Array<{
     id: string;
     name: string;
-    flow_type: 'daily' | 'weekly' | 'project' | 'seasonal';
+    flow_type: 'daily' | 'weekly' | 'monthly' | 'project' | 'seasonal';
     status: 'active' | 'completed' | 'paused';
     created_at: string;
     flow_count: number;

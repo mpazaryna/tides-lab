@@ -1,10 +1,11 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   TextInput,
   TouchableOpacity,
   Animated,
   StyleSheet,
+  LayoutChangeEvent,
 } from "react-native";
 // import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowUp, Plus } from "lucide-react-native";
@@ -24,6 +25,7 @@ interface ChatInputProps {
   showSuggestion?: boolean;
   onAcceptSuggestion?: () => void;
   onDismissSuggestion?: () => void;
+  onHeightChange?: (height: number) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -38,17 +40,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   showSuggestion = false,
   onAcceptSuggestion,
   onDismissSuggestion,
+  onHeightChange,
 }) => {
   const inputRef = useRef<TextInput>(null);
+  const [currentHeight, setCurrentHeight] = useState<number>(0);
   // const insets = useSafeAreaInsets();
 
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    if (height !== currentHeight) {
+      setCurrentHeight(height);
+      onHeightChange?.(height);
+    }
+  };
+
   return (
-    <View
-      style={[
-        styles.inputContainer,
-        // { paddingBottom: insets.bottom, height: 65 + insets.bottom },
-      ]}
-    >
+    <View style={[styles.inputContainer]} onLayout={handleLayout}>
       {/* Tool Suggestion */}
       {showSuggestion &&
         toolSuggestion &&

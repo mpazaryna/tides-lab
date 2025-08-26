@@ -59,6 +59,7 @@ export const colors = {
   // Text
   text: {
     primary: "#111618",
+    primaryDisabled: "#rgba(17, 22, 24, .33)",
     secondary: "#374151",
     tertiary: "#6b7280",
     tertiaryNull: "rgba(17, 22, 24, .5)",

@@ -55,7 +55,7 @@
  */
 
 // Core tide management operations
-export { createTide, listTides } from './tide-core';
+export { createTide, listTides, tideGetOrCreateDaily } from './tide-core';
 
 // Flow sessions and energy tracking
 export { startTideFlow, addTideEnergy } from './tide-sessions';
@@ -65,3 +65,9 @@ export { linkTideTask, listTideTaskLinks } from './tide-tasks';
 
 // Analytics and reporting
 export { getTideReport, getTideRawJson, getParticipants } from './tide-analytics';
+
+// Hierarchical context switching
+export { tideSwitchContext, tideListContexts } from './tide-context';
+
+// Enhanced hierarchical flow sessions
+export { startHierarchicalFlow, getTodaysContextSummary } from './tide-hierarchical-flow';

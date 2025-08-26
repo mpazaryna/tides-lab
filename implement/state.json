@@ -1,27 +1,73 @@
 {
-  "session_id": "energy_architecture_2025_08_19",
-  "created_at": "2025-08-19T22:00:00.000Z",
-  "source": "/docs/energy-architecture-spec.md",
-  "current_phase": "planning",
-  "phases_completed": [],
-  "current_task": null,
-  "tasks_completed": [],
-  "checkpoint": {
-    "phase": "Phase 1",
-    "task": "P1.1",
-    "description": "Ready to begin D1 table creation"
-  },
-  "files_created": [
-    "/Users/masonomara/Documents/tides/implement/plan.md",
-    "/Users/masonomara/Documents/tides/implement/state.json"
+  "sessionId": "hierarchical-tide-context-20250823",
+  "source": "docs/adr/003-hierachal-tide-context.md",
+  "status": "in_progress",
+  "created": "2025-08-23T00:00:00Z",
+  "currentPhase": "phase5-testing",
+  "completedTasks": [
+    "analyze-current-arch",
+    "create-implement-dir",
+    "design-hierarchical-schema",
+    "implement-auto-creation",
+    "add-missing-tool",
+    "update-mcp-tools",
+    "update-mobile-context",
+    "fix-daily-tide-hook",
+    "add-context-switching",
+    "create-hierarchical-displays",
+    "add-date-navigation"
   ],
-  "files_modified": [],
-  "performance_targets": {
-    "victory_chart_load_time": "<100ms",
-    "energy_write_latency": "<50ms",
-    "query_performance": "<50ms",
-    "reliability": "99.9%"
+  "currentTask": "create-integration-tests",
+  "criticalIssues": [],
+  "completedFeatures": [
+    {
+      "feature": "Hierarchical MCP context support in MCPContext",
+      "impact": "Mobile app can now use hierarchical tide tools",
+      "status": "completed"
+    },
+    {
+      "feature": "Fixed useDailyTide hook to use new tide_get_or_create_daily tool",
+      "impact": "Eliminates production errors for daily tide creation",
+      "status": "completed"
+    },
+    {
+      "feature": "Context switching UI components (ContextSwitcher, ContextSummary)",
+      "impact": "Users can switch between daily/weekly/monthly contexts",
+      "status": "completed"
+    },
+    {
+      "feature": "Hierarchical tide displays (HierarchicalTidesList, enhanced TideCard)",
+      "impact": "Users can see parent-child relationships in tide lists",
+      "status": "completed"
+    },
+    {
+      "feature": "Date navigation for different contexts (DateNavigator)",
+      "impact": "Users can navigate between different time periods",
+      "status": "completed"
+    }
+  ],
+  "architecture": {
+    "currentTideModel": "independent_entities",
+    "targetTideModel": "hierarchical_with_auto_creation",
+    "storagePattern": "d1_metadata_r2_json",
+    "authPattern": "api_key_bearer_tokens"
   },
-  "git_checkpoints": [],
-  "next_action": "Begin Phase 1: Database & Core Infrastructure"
+  "dependencies": {
+    "database": "Cloudflare D1",
+    "storage": "Cloudflare R2", 
+    "protocol": "MCP over HTTP JSON-RPC 2.0",
+    "mobile": "React Native 0.80.2",
+    "server": "Cloudflare Workers"
+  },
+  "checkpoints": {
+    "analysis_complete": true,
+    "plan_created": true,
+    "schema_designed": true,
+    "auto_creation_implemented": true,
+    "critical_tool_added": true,
+    "tools_implemented": true,
+    "mobile_updated": true,
+    "tests_created": false,
+    "integration_validated": false
+  }
 }

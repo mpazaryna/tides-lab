@@ -1,118 +1,130 @@
-# Implementation Plan - Pure D1 + Parallel R2 Energy Updates Architecture
-
-**Started**: 2025-08-19  
-**Source**: `/docs/energy-architecture-spec.md`  
-**Goal**: High-performance energy tracking with Victory charts optimization
+# Implementation Plan - Hierarchical Tide Context System
+**Source**: `docs/adr/003-hierachal-tide-context.md`  
+**Started**: 2025-08-23  
+**Status**: In Progress
 
 ## Source Analysis
+- **Source Type**: ADR (Architecture Decision Record)
+- **Core Features**: Hierarchical tide system with automatic daily/weekly/monthly context creation
+- **Dependencies**: Existing D1+R2 storage, MCP tools, mobile context management
+- **Complexity**: High - requires database schema changes, MCP tool updates, mobile app changes
 
-**Source Type**: Technical Specification (Local markdown file)  
-**Core Features**:
-- D1 energy_updates table with optimized indexes
-- Parallel dual writes (D1 + R2) for zero breaking changes
-- Victory chart API endpoint for performance 
-- EnergyService for centralized energy operations
-- Mobile app Victory chart integration
+## Current Architecture Analysis ✅
+**Current State**:
+- Independent tide entities (daily, weekly, project, seasonal)
+- Manual creation required for each tide type
+- No hierarchical relationships between tides
+- Mobile app calling missing `tide_get_or_create_daily` tool causing errors
 
-**Dependencies**: 
-- Cloudflare D1 Database
-- Existing R2 storage (D1R2HybridStorage)
-- TypeScript interfaces for energy types
-- Victory charts library (mobile)
-
-**Complexity**: High (database schema changes, service refactor, API endpoints)
+**Key Files Analyzed**:
+- `apps/server/src/storage/d1-r2.ts` - Hybrid D1+R2 storage implementation
+- `apps/server/src/db/schema.sql` - Current database schema
+- `apps/server/src/tools/tide-core.ts` - Core tide management tools
+- `apps/mobile/src/hooks/useDailyTide.ts` - Mobile daily tide hook (needs fixing)
 
 ## Target Integration
-
-**Integration Points**:
-- Server: New EnergyService, API endpoints, MCP tool updates
-- Mobile: Enhanced useEnergyData hook, Victory chart performance
-- Database: New D1 table with indexes, parallel write strategy
-- Storage: Update D1R2HybridStorage to work with EnergyService
+**Integration Points**: 
+- Database schema (add hierarchical fields)
+- MCP tools (add auto-creation logic)
+- Mobile context management (support hierarchical contexts)
+- Storage layer (support parent-child relationships)
 
 **Affected Files**:
-- `apps/server/src/services/energyService.ts` (CREATE)
-- `apps/server/src/index.ts` (UPDATE - add energy API)
-- `apps/server/src/tools/tide-sessions.ts` (UPDATE - use EnergyService)
-- `apps/server/src/storage/d1-r2.ts` (UPDATE - energy integration)
-- `apps/mobile/src/hooks/useEnergyData.ts` (UPDATE - D1 API option)
-- `apps/mobile/src/types/charts.ts` (UPDATE - EnergyUpdate type)
-- Database migration script (CREATE)
-
-**Pattern Matching**:
-- Follow existing service patterns (authService, mcpService)
-- Use established error handling (loggingService)
-- Match TypeScript interfaces from existing codebase
-- Follow MCP tool handler patterns
+- `apps/server/src/db/schema.sql` - Add hierarchical columns and indexes
+- `apps/server/src/storage/d1-r2.ts` - Update storage methods
+- `apps/server/src/tools/tide-core.ts` - Add `tide_get_or_create_daily` and auto-creation
+- `apps/server/src/tools/index.ts` - Export new tools
+- `apps/mobile/src/context/MCPContext.tsx` - Update context management
+- `apps/mobile/src/hooks/useDailyTide.ts` - Fix existing implementation
 
 ## Implementation Tasks
 
-### Phase 1: Database & Core Infrastructure ✅ Ready
-- [ ] **P1.1**: Create D1 energy_updates table with optimized indexes
-- [ ] **P1.2**: Create EnergyService with parallel dual-write capability  
-- [ ] **P1.3**: Add EnergyUpdate TypeScript interface
-- [ ] **P1.4**: Add energy chart data API endpoint
+### Phase 1: Database Schema & Storage ⏳
+- [x] Analyze current schema and storage implementation
+- [ ] Design hierarchical schema changes (parent_tide_id, date_range, auto_created)
+- [ ] Update D1 schema with hierarchical columns and indexes
+- [ ] Update D1R2HybridStorage class to support hierarchical operations
+- [ ] Add date boundary utility functions (week/month calculation)
 
-### Phase 2: MCP Integration ✅ Ready  
-- [ ] **P2.1**: Update tide_sessions.ts addTideEnergy to use EnergyService
-- [ ] **P2.2**: Handle initial_energy in startTideFlow function
-- [ ] **P2.3**: Integrate EnergyService with D1R2HybridStorage context
-- [ ] **P2.4**: Test MCP energy tools work with new architecture
+### Phase 2: Auto-Creation Logic ⏳
+- [ ] Implement `getOrCreateDailyTide(date)` function
+- [ ] Implement `getOrCreateWeeklyTide(date)` function  
+- [ ] Implement `getOrCreateMonthlyTide(date)` function
+- [ ] Add parent-child relationship linking logic
+- [ ] Handle timezone considerations for date boundaries
 
-### Phase 3: Mobile Victory Charts ✅ Ready
-- [ ] **P3.1**: Update useEnergyData hook with D1 API option
-- [ ] **P3.2**: Add fallback to existing MCP method for reliability
-- [ ] **P3.3**: Test Victory charts performance improvement
-- [ ] **P3.4**: Ensure backward compatibility maintained
+### Phase 3: MCP Tools Update ✅
+- [x] Add `tide_get_or_create_daily` tool (CRITICAL - fixes mobile errors)
+- [x] Add `tide_switch_context` tool for context switching
+- [x] Add `tide_start_hierarchical_flow` tool for enhanced flow distribution
+- [x] Add `tide_list_contexts` and `tide_get_todays_summary` tools
+- [x] Update tools export in `index.ts`
+- [x] Register all hierarchical tools in MCP server
+- [x] Add comprehensive tool documentation
 
-### Phase 4: Integration & Testing ✅ Ready
-- [ ] **P4.1**: Deploy D1 schema to development environment
-- [ ] **P4.2**: Test all energy update flows (MCP, Chat, Agent, Flow Session)
-- [ ] **P4.3**: Verify parallel writes work correctly
-- [ ] **P4.4**: Performance testing: Victory chart load times
-- [ ] **P4.5**: Error handling testing: D1/R2 failure scenarios
+### Phase 4: Mobile App Integration ✅
+- [x] Update MCPContext to support hierarchical contexts
+- [x] Fix `useDailyTide.ts` to use new `tide_get_or_create_daily` tool
+- [x] Add context switching UI components
+- [x] Update tide list displays to show hierarchical relationships
+- [x] Add date navigation for different contexts
+
+**New Components Created:**
+- `ContextSwitcher.tsx` - Switch between daily/weekly/monthly/project contexts
+- `ContextSummary.tsx` - Display today's hierarchical summary with flow sessions
+- `HierarchicalTidesList.tsx` - Show parent-child tide relationships
+- `DateNavigator.tsx` - Navigate between different time periods
+- `useHierarchicalContext.ts` - Hook for managing hierarchical context state
+
+**Enhanced Components:**
+- `MCPContext.tsx` - Added hierarchical MCP tool support
+- `useDailyTide.ts` - Updated to use MCPContext instead of direct service calls
+- `TideCard.tsx` - Added hierarchical relationship display
+- `types/models.ts` - Extended Tide interface with hierarchical fields
+
+### Phase 5: Testing & Validation ⏳
+- [x] Mobile app integration completed and ready for testing
+- [ ] Create unit tests for auto-creation logic
+- [ ] Create integration tests for hierarchical operations
+- [ ] Test mobile-server integration with new tools
+- [ ] Test edge cases (year boundaries, timezones)
+- [ ] Validate performance with hierarchical queries
 
 ## Validation Checklist
-
-- [ ] All energy update flows implemented and tested
-- [ ] Victory charts show performance improvement (<100ms target)
-- [ ] Zero breaking changes - existing functionality preserved
-- [ ] D1 indexes optimize query performance
-- [ ] Parallel writes handle failure cases gracefully
-- [ ] MCP tools continue working unchanged
-- [ ] Mobile app maintains backward compatibility
-- [ ] Error handling comprehensive and logged
-- [ ] TypeScript types updated and consistent
+- [ ] All features from ADR implemented
+- [ ] Mobile app errors resolved (`tide_get_or_create_daily` exists)
+- [ ] Tests written and passing
+- [ ] No broken functionality
+- [ ] Database migration path defined
+- [ ] Performance acceptable
+- [ ] Cross-timezone handling correct
 
 ## Risk Mitigation
 
-**Potential Issues**:
-- D1 foreign key constraints may fail if users/tide_index don't exist
-- Parallel writes could lead to data inconsistency
-- Performance regression if D1 queries aren't properly indexed
-- Mobile app breaking if API endpoint fails
+### Implementation Complexity
+- **Risk**: Complex date boundary logic and hierarchical updates
+- **Mitigation**: Use well-defined date boundaries (Monday-Sunday weeks), atomic operations, comprehensive tests
 
-**Rollback Strategy**:
-- Git checkpoints at each phase completion
-- Parallel writes mean existing R2 functionality continues working
-- Feature flags could disable D1 writes if needed
-- Mobile hook can fallback to existing MCP method
+### Data Storage Overhead  
+- **Risk**: Additional relationships and complex queries
+- **Mitigation**: Database views for aggregations, intelligent caching, optimized indexes
 
-## Performance Targets
+### Migration Challenges
+- **Risk**: Existing data needs relationship retrofitting
+- **Mitigation**: Gradual migration, backwards compatibility, manual repair tools
 
-- **Victory Chart Load Time**: <100ms (from ~300ms current)
-- **Energy Write Latency**: <50ms maintained  
-- **Query Performance**: Sub-50ms for 1000+ energy points
-- **Reliability**: 99.9% dual-write success rate
+## Current Session State
+- [x] Project analysis completed
+- [x] Implementation plan created  
+- [x] Session tracking initialized
+- [ ] Schema design in progress
+- [ ] Tool implementation pending
+- [ ] Mobile integration pending
+- [ ] Testing pending
 
-## Success Criteria
-
-1. **Functionality**: All existing energy flows continue working
-2. **Performance**: Victory charts load significantly faster
-3. **Scalability**: System handles 10x energy update frequency
-4. **Reliability**: Robust error handling and dual-write tolerance
-5. **Maintainability**: Clean architecture with service separation
-
----
-
-**Next Step**: Begin Phase 1 with D1 table creation and EnergyService implementation
+## Next Steps
+1. Design hierarchical database schema changes
+2. Implement the missing `tide_get_or_create_daily` tool to fix mobile errors
+3. Build auto-creation logic for daily/weekly/monthly tides
+4. Update mobile context management
+5. Create comprehensive test suite

@@ -4,7 +4,7 @@ import type { Env as AgentEnv } from "@agents/types";
 export interface Tide {
   id: string;
   name: string;
-  flow_type: "daily" | "weekly" | "project" | "seasonal";
+  flow_type: "daily" | "weekly" | "monthly" | "project" | "seasonal";
   description?: string;
   created_at: string;
   status: "active" | "completed" | "paused";
@@ -42,7 +42,7 @@ export interface TaskLink {
 
 export interface CreateTideInput {
   name: string;
-  flow_type: "daily" | "weekly" | "project" | "seasonal";
+  flow_type: "daily" | "weekly" | "monthly" | "project" | "seasonal";
   description?: string;
 }
 

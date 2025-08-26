@@ -1,57 +1,175 @@
-import React from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
-import { Calendar, Edit2 } from "lucide-react-native";
+import React, { useRef, useState, useCallback } from "react";
+import { 
+  View, 
+  StyleSheet, 
+  PanResponder, 
+  Animated, 
+  Dimensions,
+  Haptics,
+  TouchableWithoutFeedback 
+} from "react-native";
 import { colors, spacing } from "../../design-system/tokens";
 import { useDailyTide } from "../../hooks/useDailyTide";
 import { useLocationData } from "../../hooks/useLocationData";
+import { useTimeContext } from "../../context/TimeContext";
+import { getContextDateRange, getContextDateRangeWithOffset } from "../../utils/contextUtils";
 import Loading from "../Loading";
 import { Text } from "../Text";
-import { EnergyChart } from "../charts/EnergyChart";
 
-// const formatTime = (date: Date): string => {
-//   return date.toLocaleTimeString("en-US", {
-//     hour: "numeric",
-//     minute: "2-digit",
-//     hour12: true,
-//   });
-// };
+const { width: screenWidth } = Dimensions.get('window');
+const SWIPE_THRESHOLD = 50;
+const TAP_THRESHOLD = 10; // Maximum movement for tap
 
-// const getTimeIcon = (timeOfDay: LocationInfo["timeOfDay"]) => {
-//   const iconColor = colors.neutral[600];
-//   const size = 16;
+interface TideInfoProps {
+  onPress?: () => void;
+}
 
-//   switch (timeOfDay) {
-//     case "morning":
-//       return <Sunrise color={iconColor} size={size} />;
-//     case "afternoon":
-//       return <Sun color={iconColor} size={size} />;
-//     case "evening":
-//       return <Sunset color={iconColor} size={size} />;
-//     case "night":
-//       return <Moon color={iconColor} size={size} />;
-//     default:
-//       return <Sun color={iconColor} size={size} />;
-//   }
-// };
-
-// const getGreeting = (timeOfDay: LocationInfo["timeOfDay"]): string => {
-//   switch (timeOfDay) {
-//     case "morning":
-//       return "Good morning";
-//     case "afternoon":
-//       return "Good afternoon";
-//     case "evening":
-//       return "Good evening";
-//     case "night":
-//       return "Good evening";
-//     default:
-//       return "Hello";
-//   }
-// };
-
-export const TideInfo: React.FC = React.memo(() => {
-  const { dailyTide, loading, wasCreatedToday, error } = useDailyTide();
+export const TideInfo: React.FC<TideInfoProps> = React.memo(({ onPress }) => {
+  const { dailyTide, loading, wasCreatedToday } = useDailyTide();
   const { locationInfo } = useLocationData();
+  const { 
+    currentContext, 
+    dateOffset,
+    navigateBackward, 
+    navigateForward, 
+    isAtPresent 
+  } = useTimeContext();
+
+  // Animation values
+  const pan = useRef(new Animated.ValueXY()).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const [isGestureActive, setIsGestureActive] = useState(false);
+  const [previewOffset, setPreviewOffset] = useState<number | null>(null);
+
+  // Haptic feedback helper
+  const triggerHaptic = useCallback(() => {
+    try {
+      if (Haptics && Haptics.selectionAsync) {
+        Haptics.selectionAsync();
+      }
+    } catch (error) {
+      // Haptics might not be available on all devices
+    }
+  }, []);
+
+  // Reset animations
+  const resetAnimations = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(pan, { 
+        toValue: { x: 0, y: 0 }, 
+        useNativeDriver: false 
+      }),
+      Animated.spring(opacity, { 
+        toValue: 1, 
+        useNativeDriver: false 
+      })
+    ]).start();
+    setPreviewOffset(null);
+  }, [pan, opacity]);
+
+  // Handle navigation
+  const handleNavigation = useCallback((direction: 'forward' | 'backward') => {
+    if (currentContext === 'project') return; // No time navigation for project context
+    
+    triggerHaptic();
+    
+    if (direction === 'backward') {
+      navigateBackward();
+    } else {
+      navigateForward();
+    }
+    
+    resetAnimations();
+    setIsGestureActive(false);
+  }, [currentContext, navigateBackward, navigateForward, resetAnimations, triggerHaptic]);
+
+  // Create PanResponder - simplified for testing
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => {
+        console.log("onStartShouldSetPanResponder called");
+        return true;
+      },
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        console.log("onMoveShouldSetPanResponder called", gestureState);
+        return true; // Always try to set responder for testing
+      },
+      onPanResponderGrant: (evt, gestureState) => {
+        console.log("PanResponder GRANTED!", evt.nativeEvent, gestureState);
+        setIsGestureActive(true);
+        pan.setOffset({
+          x: pan.x._value,
+          y: pan.y._value,
+        });
+      },
+      onPanResponderMove: (_, gestureState) => {
+        console.log("PanResponder MOVE", gestureState.dx, gestureState.dy);
+        
+        // Only allow horizontal movement for navigation contexts
+        if (currentContext === 'project') return;
+        
+        const { dx } = gestureState;
+        
+        // Calculate preview offset based on gesture
+        if (Math.abs(dx) > SWIPE_THRESHOLD / 2) {
+          const direction = dx > 0 ? 'forward' : 'backward';
+          const newPreviewOffset = direction === 'backward' ? dateOffset + 1 : Math.max(0, dateOffset - 1);
+          
+          if (newPreviewOffset !== previewOffset) {
+            setPreviewOffset(newPreviewOffset);
+            try {
+              if (Haptics && Haptics.impactAsync) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            } catch (error) {
+              // Ignore haptic errors
+            }
+          }
+        } else {
+          setPreviewOffset(null);
+        }
+
+        // Update animations
+        pan.setValue({ x: dx, y: 0 });
+        const opacityValue = Math.max(0.7, 1 - Math.abs(dx) / screenWidth);
+        opacity.setValue(opacityValue);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        pan.flattenOffset();
+        
+        const { dx, dy } = gestureState;
+        const totalMovement = Math.sqrt(dx * dx + dy * dy);
+        
+        // If minimal movement, treat as tap
+        if (totalMovement < TAP_THRESHOLD) {
+          onPress?.();
+          resetAnimations();
+          setIsGestureActive(false);
+          return;
+        }
+        
+        // Determine if swipe threshold was met
+        if (Math.abs(dx) > SWIPE_THRESHOLD && currentContext !== 'project') {
+          const direction = dx > 0 ? 'forward' : 'backward';
+          
+          // Prevent going to future dates
+          if (direction === 'forward' && dateOffset === 0) {
+            resetAnimations();
+            setIsGestureActive(false);
+            return;
+          }
+          
+          handleNavigation(direction);
+        } else {
+          resetAnimations();
+          setIsGestureActive(false);
+        }
+      },
+      onPanResponderTerminationRequest: () => false, // Don't let other responders terminate this
+      onShouldBlockNativeResponder: () => true, // Block native responders
+    })
+  ).current;
+
 
   // Debug information
   const currentTime = new Date();
@@ -69,6 +187,13 @@ export const TideInfo: React.FC = React.memo(() => {
     month: "2-digit",
     day: "2-digit",
   });
+
+  // Calculate sunrise and sunset positions (0-23 hour scale mapped to 0-100%)
+  const getSunPosition = (sunTime: Date | undefined) => {
+    if (!sunTime) return 0;
+    const hour = sunTime.getHours() + sunTime.getMinutes() / 60;
+    return (hour / 24) * 100; // Convert to percentage
+  };
 
   // Format sunrise and sunset times
   const formatTime = (date: Date | undefined) => {
@@ -90,165 +215,153 @@ export const TideInfo: React.FC = React.memo(() => {
             color="secondary"
             style={styles.loadingText}
           >
-            Setting up your daily tide...
+            Setting up your {currentContext} tide...
           </Text>
         </View>
       </View>
     );
   }
 
-  // if (error || !locationInfo) {
-  //   return (
-  //     <View style={styles.container}>
-  //       <View style={styles.row}>
-  //         <Sun color={colors.neutral[600]} size={16} />
-  //         <Text variant="body" color="primary" style={styles.greeting}>
-  //           Hello
-  //         </Text>
-  //       </View>
-  //       <Text variant="bodySmall" color="secondary">
-  //         {error || "Location unavailable"}
-  //       </Text>
-  //     </View>
-  //   );
-  // }
-
-  // const greeting = getGreeting(locationInfo.timeOfDay);
-  // const timeIcon = getTimeIcon(locationInfo.timeOfDay);
-
   return (
-    <View style={styles.container}>
-      {/* Debug Information Section */}
-      <View style={styles.debugSection}>
-        <Text variant="bodySmall" color="secondary">
-          Debug Info:
-        </Text>
-        <Text variant="bodySmall" color="secondary">
-          • Timezone: {timezone}
-        </Text>
-        <Text variant="bodySmall" color="secondary">
-          • Local Time: {localTime}
-        </Text>
-        <Text variant="bodySmall" color="secondary">
-          • Local Date: {localDate}
-        </Text>
-        {locationInfo && (
-          <>
-            <Text variant="bodySmall" color="secondary">
-              • Location: {locationInfo.city || "Unknown"},{" "}
-              {locationInfo.region || "Unknown"}
-            </Text>
-            <Text variant="bodySmall" color="secondary">
-              • Sunrise: {formatTime(locationInfo.sunrise)}
-            </Text>
-            <Text variant="bodySmall" color="secondary">
-              • Sunset: {formatTime(locationInfo.sunset)}
-            </Text>
-            <Text variant="bodySmall" color="secondary">
-              • Time of Day: {locationInfo.timeOfDay}
-            </Text>
-          </>
-        )}
-        {dailyTide && (
-          <>
-            <Text variant="bodySmall" color="secondary">
-              • Tide ID: {dailyTide.id?.substring(0, 20)}...
-            </Text>
-            <Text variant="bodySmall" color="secondary">
-              • Tide Name: {dailyTide.name}
-            </Text>
-            <Text variant="bodySmall" color="secondary">
-              • Created Today: {wasCreatedToday ? "Yes" : "No"}
-            </Text>
-            <Text variant="bodySmall" color="secondary">
-              • Status: {dailyTide.status}
-            </Text>
-          </>
-        )}
-        {error && (
-          <Text variant="bodySmall" color="error">
-            • Error: {error}
-          </Text>
+    <Animated.View 
+      style={[
+        styles.container,
+        {
+          transform: [{ translateX: pan.x }],
+          opacity: opacity,
+        }
+      ]}
+      {...panResponder.panHandlers}
+    >
+    
+
+      <View style={styles.chartContainer}>
+        {/* Sunrise and Sunset markers */}
+
+        {locationInfo && locationInfo.sunset && locationInfo.sunrise && (
+          <View
+            style={[
+              styles.sunLine,
+              styles.sunsetMarker,
+              {
+                width: `${
+                  getSunPosition(locationInfo.sunset) -
+                  getSunPosition(locationInfo.sunrise)
+                }%`,
+                left: `${getSunPosition(locationInfo.sunrise)}%`,
+              },
+            ]}
+          />
         )}
       </View>
-
-      {/* Daily Tide Header */}
-      {dailyTide && (
-        <View style={styles.dailyTideSection}>
-          <View style={styles.dailyTideHeader}>
-            <View style={styles.dailyTideLeft}>
-              <Calendar color={colors.neutral[600]} size={16} />
-              <Text
-                variant="body"
-                color="primary"
-                style={styles.dailyTideTitle}
-              >
-                {dailyTide.name}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.editButton}>
-              <Edit2 color={colors.neutral[500]} size={14} />
-            </TouchableOpacity>
-          </View>
-          {wasCreatedToday && (
-            <Text
-              variant="bodySmall"
-              color="secondary"
-              style={styles.newTideNote}
-            >
-              Today's tide is ready • Tap edit to rename
-            </Text>
-          )}
+      <View style={styles.numberBottom}>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
         </View>
-      )}
-
-      <View style={styles.mainRow}>
-        <View style={styles.greetingSection}>
-          {/* Placeholder for future greeting content */}
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
         </View>
-      </View>
-
-      <View style={styles.sunTimesRow}>
-        {/* <View style={styles.sunTimeItem}>
-          <Sunrise color={colors.neutral[500]} size={12} />
-          <Text
-            variant="bodySmall"
-            color="secondary"
-            style={styles.sunTimeText}
-          >
-            {formatTime(locationInfo.sunrise)}
+        <View style={styles.numberCell}>
+          <View style={styles.numberedMarker} />
+          <Text variant="captionSmall" color={colors.text.primaryDisabled}>
+            3
           </Text>
         </View>
-
-        <View style={styles.sunTimeItem}>
-          <Sunset color={colors.neutral[500]} size={12} />
-          <Text
-            variant="bodySmall"
-            color="secondary"
-            style={styles.sunTimeText}
-          >
-            {formatTime(locationInfo.sunset)}
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.numberedMarker} />
+          <Text variant="captionSmall" color={colors.text.primaryDisabled}>
+            6
           </Text>
-        </View> */}
-
-        {/* {locationInfo.timeUntilSunset && (
-          <Text variant="bodySmall" color="secondary" style={styles.timeUntil}>
-            {locationInfo.timeUntilSunset} until sunset
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.numberedMarker} />
+          <Text variant="captionSmall" color={colors.text.primaryDisabled}>
+            9
           </Text>
-        )} */}
-
-        {/* {locationInfo.timeUntilSunrise && (
-          <Text variant="bodySmall" color="secondary" style={styles.timeUntil}>
-            {locationInfo.timeUntilSunrise} until sunrise
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.numberedMarker} />
+          <Text variant="captionSmall" color={colors.text.primaryDisabled}>
+            12
           </Text>
-        )} */}
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.numberedMarker} />
+          <Text variant="captionSmall" color={colors.text.primaryDisabled}>
+            3
+          </Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.numberedMarker} />
+          <Text variant="captionSmall" color={colors.text.primaryDisabled}>
+            6
+          </Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.numberedMarker} />
+          <Text variant="captionSmall" color={colors.text.primaryDisabled}>
+            9
+          </Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
+        <View style={styles.numberCell}>
+          <View style={styles.marker} />
+          <Text variant="captionSmall">{""}</Text>
+        </View>
       </View>
-
-      {/* Energy Chart Section */}
-      <View style={styles.energySection}>
-        <EnergyChart height={120} />
-      </View>
-    </View>
+    </Animated.View>
   );
 });
 
@@ -256,11 +369,50 @@ TideInfo.displayName = "TideInfo";
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
+    backgroundColor: colors.secondary[100],
+    borderRadius: 20,
+    height: 148,
+    maxHeight: 148,
+    minHeight: 148,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1.5,
+    },
+    shadowRadius: 1.5,
+    shadowOpacity: 0.03,
+  },
+  previewContainer: {
+    position: "absolute",
+    top: spacing[2],
+    left: spacing[4],
+    right: spacing[4],
+    zIndex: 10,
+    backgroundColor: colors.primary[500] + "E6", // Semi-transparent
+    borderRadius: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1],
+  },
+  previewText: {
+    color: colors.neutral[50],
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  dateRangeContainer: {
+    position: "absolute",
+    top: spacing[2],
+    left: spacing[4],
+    right: spacing[4],
+    zIndex: 5,
+  },
+  dateRangeText: {
+    color: colors.neutral[700],
+    textAlign: "center",
+    fontWeight: "500",
   },
   debugSection: {
-    backgroundColor: colors.neutral[50],
+    backgroundColor: colors.text.primary,
     padding: spacing[2],
     marginBottom: spacing[2],
     borderRadius: 8,
@@ -351,5 +503,87 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     marginLeft: spacing[2],
   },
-  energySection: {},
+
+  chartContainer: {
+    height: 80,
+    display: "flex",
+    width: "100%",
+    alignItems: "flex-start",
+    backgroundColor: colors.primary[200],
+    justifyContent: "flex-start",
+  },
+  flowCount: {
+    alignSelf: "flex-end",
+  },
+  chart: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+  },
+  numberBottom: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+    width: "100%",
+    height: 25,
+  },
+  numberCell: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    flex: 1,
+    gap: 3,
+  },
+  marker: {
+    width: 0.5,
+    height: 2,
+    backgroundColor: colors.text.primary,
+  },
+  numberedMarker: {
+    width: 0.5,
+    height: 2.5,
+    backgroundColor: colors.text.primary,
+  },
+  sunLine: {
+    position: "absolute",
+    height: 80,
+    backgroundColor: colors.warning[100],
+    zIndex: 1,
+  },
+  sunriseMarker: {
+    backgroundColor: colors.warning[300],
+  },
+  sunsetMarker: {
+    backgroundColor: colors.primary[100],
+  },
+  sunLabel: {
+    position: "absolute",
+    top: -20,
+    left: -10,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sunLabelText: {
+    fontSize: 14,
+  },
+  emptyChart: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  currentTimeLine: {
+    position: "absolute",
+    width: 2,
+    height: 80,
+    backgroundColor: colors.error[500],
+    zIndex: 3,
+  },
+  energyCheckLine: {
+    position: "absolute",
+    width: 1,
+    height: 80,
+    backgroundColor: colors.primary[400],
+    zIndex: 2,
+  },
 });

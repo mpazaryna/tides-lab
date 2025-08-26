@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS tide_index (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
-  flow_type TEXT NOT NULL CHECK (flow_type IN ('daily', 'weekly', 'project', 'seasonal')),
+  flow_type TEXT NOT NULL CHECK (flow_type IN ('daily', 'weekly', 'monthly', 'project', 'seasonal')),
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
   description TEXT, -- For search and filtering
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -39,6 +39,11 @@ CREATE TABLE IF NOT EXISTS tide_index (
   total_duration INTEGER DEFAULT 0, -- Cached total flow duration in minutes
   energy_balance INTEGER DEFAULT 0, -- Cached energy score
   r2_path TEXT NOT NULL, -- Path to full JSON in R2
+  -- Hierarchical tide support
+  parent_tide_id TEXT REFERENCES tide_index(id),
+  date_start TEXT, -- ISO date (YYYY-MM-DD) for time-bound tides
+  date_end TEXT,   -- ISO date (YYYY-MM-DD) for time-bound tides  
+  auto_created BOOLEAN DEFAULT FALSE, -- True if automatically created by system
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -107,6 +112,13 @@ CREATE INDEX IF NOT EXISTS idx_tide_user_status_flowtype ON tide_index(user_id, 
 CREATE INDEX IF NOT EXISTS idx_tide_user_created ON tide_index(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tide_user_lastflow ON tide_index(user_id, last_flow DESC);
 CREATE INDEX IF NOT EXISTS idx_tide_user_updated ON tide_index(user_id, updated_at DESC);
+
+-- Hierarchical tide indexes  
+CREATE INDEX IF NOT EXISTS idx_tides_parent ON tide_index(parent_tide_id);
+CREATE INDEX IF NOT EXISTS idx_tides_date_range ON tide_index(date_start, date_end);
+CREATE INDEX IF NOT EXISTS idx_tides_auto_created ON tide_index(auto_created, flow_type);
+CREATE INDEX IF NOT EXISTS idx_tides_user_date_type ON tide_index(user_id, date_start, flow_type);
+CREATE INDEX IF NOT EXISTS idx_tides_user_date_auto ON tide_index(user_id, date_start, auto_created);
 
 -- Analytics table indexes
 CREATE INDEX IF NOT EXISTS idx_analytics_user ON tide_analytics(user_id);

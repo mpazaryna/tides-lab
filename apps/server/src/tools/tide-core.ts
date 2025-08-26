@@ -28,7 +28,7 @@
  * interface Tide {
  *   id: string;                    // Format: "tide_TIMESTAMP_HASH"
  *   name: string;                  // User-friendly display name
- *   flow_type: FlowType;          // Rhythm pattern (daily/weekly/project/seasonal)
+ *   flow_type: FlowType;          // Rhythm pattern (daily/weekly/monthly/project/seasonal)
  *   description?: string;          // Optional detailed description
  *   status: TideStatus;           // Lifecycle state (active/completed/paused)
  *   created_at: string;           // ISO timestamp of creation
@@ -120,7 +120,7 @@ import type { TideStorage, CreateTideInput, TideFilter } from '../storage';
  * 
  * @param {Object} params - The tide creation parameters
  * @param {string} params.name - The display name for the tide (max 100 chars recommended)
- * @param {'daily'|'weekly'|'project'|'seasonal'} params.flow_type - How often this tide flows
+ * @param {'daily'|'weekly'|'monthly'|'project'|'seasonal'} params.flow_type - How often this tide flows
  * @param {string} [params.description] - Optional description (max 500 chars recommended)
  * @param {TideStorage} storage - Storage instance for persistence
  * 
@@ -145,7 +145,7 @@ import type { TideStorage, CreateTideInput, TideFilter } from '../storage';
 export async function createTide(
   params: {
     name: string;
-    flow_type: 'daily' | 'weekly' | 'project' | 'seasonal';
+    flow_type: 'daily' | 'weekly' | 'monthly' | 'project' | 'seasonal';
     description?: string;
   },
   storage: TideStorage
@@ -199,7 +199,7 @@ export async function createTide(
  * information like flow count and last flow time.
  * 
  * @param {Object} params - The filtering parameters
- * @param {string} [params.flow_type] - Filter by flow type ('daily', 'weekly', 'project', 'seasonal')
+ * @param {string} [params.flow_type] - Filter by flow type ('daily', 'weekly', 'monthly', 'project', 'seasonal')
  * @param {boolean} [params.active_only=false] - If true, only return active tides
  * @param {TideStorage} storage - Storage instance for data retrieval
  * 
@@ -255,6 +255,136 @@ export async function listTides(
       error: error instanceof Error ? error.message : 'Unknown error occurred',
       tides: [],
       count: 0,
+    };
+  }
+}
+
+/**
+ * Gets or creates a daily tide for today (or specified date)
+ * 
+ * @description This is the key tool needed by mobile apps for automatic daily tide management.
+ * It ensures a daily tide exists for the current day and returns it, handling all the
+ * complexity of hierarchical tide creation and linking automatically.
+ * 
+ * @param {Object} params - The daily tide parameters
+ * @param {string} [params.timezone] - User's timezone for date calculation (optional)
+ * @param {string} [params.date] - Specific date in YYYY-MM-DD format (defaults to today)
+ * @param {TideStorage} storage - Storage instance for persistence
+ * 
+ * @returns {Promise<DailyTideResponse>} Promise resolving to daily tide result
+ * 
+ * @example
+ * // Mobile usage - get today's daily tide
+ * const result = await tideGetOrCreateDaily({
+ *   timezone: "America/New_York"
+ * }, storage);
+ * 
+ * if (result.success) {
+ *   // Use result.tide for UI display
+ *   // result.created indicates if tide was just created
+ * }
+ * 
+ * @since 2.0.0
+ */
+export async function tideGetOrCreateDaily(
+  params: {
+    timezone?: string;
+    date?: string;
+  },
+  storage: TideStorage & { getOrCreateDailyTide?: (date: string) => Promise<any> }
+) {
+  try {
+    // Calculate target date (use provided date or today)
+    const targetDate = params.date || new Date().toISOString().split('T')[0];
+    
+    // If storage supports hierarchical operations, use them
+    if (storage.getOrCreateDailyTide) {
+      const tide = await storage.getOrCreateDailyTide(targetDate);
+      
+      return {
+        success: true,
+        tide: {
+          id: tide.id,
+          name: tide.name,
+          flow_type: tide.flow_type,
+          status: tide.status,
+          created_at: tide.created_at,
+          description: tide.description || "",
+          flow_count: tide.flow_sessions.length,
+          last_flow: tide.flow_sessions.length > 0 
+            ? tide.flow_sessions[tide.flow_sessions.length - 1].started_at
+            : null,
+        },
+        created: tide.created_at.split('T')[0] === targetDate, // Approximate check for newly created
+        date: targetDate,
+        timezone: params.timezone || 'UTC',
+      };
+    }
+    
+    // Fallback: use existing createTide if hierarchical not available
+    const existingTides = await storage.listTides({
+      flow_type: 'daily',
+      active_only: true,
+    });
+    
+    // Check if we already have a daily tide for today (simple heuristic)
+    const todayTide = existingTides.find(t => 
+      t.created_at.split('T')[0] === targetDate
+    );
+    
+    if (todayTide) {
+      return {
+        success: true,
+        tide: {
+          id: todayTide.id,
+          name: todayTide.name,
+          flow_type: todayTide.flow_type,
+          status: todayTide.status,
+          created_at: todayTide.created_at,
+          description: todayTide.description || "",
+          flow_count: todayTide.flow_sessions.length,
+          last_flow: todayTide.flow_sessions.length > 0 
+            ? todayTide.flow_sessions[todayTide.flow_sessions.length - 1].started_at
+            : null,
+        },
+        created: false,
+        date: targetDate,
+        timezone: params.timezone || 'UTC',
+      };
+    }
+    
+    // Create new daily tide
+    const result = await createTide({
+      name: `Daily Focus - ${new Date(targetDate).toLocaleDateString()}`,
+      flow_type: 'daily',
+      description: `Daily tide for ${targetDate}`,
+    }, storage);
+    
+    if (result.success) {
+      return {
+        success: true,
+        tide: {
+          id: result.tide_id,
+          name: result.name,
+          flow_type: result.flow_type,
+          status: result.status,
+          created_at: result.created_at,
+          description: result.description,
+          flow_count: 0,
+          last_flow: null,
+        },
+        created: true,
+        date: targetDate,
+        timezone: params.timezone || 'UTC',
+      };
+    } else {
+      throw new Error(result.error);
+    }
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }
 }

@@ -17,6 +17,7 @@ export const ChatMessages = forwardRef<ScrollView, ChatMessagesProps>(
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
       >
         <Stack spacing={2}>
           {messages.map((message) => (

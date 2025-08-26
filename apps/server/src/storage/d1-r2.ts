@@ -593,4 +593,257 @@ export class D1R2HybridStorage implements TideStorage {
       console.log("[STORAGE] API key already exists");
     }
   }
+
+  // =============================================================================
+  // Hierarchical Tide Methods
+  // =============================================================================
+
+  /**
+   * Gets or creates a daily tide for the specified date
+   */
+  async getOrCreateDailyTide(date: string): Promise<Tide> {
+    const userId = this.getUserId();
+    
+    // Check if daily tide already exists for this date
+    const existing = await this.db.prepare(`
+      SELECT r2_path FROM tide_index 
+      WHERE user_id = ? AND flow_type = 'daily' AND date_start = ? AND auto_created = true
+    `).bind(userId, date).first();
+
+    if (existing) {
+      const tide = await this.r2.getObject(existing.r2_path as string);
+      if (tide) return tide;
+    }
+
+    // Create new daily tide
+    const tideId = this.generateId('tide');
+    const now = new Date().toISOString();
+    const { formatDate } = await import('../utils/date-utils');
+    
+    const tide: Tide = {
+      id: tideId,
+      name: `Daily Focus - ${formatDate(date)}`,
+      flow_type: 'daily',
+      description: `Automatically created daily tide for ${date}`,
+      created_at: now,
+      status: 'active',
+      flow_sessions: [],
+      energy_updates: [],
+      task_links: [],
+    };
+
+    const r2Path = this.getUserR2Path(userId, tideId);
+
+    try {
+      // Insert into D1 with hierarchical data
+      await this.db.prepare(`
+        INSERT INTO tide_index (
+          id, user_id, name, flow_type, description, status, created_at, updated_at, r2_path,
+          date_start, date_end, auto_created
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        tideId, userId, tide.name, tide.flow_type, tide.description,
+        tide.status, now, now, r2Path, date, date, true
+      ).run();
+
+      // Store in R2
+      await this.r2.putObject(r2Path, tide);
+
+      // Initialize analytics
+      await this.db.prepare(`
+        INSERT INTO tide_analytics (tide_id, user_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+      `).bind(tideId, userId, now, now).run();
+
+      console.log(`✅ Created daily tide for ${date}: ${tideId}`);
+      return tide;
+    } catch (error) {
+      console.error('Error creating daily tide:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets or creates a weekly tide for the week containing the specified date
+   */
+  async getOrCreateWeeklyTide(date: string): Promise<Tide> {
+    const userId = this.getUserId();
+    const { getWeekStart, getWeekEnd, formatDateRange } = await import('../utils/date-utils');
+    
+    const weekStart = getWeekStart(date);
+    const weekEnd = getWeekEnd(date);
+
+    // Check if weekly tide already exists for this week
+    const existing = await this.db.prepare(`
+      SELECT r2_path FROM tide_index 
+      WHERE user_id = ? AND flow_type = 'weekly' AND date_start = ? AND date_end = ? AND auto_created = true
+    `).bind(userId, weekStart, weekEnd).first();
+
+    if (existing) {
+      const tide = await this.r2.getObject(existing.r2_path as string);
+      if (tide) return tide;
+    }
+
+    // Create new weekly tide
+    const tideId = this.generateId('tide');
+    const now = new Date().toISOString();
+    
+    const tide: Tide = {
+      id: tideId,
+      name: `Week of ${formatDateRange(weekStart, weekEnd)}`,
+      flow_type: 'weekly',
+      description: `Automatically created weekly tide for ${weekStart} to ${weekEnd}`,
+      created_at: now,
+      status: 'active',
+      flow_sessions: [],
+      energy_updates: [],
+      task_links: [],
+    };
+
+    const r2Path = this.getUserR2Path(userId, tideId);
+
+    try {
+      // Insert into D1 with hierarchical data
+      await this.db.prepare(`
+        INSERT INTO tide_index (
+          id, user_id, name, flow_type, description, status, created_at, updated_at, r2_path,
+          date_start, date_end, auto_created
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        tideId, userId, tide.name, tide.flow_type, tide.description,
+        tide.status, now, now, r2Path, weekStart, weekEnd, true
+      ).run();
+
+      // Store in R2
+      await this.r2.putObject(r2Path, tide);
+
+      // Initialize analytics
+      await this.db.prepare(`
+        INSERT INTO tide_analytics (tide_id, user_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+      `).bind(tideId, userId, now, now).run();
+
+      // Link existing daily tides as children
+      await this.linkDailyTidesToWeek(userId, tideId, weekStart, weekEnd);
+
+      console.log(`✅ Created weekly tide for ${weekStart} to ${weekEnd}: ${tideId}`);
+      return tide;
+    } catch (error) {
+      console.error('Error creating weekly tide:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gets or creates a monthly tide for the month containing the specified date
+   */
+  async getOrCreateMonthlyTide(date: string): Promise<Tide> {
+    const userId = this.getUserId();
+    const { getMonthStart, getMonthEnd, formatDateRange } = await import('../utils/date-utils');
+    
+    const monthStart = getMonthStart(date);
+    const monthEnd = getMonthEnd(date);
+
+    // Check if monthly tide already exists for this month
+    const existing = await this.db.prepare(`
+      SELECT r2_path FROM tide_index 
+      WHERE user_id = ? AND flow_type = 'monthly' AND date_start = ? AND date_end = ? AND auto_created = true
+    `).bind(userId, monthStart, monthEnd).first();
+
+    if (existing) {
+      const tide = await this.r2.getObject(existing.r2_path as string);
+      if (tide) return tide;
+    }
+
+    // Create new monthly tide
+    const tideId = this.generateId('tide');
+    const now = new Date().toISOString();
+    
+    const tide: Tide = {
+      id: tideId,
+      name: `${formatDateRange(monthStart, monthEnd)}`,
+      flow_type: 'monthly',
+      description: `Automatically created monthly tide for ${monthStart} to ${monthEnd}`,
+      created_at: now,
+      status: 'active',
+      flow_sessions: [],
+      energy_updates: [],
+      task_links: [],
+    };
+
+    const r2Path = this.getUserR2Path(userId, tideId);
+
+    try {
+      // Insert into D1 with hierarchical data
+      await this.db.prepare(`
+        INSERT INTO tide_index (
+          id, user_id, name, flow_type, description, status, created_at, updated_at, r2_path,
+          date_start, date_end, auto_created
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        tideId, userId, tide.name, tide.flow_type, tide.description,
+        tide.status, now, now, r2Path, monthStart, monthEnd, true
+      ).run();
+
+      // Store in R2
+      await this.r2.putObject(r2Path, tide);
+
+      // Initialize analytics
+      await this.db.prepare(`
+        INSERT INTO tide_analytics (tide_id, user_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+      `).bind(tideId, userId, now, now).run();
+
+      // Link existing weekly tides as children
+      await this.linkWeeklyTidesToMonth(userId, tideId, monthStart, monthEnd);
+
+      console.log(`✅ Created monthly tide for ${monthStart} to ${monthEnd}: ${tideId}`);
+      return tide;
+    } catch (error) {
+      console.error('Error creating monthly tide:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Links existing daily tides to a weekly parent
+   */
+  private async linkDailyTidesToWeek(userId: string, weeklyTideId: string, weekStart: string, weekEnd: string): Promise<void> {
+    await this.db.prepare(`
+      UPDATE tide_index 
+      SET parent_tide_id = ?
+      WHERE user_id = ? AND flow_type = 'daily' 
+        AND date_start >= ? AND date_start <= ?
+        AND parent_tide_id IS NULL
+    `).bind(weeklyTideId, userId, weekStart, weekEnd).run();
+  }
+
+  /**
+   * Links existing weekly tides to a monthly parent
+   */
+  private async linkWeeklyTidesToMonth(userId: string, monthlyTideId: string, monthStart: string, monthEnd: string): Promise<void> {
+    await this.db.prepare(`
+      UPDATE tide_index 
+      SET parent_tide_id = ?
+      WHERE user_id = ? AND flow_type = 'weekly' 
+        AND date_start >= ? AND date_start <= ?
+        AND parent_tide_id IS NULL
+    `).bind(monthlyTideId, userId, monthStart, monthEnd).run();
+  }
+
+  /**
+   * Gets tide by context and date (for context switching)
+   */
+  async getTideByContext(context: 'daily' | 'weekly' | 'monthly', date: string): Promise<Tide | null> {
+    switch (context) {
+      case 'daily':
+        return await this.getOrCreateDailyTide(date);
+      case 'weekly':
+        return await this.getOrCreateWeeklyTide(date);
+      case 'monthly':
+        return await this.getOrCreateMonthlyTide(date);
+      default:
+        throw new Error(`Invalid context: ${context}`);
+    }
+  }
 }

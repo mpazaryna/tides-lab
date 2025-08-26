@@ -82,7 +82,11 @@ export default function Settings() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+      >
         <Container padding={5} style={styles.content}>
           <Text variant="h2" align="center" style={styles.titleStyle}>
             Settings

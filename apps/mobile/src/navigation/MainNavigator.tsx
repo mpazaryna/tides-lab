@@ -1,14 +1,34 @@
 // Main navigation stack with proper TypeScript types
 
-import React from "react";
+import React, { useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { TouchableOpacity } from "react-native";
-import { AlignLeft, ChartLine } from "lucide-react-native";
+import {
+  TouchableOpacity,
+  View,
+  Modal,
+  TouchableWithoutFeedback,
+} from "react-native";
+import {
+  AlignLeft,
+  ChartLine,
+  ChevronDown,
+  Sun,
+  Waves,
+  Moon,
+  Compass,
+} from "lucide-react-native";
 import Home from "../screens/Main/Home";
 import Settings from "../screens/Main/Settings";
 import TideDetails from "../screens/Main/TideDetails";
+import TidesList from "../screens/Main/TidesList";
 import { MainStackParamList, Routes, NavigationOptions } from "./types";
 import { colors } from "../design-system/tokens";
+import { useTimeContext, TimeContextType } from "../context/TimeContext";
+import {
+  getContextDateRange,
+  getContextDateRangeWithOffset,
+} from "../utils/contextUtils";
+import { Text } from "../components/Text";
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -17,38 +37,231 @@ const SettingsHeaderButton = React.memo(({ navigation }: any) => (
     onPress={() => navigation.navigate(Routes.main.settings)}
     style={{ padding: 8 }}
   >
-    <AlignLeft size={24} color={colors.primary[900]} />
+    <AlignLeft size={24} color={colors.text.primary} />
   </TouchableOpacity>
 ));
 
-const ProjectHeaderButton = React.memo(({ navigation }: any) => (
+const TidesHeaderButton = React.memo(({ navigation }: any) => (
   <TouchableOpacity
-    onPress={() => navigation.navigate(Routes.main.settings)}
+    onPress={() => navigation.navigate(Routes.main.tidesList)}
     style={{ padding: 8 }}
   >
-    <ChartLine size={24} color={colors.primary[900]} />
+    <ChartLine size={24} color={colors.text.primary} />
   </TouchableOpacity>
 ));
 1;
 
-// const TidesListHeaderButton = React.memo(({ navigation }: any) => (
-//   <Button
-//     onPress={() => navigation.navigate(Routes.main.tidesList)}
-//     title="Chat"
-//     color={colors.primary[500]}
-//   />
-// ));
+
+const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
+  const {
+    currentContext,
+    setCurrentContext,
+    dateOffset,
+    isAtPresent,
+    resetToPresent,
+  } = useTimeContext();
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const title = route.params?.tideId
+    ? `${route.params?.tideName || "Home"} (${route.params.tideId})`
+    : getContextDateRangeWithOffset(currentContext, dateOffset);
+
+  const contextOptions: { label: string; value: TimeContextType; icon: any }[] =
+    [
+      { label: "Daily", value: "daily", icon: Sun },
+      { label: "Weekly", value: "weekly", icon: Waves },
+      { label: "Monthly", value: "monthly", icon: Moon },
+      { label: "Project", value: "project", icon: Compass },
+    ];
+
+  const handleTitlePress = () => {
+    if (route.params?.tideId) return; // Don't show context switcher when viewing specific tide
+    setShowTooltip(!showTooltip);
+  };
+
+  const handleContextSelect = (value: TimeContextType) => {
+    if (currentContext === value && !isAtPresent) {
+      // If clicking the same context and not at present, jump to present
+      resetToPresent();
+    } else {
+      // Otherwise, just switch context
+      setCurrentContext(value);
+    }
+    setShowTooltip(false);
+  };
+
+  return (
+    <View style={{ position: "relative" }}>
+      <TouchableOpacity
+        onPress={handleTitlePress}
+        style={{
+          paddingVertical: 8,
+          paddingHorizontal: 12,
+          marginVertical: -8,
+          marginHorizontal: -12,
+        }}
+      >
+        <View style={{ flexDirection: "column", alignItems: "center", marginTop: 2 }}>
+          <Text color={colors.text.primary} variant="header">
+        
+            {title}
+          </Text>
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginTop: 2.5,
+            }}
+          >
+            <Text variant="captionSmall" color={colors.text.tertiary}>
+              {contextOptions.find((option) => option.value === currentContext)
+                ?.label || currentContext}{" "}
+              Tide
+            </Text>
+
+            <ChevronDown
+              size={11.5}
+              color={colors.text.tertiary}
+              strokeWidth={2.5}
+              style={{ marginLeft: 2.5 }}
+            />
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      <Modal visible={showTooltip} transparent animationType="fade">
+        <TouchableWithoutFeedback onPress={() => setShowTooltip(false)}>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <View
+              style={{
+     
+                marginTop: 60, // Adjust based on header height
+              }}
+            >
+              {/* Upward pointing caret with border */}
+              <View style={{ alignSelf: "center" }}>
+                {/* Border triangle (slightly larger, behind) */}
+                <View
+                  style={{
+                    width: 0,
+                    height: 0,
+                    backgroundColor: "transparent",
+                    borderStyle: "solid",
+                    borderLeftWidth: 9,
+                    borderRightWidth: 9,
+                    borderBottomWidth: 9,
+                    borderLeftColor: "transparent",
+                    borderRightColor: "transparent",
+                    borderBottomColor: colors.neutral[200],
+                    position: "absolute",
+                    top: -.5,
+                    left: -1,
+                    zIndex: 0,
+                  }}
+                />
+                {/* Main triangle (on top) */}
+                <View
+                  style={{
+                    width: 0,
+                    height: 0,
+                    backgroundColor: "transparent",
+                    borderStyle: "solid",
+                    borderLeftWidth: 8,
+                    borderRightWidth: 8,
+                    borderBottomWidth: 8,
+                    borderLeftColor: "transparent",
+                    borderRightColor: "transparent",
+                    borderBottomColor: colors.background.secondary,
+                    marginBottom: -1,
+                    zIndex: 1001,
+                                      shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 1.5 },
+                  shadowOpacity: 0.03,
+                  shadowRadius: 1.5,
+                  }}
+                />
+              </View>
+
+              {/* Tooltip container */}
+              <View
+                style={{
+                  backgroundColor: colors.background.secondary,
+                  borderRadius: 16,
+                  paddingVertical: 8,
+                  paddingHorizontal: 8,
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 1.5 },
+                  shadowOpacity: 0.03,
+                  shadowRadius: 1.5,
+                  elevation: 4,
+                  borderWidth: .5,
+                  borderColor: colors.neutral[200],
+       gap: 8,
+       width: 296,
+                }}
+              >
+                {contextOptions.map((option) => {
+                  const IconComponent = option.icon;
+                  const isSelected = currentContext === option.value;
+
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => handleContextSelect(option.value)}
+                      style={{
+                        paddingVertical: 10,
+                        paddingBottom: 7.5,
+                        borderRadius: 8,
+                        backgroundColor: isSelected
+                          ? colors.primary[100]
+                          : "transparent",
+                        alignItems: "center",
+                        width: 64,
+
+                      }}
+                    >
+                      <IconComponent
+                        size={20}
+                        color={
+                          isSelected ? colors.text.primary : colors.text.tertiary
+                        }
+                        strokeWidth={2}
+                        style={{ marginBottom: 2.5 }}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: isSelected ? "500" : "400",
+                          color: isSelected
+                            ? colors.text.primary
+                            : colors.text.tertiary,
+                          textAlign: "center",
+                        }}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </View>
+  );
+};
 
 const getHomeScreenOptions = ({ navigation, route }: any) => ({
-  title: route.params?.tideId
-    ? `${route.params?.tideName || "Home"} (${route.params.tideId})`
-    : "Tides",
+  headerTitle: () => <HomeScreenTitle route={route} />,
   headerTintColor: colors.primary[900],
   headerShown: true,
   headerShadowVisible: false,
-  headerRight: () => <ProjectHeaderButton navigation={navigation} />,
+  headerRight: () => <TidesHeaderButton navigation={navigation} />,
   headerLeft: () => <SettingsHeaderButton navigation={navigation} />,
-
   back: colors.background.primary,
 });
 
@@ -84,6 +297,19 @@ export default function MainNavigator() {
         component={TideDetails}
         options={{
           headerShown: false,
+          gestureEnabled: true,
+        }}
+      />
+
+      <Stack.Screen
+        name={Routes.main.tidesList}
+        component={TidesList}
+        options={{
+          presentation: "modal",
+          headerShown: true,
+          headerShadowVisible: false,
+          title: "Tides",
+          headerTintColor: colors.primary[900],
           gestureEnabled: true,
         }}
       />

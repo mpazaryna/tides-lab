@@ -2,6 +2,7 @@
 
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
+import { TimeContextProvider } from "./src/context/TimeContext";
 import { ServerEnvironmentProvider } from "./src/context/ServerEnvironmentContext";
 import { AuthProvider } from "./src/context/AuthContext";
 import { MCPProvider } from "./src/context/MCPContext";
@@ -29,17 +30,19 @@ const AppContent: React.FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ServerEnvironmentProvider>
-          <AuthProvider>
-            <MCPProvider>
-              <ChatProvider>
-                <NavigationContainer>
-                  <RootNavigator />
-                </NavigationContainer>
-              </ChatProvider>
-            </MCPProvider>
-          </AuthProvider>
-        </ServerEnvironmentProvider>
+        <TimeContextProvider>
+          <ServerEnvironmentProvider>
+            <AuthProvider>
+              <MCPProvider>
+                <ChatProvider>
+                  <NavigationContainer>
+                    <RootNavigator />
+                  </NavigationContainer>
+                </ChatProvider>
+              </MCPProvider>
+            </AuthProvider>
+          </ServerEnvironmentProvider>
+        </TimeContextProvider>
       </KeyboardAvoidingView>
       <View
         style={{
