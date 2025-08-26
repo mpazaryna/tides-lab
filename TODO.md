@@ -1,3 +1,17 @@
+### P0
+
+Agent needs to be communciated with through message input
+Agent needs to be able to call MCP tools
+Aghent needs to be abel to call MCP tools without being specifically prompted to
+User shoudl be be able to directly call MCP tools without having to go through the agent
+
+### P1
+
+Use hierarchal tide context rather than manual switching
+
+
+### P3
+
 make the gap the list scrolls up from a gradient
 add dividers between each setion on the list
 tighten up th spacing

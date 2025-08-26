@@ -1,3 +1,0 @@
-event: message
-data: {"result":{"content":[{"type":"text","text":"{\n  \"success\": true,\n  \"tide_id\": \"tide_1754586909833_jrybwfivqb\",\n  \"name\": \"Daily Deep Work - Manual Test\",\n  \"flow_type\": \"daily\",\n  \"created_at\": \"2025-08-07T17:15:09.833Z\",\n  \"status\": \"active\",\n  \"description\": \"Synthetic tide for agent testing with real flow patterns\",\n  \"next_flow\": \"2025-08-08 09:00\"\n}"}]},"jsonrpc":"2.0","id":1}
-
