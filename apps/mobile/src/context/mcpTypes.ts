@@ -13,7 +13,7 @@ export interface MCPState {
 export type MCPAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_CONNECTION_STATUS'; payload: { isConnected: boolean; hasAuthToken: boolean } }
+  | { type: 'SET_CONNECTION_STATUS'; payload: { isConnected: boolean; hasApiKey: boolean } }
   | { type: 'SET_TIDES'; payload: Tide[] }
   | { type: 'ADD_TIDE'; payload: Tide }
   | { type: 'UPDATE_TIDE'; payload: Tide }
@@ -49,10 +49,10 @@ export function mcpReducer(state: MCPState, action: MCPAction): MCPState {
     case 'SET_CONNECTION_STATUS':
       return {
         ...state,
-        isConnected: action.payload.isConnected && action.payload.hasAuthToken,
+        isConnected: action.payload.isConnected && action.payload.hasApiKey,
         loading: false,
-        error: !action.payload.hasAuthToken 
-          ? "No auth token available. Please authenticate first."
+        error: !action.payload.hasApiKey 
+          ? "No API key available. Please authenticate first."
           : !action.payload.isConnected 
           ? "Unable to connect to MCP server."
           : null,

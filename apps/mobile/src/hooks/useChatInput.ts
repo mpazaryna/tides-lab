@@ -48,7 +48,7 @@ export const useChatInput = ({
   const [showSuggestion, setShowSuggestion] = useState(false);
   
   // Debounce timer ref
-  const detectionTimerRef = useRef<NodeJS.Timeout>();
+  const detectionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Detect tool intent when input changes
   useEffect(() => {

@@ -4,10 +4,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { supabase } from "../../config/supabase";
 import { AuthStackParamList, Routes, EmailConfirmationScreenProps } from "../../navigation/types";
-import { colors, spacing } from "../../design-system/tokens";
-import { Container } from "../../components/Container";
-import { Text } from "../../components/Text";
-import { Button } from "../../components/Button";
+import { colors, spacing, Container, Text, Button } from "../../design-system";
 import { useAuth } from "../../context/AuthContext";
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, "EmailConfirmation">;

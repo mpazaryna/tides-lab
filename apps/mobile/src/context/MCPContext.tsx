@@ -91,7 +91,7 @@ interface MCPProviderProps {
 }
 
 export function MCPProvider({ children }: MCPProviderProps) {
-  const { user, authToken } = useAuth();
+  const { apiKey } = useAuth();
   const { getCurrentServerUrl: getEnvironmentServerUrl, currentEnvironment } =
     useServerEnvironment();
   const [state, dispatch] = useReducer(mcpReducer, initialMCPState);
@@ -109,11 +109,11 @@ export function MCPProvider({ children }: MCPProviderProps) {
     loggingService.info("MCPContext", "Checking MCP connection", undefined);
     dispatch({ type: "SET_LOADING", payload: true });
 
-    // Validate auth token before attempting connection
-    if (!authToken) {
+    // Validate API key before attempting connection
+    if (!apiKey) {
       dispatch({
         type: "SET_ERROR",
-        payload: "No auth token available. Please authenticate first.",
+        payload: "No API key available. Please authenticate first.",
       });
       return;
     }
@@ -125,7 +125,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
         type: "SET_CONNECTION_STATUS",
         payload: {
           isConnected: status.isConnected,
-          hasAuthToken: status.hasAuthToken,
+          hasApiKey: status.hasApiKey,
         },
       });
 
@@ -139,7 +139,7 @@ export function MCPProvider({ children }: MCPProviderProps) {
         payload: "Failed to check connection status.",
       });
     }
-  }, []);
+  }, [apiKey]);
 
   const updateServerUrl = useCallback(async (url: string): Promise<void> => {
     loggingService.info("MCPContext", "Updating server URL", { url });
@@ -586,14 +586,14 @@ export function MCPProvider({ children }: MCPProviderProps) {
     handleEnvironmentChange();
   }, [currentEnvironment, getEnvironmentServerUrl]);
 
-  // Effect to check connection when user/authToken changes
+  // Effect to check connection when API key changes
   useEffect(() => {
-    const handleUserAuthChange = async () => {
-      if (user && authToken) {
+    const handleApiKeyChange = async () => {
+      if (apiKey) {
         loggingService.info(
           "MCPContext",
-          "User authenticated, checking connection",
-          { hasUser: !!user, hasAuthToken: !!authToken }
+          "API key available, checking connection",
+          { hasApiKey: !!apiKey }
         );
         dispatch({ type: "SET_LOADING", payload: true });
         dispatch({ type: "SET_LOADING", payload: true });
@@ -605,14 +605,14 @@ export function MCPProvider({ children }: MCPProviderProps) {
             type: "SET_CONNECTION_STATUS",
             payload: {
               isConnected: status.isConnected,
-              hasAuthToken: status.hasAuthToken,
+              hasApiKey: status.hasApiKey,
             },
           });
 
-          if (!status.hasAuthToken) {
+          if (!status.hasApiKey) {
             dispatch({
               type: "SET_ERROR",
-              payload: "No auth token available. Please authenticate first.", // TODO: update all user-facing error messages
+              payload: "No API key available. Please authenticate first.",
             });
           } else if (!status.isConnected) {
             dispatch({
@@ -623,20 +623,20 @@ export function MCPProvider({ children }: MCPProviderProps) {
 
           loggingService.info(
             "MCPContext",
-            "Connection status checked in auth change",
+            "Connection status checked in API key change",
             { status }
           );
         } catch (error) {
           loggingService.error(
             "MCPContext",
-            "Connection check failed in auth change",
+            "Connection check failed in API key change",
             { error }
           );
           dispatch({
             type: "SET_CONNECTION_STATUS",
             payload: {
               isConnected: false,
-              hasAuthToken: false,
+              hasApiKey: false,
             },
           });
           dispatch({
@@ -645,27 +645,18 @@ export function MCPProvider({ children }: MCPProviderProps) {
           });
         }
       } else {
-        // Don't immediately reset if user exists but auth token is still loading
-        if (!user) {
-          loggingService.info(
-            "MCPContext",
-            "User not authenticated, resetting state",
-            { hasUser: !!user, hasAuthToken: !!authToken }
-          );
-          dispatch({ type: "RESET_STATE" });
-        } else {
-          loggingService.info(
-            "MCPContext",
-            "User authenticated but auth token not yet available, waiting...",
-            { hasUser: !!user, hasAuthToken: !!authToken }
-          );
-          // Don't reset state - the auth token might still be loading
-        }
+        // No API key available - reset state
+        loggingService.info(
+          "MCPContext",
+          "No API key available, resetting state",
+          { hasApiKey: !!apiKey }
+        );
+        dispatch({ type: "RESET_STATE" });
       }
     };
 
-    handleUserAuthChange();
-  }, [user, authToken]);
+    handleApiKeyChange();
+  }, [apiKey]);
 
   // Effect to refresh tides when connection is established
   useEffect(() => {

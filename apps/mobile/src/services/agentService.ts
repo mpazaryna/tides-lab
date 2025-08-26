@@ -1,5 +1,6 @@
 import { authService } from "./authService";
 import { loggingService } from "./loggingService";
+import { extractUserIdFromApiKey } from "../utils/apiKeyUtils";
 
 export interface TideContext {
   tideId?: string;
@@ -79,6 +80,56 @@ class AgentService {
   }
 
   /**
+   * Extract user ID from API key when available
+   * Format: tides_userId_randomId -> extract userId
+   */
+  private async getUserIdFromApiKey(): Promise<string | null> {
+    try {
+      const apiKey = await authService.getApiKey();
+      if (!apiKey) return null;
+      
+      const userId = extractUserIdFromApiKey(apiKey);
+      if (userId) {
+        loggingService.info(this.SERVICE_NAME, "Extracted user ID from API key", { 
+          userId,
+          apiKeyPrefix: apiKey.substring(0, 15) + '...' 
+        });
+        return userId;
+      }
+      
+      loggingService.warn(this.SERVICE_NAME, "API key is not in expected format for user ID extraction", {
+        apiKeyPrefix: apiKey.substring(0, 15) + '...',
+        expectedFormat: 'tides_userId_randomId'
+      });
+      return null;
+    } catch (error) {
+      loggingService.error(this.SERVICE_NAME, "Failed to extract user ID from API key", error);
+      return null;
+    }
+  }
+
+  /**
+   * Get user ID with fallback to API key extraction
+   */
+  private async getUserId(): Promise<string | null> {
+    try {
+      // First try Supabase current user
+      const user = await authService.getCurrentUser();
+      if (user?.id) {
+        loggingService.info(this.SERVICE_NAME, "Got user ID from Supabase", { userId: user.id });
+        return user.id;
+      }
+      
+      // Fallback to extracting from API key
+      loggingService.info(this.SERVICE_NAME, "Supabase user not available, extracting from API key");
+      return await this.getUserIdFromApiKey();
+    } catch (error) {
+      loggingService.error(this.SERVICE_NAME, "Failed to get user ID", error);
+      return null;
+    }
+  }
+
+  /**
    * Execute an MCP tool directly from agent service
    */
   async executeMCPTool(toolName: string, parameters: any): Promise<any> {
@@ -104,8 +155,8 @@ class AgentService {
     body?: any
   ): Promise<any> {
     try {
-      const authToken = await authService.getAuthToken();
-      if (!authToken) {
+      const apiKey = await authService.getApiKey();
+      if (!apiKey) {
         throw new Error("No auth token available");
       }
 
@@ -139,7 +190,7 @@ class AgentService {
             method,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`,
+              'Authorization': `Bearer ${apiKey}`,
               'User-Agent': 'TidesMobile/1.0 React-Native/0.80.2'
             },
             ...(body && { body: JSON.stringify(body) }),
@@ -244,19 +295,13 @@ class AgentService {
         hasConversationId: !!this.conversationId
       });
       
-      // Get userId from auth service
-      loggingService.info(this.SERVICE_NAME, "Getting current user from auth service", {});
+      // Get userId with fallback to API key extraction
+      loggingService.info(this.SERVICE_NAME, "Getting user ID", {});
       
-      const user = await authService.getCurrentUser();
-      loggingService.info(this.SERVICE_NAME, "Retrieved user from auth service", { 
-        hasUser: !!user, 
-        userId: user?.id 
-      });
-      
-      const userId = user?.id;
+      const userId = await this.getUserId();
       
       if (!userId) {
-        loggingService.error(this.SERVICE_NAME, "No user ID available", { user });
+        loggingService.error(this.SERVICE_NAME, "No user ID available", { userId });
         throw new Error("User ID is required for agent communication");
       }
 
@@ -402,8 +447,7 @@ class AgentService {
     confidence: number;
     suggestions?: string[];
   }> {
-    const user = await authService.getCurrentUser();
-    const userId = user?.id || context?.userId;
+    const userId = await this.getUserId() || context?.userId;
     
     if (!userId) {
       throw new Error("User ID is required for tool classification");
@@ -444,8 +488,7 @@ class AgentService {
   async getProductivityInsights(
     analysisDepth: "quick" | "detailed" = "quick"
   ): Promise<AgentResponse> {
-    const user = await authService.getCurrentUser();
-    const userId = user?.id;
+    const userId = await this.getUserId();
     
     if (!userId) {
       throw new Error("User ID is required for productivity analysis");
@@ -485,8 +528,7 @@ class AgentService {
   async generateFlowSuggestions(
     energyLevel: number = 6
   ): Promise<AgentResponse> {
-    const user = await authService.getCurrentUser();
-    const userId = user?.id;
+    const userId = await this.getUserId();
     
     if (!userId) {
       throw new Error("User ID is required for flow suggestions");
@@ -542,8 +584,8 @@ class AgentService {
     method: "GET" | "POST" = "POST",
     body?: any
   ): Promise<any> {
-    const authToken = await authService.getAuthToken();
-    if (!authToken) {
+    const apiKey = await authService.getApiKey();
+    if (!apiKey) {
       throw new Error("No auth token available for AI service");
     }
 
@@ -559,7 +601,7 @@ class AgentService {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+        'Authorization': `Bearer ${apiKey}`
       },
       ...(body && { body: JSON.stringify(body) }),
     });

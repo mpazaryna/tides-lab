@@ -6,15 +6,15 @@ export interface AuthState {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  authToken: string | null;
+  apiKey: string | null;
   error: string | null;
 }
 
 export type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_AUTH_SUCCESS'; payload: { user: User | null; session: Session | null; authToken: string | null } }
-  | { type: 'SET_AUTH_TOKEN'; payload: string | null }
+  | { type: 'SET_AUTH_SUCCESS'; payload: { user: User | null; session: Session | null; apiKey: string | null } }
+  | { type: 'SET_API_KEY'; payload: string | null }
   | { type: 'CLEAR_AUTH' }
   | { type: 'RESET_STATE' };
 
@@ -22,7 +22,7 @@ export const initialAuthState: AuthState = {
   user: null,
   session: null,
   loading: true,
-  authToken: null,
+  apiKey: null,
   error: null,
 };
 
@@ -47,15 +47,15 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         ...state,
         user: action.payload.user,
         session: action.payload.session,
-        authToken: action.payload.authToken,
+        apiKey: action.payload.apiKey,
         loading: false,
         error: null,
       };
 
-    case 'SET_AUTH_TOKEN':
+    case 'SET_API_KEY':
       return {
         ...state,
-        authToken: action.payload,
+        apiKey: action.payload,
       };
 
     case 'CLEAR_AUTH':
@@ -63,7 +63,7 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         ...state,
         user: null,
         session: null,
-        authToken: null,
+        apiKey: null,
         loading: false,
         error: null,
       };

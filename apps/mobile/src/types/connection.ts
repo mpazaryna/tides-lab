@@ -427,7 +427,7 @@ export const DEFAULT_CONNECTION_CONFIG: EnhancedAgentConnectionConfig = {
   healthCheck: {
     interval: 30000,
     initialDelay: 5000,
-    endpoint: "/health",
+    endpoint: "/ai/health",
     method: "GET",
     expectedStatus: [200],
     timeout: 5000,

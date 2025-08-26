@@ -12,11 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useAuth } from "../../context/AuthContext";
 import { AuthStackParamList } from "../../navigation/types";
-import { colors, spacing } from "../../design-system/tokens";
-import { Container } from "../../components/Container";
-import { Text } from "../../components/Text";
-import { Input } from "../../components/Input";
-import { Button } from "../../components/Button";
+import { colors, spacing, Container, Text, Input, Button } from "../../design-system";
 
 interface CreateAccountScreenProps {}
 

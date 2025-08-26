@@ -2,8 +2,8 @@
 
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Button, TouchableOpacity } from "react-native";
-import { AlignLeft } from "lucide-react-native";
+import { TouchableOpacity } from "react-native";
+import { AlignLeft, ChartLine } from "lucide-react-native";
 import Home from "../screens/Main/Home";
 import Settings from "../screens/Main/Settings";
 import TideDetails from "../screens/Main/TideDetails";
@@ -21,13 +21,23 @@ const SettingsHeaderButton = React.memo(({ navigation }: any) => (
   </TouchableOpacity>
 ));
 
-const TidesListHeaderButton = React.memo(({ navigation }: any) => (
-  <Button
-    onPress={() => navigation.navigate(Routes.main.tidesList)}
-    title="Chat"
-    color={colors.primary[500]}
-  />
+const ProjectHeaderButton = React.memo(({ navigation }: any) => (
+  <TouchableOpacity
+    onPress={() => navigation.navigate(Routes.main.settings)}
+    style={{ padding: 8 }}
+  >
+    <ChartLine size={24} color={colors.primary[900]} />
+  </TouchableOpacity>
 ));
+1;
+
+// const TidesListHeaderButton = React.memo(({ navigation }: any) => (
+//   <Button
+//     onPress={() => navigation.navigate(Routes.main.tidesList)}
+//     title="Chat"
+//     color={colors.primary[500]}
+//   />
+// ));
 
 const getHomeScreenOptions = ({ navigation, route }: any) => ({
   title: route.params?.tideId
@@ -36,7 +46,7 @@ const getHomeScreenOptions = ({ navigation, route }: any) => ({
   headerTintColor: colors.primary[900],
   headerShown: true,
   headerShadowVisible: false,
-  headerRight: () => <TidesListHeaderButton navigation={navigation} />,
+  headerRight: () => <ProjectHeaderButton navigation={navigation} />,
   headerLeft: () => <SettingsHeaderButton navigation={navigation} />,
 
   back: colors.background.primary,
@@ -48,9 +58,8 @@ export default function MainNavigator() {
       initialRouteName={Routes.main.home}
       screenOptions={{
         ...NavigationOptions.withHeader,
-        headerTintColor: colors.primary[500],
         headerStyle: {
-          backgroundColor: colors.background.secondary,
+          backgroundColor: colors.background.primary,
         },
       }}
     >

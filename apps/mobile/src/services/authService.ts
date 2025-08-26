@@ -1,7 +1,7 @@
 import { supabase } from "../config/supabase";
 import { SUPABASE_CONFIG } from "../constants";
-// import { secureStorage } from "./secureStorage"; // TODO: Re-enable once Keychain is fixed
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "./secureStorage";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Keep for non-sensitive data
 import type { Session } from "@supabase/supabase-js";
 
 class AuthService {
@@ -48,9 +48,59 @@ class AuthService {
     await AsyncStorage.setItem("mcp_server_url", url);
   }
 
-  private generateAuthToken(userId: string) {
-    // Use Supabase UUID directly as auth token (per auth-specs.md)
-    return userId;
+  private generateApiKey(userId: string) {
+    // Generate a random suffix for uniqueness (6 chars)
+    const randomId = Math.random().toString(36).substring(2, 8);
+    // Format: tides_userId_randomId (per server auth requirements)
+    return `tides_${userId}_${randomId}`;
+  }
+
+  private async registerApiKeyWithMCPServer(
+    apiKey: string, 
+    userId: string, 
+    email: string
+  ): Promise<boolean> {
+    try {
+      console.log('[AuthService] Registering API key with MCP server...', { 
+        userId, 
+        email,
+        serverUrl: this.currentUrl 
+      });
+      
+      const serverUrl = this.urlProvider ? this.urlProvider() : this.currentUrl;
+      const response = await fetch(`${serverUrl}/register-api-key`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          api_key: apiKey,
+          user_id: userId,
+          user_email: email,
+          name: 'Mobile App Key'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('[AuthService] ✅ API key registered with MCP server successfully', {
+          keyHash: result.key_hash?.substring(0, 8) + '...',
+          userId: result.user_id
+        });
+        return true;
+      } else {
+        console.error('[AuthService] ❌ Failed to register API key with MCP server:', {
+          error: result.error,
+          details: result.details
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('[AuthService] ❌ Network error during API key registration:', error);
+      return false;
+    }
   }
 
 
@@ -60,9 +110,11 @@ class AuthService {
       if (error) throw new Error(error.message);
 
       if (data.user && data.session) {
-        const uuid = this.generateAuthToken(data.user.id);
-        // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
-        await AsyncStorage.setItem("user_uuid", uuid);
+        const apiKey = this.generateApiKey(data.user.id);
+        await secureStorage.setItem("api_key", apiKey);
+        
+        // Register with MCP server D1 database
+        await this.registerApiKeyWithMCPServer(apiKey, data.user.id, data.user.email || '');
       }
 
       return { user: data.user, session: data.session };
@@ -90,11 +142,21 @@ class AuthService {
       if (error) throw new Error(error.message);
 
       if (data.user && data.session) {
-        const uuid = this.generateAuthToken(data.user.id);
-        console.log('[AuthService] Generated UUID, storing...', { uuid: uuid.substring(0, 8) + '...' });
-        // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
-        await AsyncStorage.setItem("user_uuid", uuid);
-        console.log('[AuthService] UUID stored successfully');
+        const apiKey = this.generateApiKey(data.user.id);
+        console.log('[AuthService] Generated API key, storing...', { apiKey: apiKey.substring(0, 8) + '...' });
+        // TODO: Remove debug logging before production release
+        console.log('[DEBUG] Full API key details:', {
+          fullToken: apiKey,
+          length: apiKey.length,
+          startsWithTides: apiKey.startsWith('tides_'),
+          userId: data.user.id,
+          format: `tides_${data.user.id}_${apiKey.split('_')[2]}`
+        });
+        await secureStorage.setItem("api_key", apiKey);
+        console.log('[AuthService] API key stored successfully');
+        
+        // Register with MCP server (in case user signed up before this fix)
+        await this.registerApiKeyWithMCPServer(apiKey, data.user.id, data.user.email || '');
       }
 
       return { user: data.user, session: data.session };
@@ -105,10 +167,17 @@ class AuthService {
   }
 
   async signOut() {
-    // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
-    await AsyncStorage.removeItem("user_uuid");
-    const { error } = await supabase.auth.signOut();
-    if (error) throw new Error(error.message);
+    // Clear local API key first (works offline)
+    await secureStorage.removeItem("api_key");
+    
+    // Then try Supabase signout (may fail if offline)
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw new Error(error.message);
+    } catch (error) {
+      console.log('[AuthService] Supabase signout failed (may be offline):', error);
+      // Don't throw - local cleanup is more important
+    }
   }
 
   async getCurrentSession() {
@@ -135,59 +204,117 @@ class AuthService {
     }
   }
 
-  async getAuthToken() {
+  async verifyStoredAuth(): Promise<{
+    isValid: boolean;
+    user?: any;
+    isOffline?: boolean;
+  }> {
     try {
-      console.log('[AuthService] getAuthToken called');
+      // First check if we have a valid session
+      const session = await this.getCurrentSession();
       
-      let uuid = await AsyncStorage.getItem("user_uuid");
-      console.log('[AuthService] Retrieved UUID from storage:', { hasUuid: !!uuid, uuidLength: uuid?.length });
-      
-      // Migration: Check for legacy API key storage and migrate to UUID
-      if (!uuid) {
-        console.log('[AuthService] No UUID found, checking for migration');
-        const oldApiKey = await AsyncStorage.getItem("user_api_key");
-        console.log('[AuthService] Legacy API key check:', { hasOldKey: !!oldApiKey });
-        
-        if (oldApiKey) {
-          console.log('[AuthService] Removing legacy API key');
-          await AsyncStorage.removeItem("user_api_key");
-        }
-        
-        console.log('[AuthService] Getting current user for UUID generation');
-        const user = await this.getCurrentUser();
-        console.log('[AuthService] Current user:', { hasUser: !!user, userId: user?.id });
-        
-        if (user) {
-          uuid = this.generateAuthToken(user.id);
-          console.log('[AuthService] Generated UUID:', { uuid: uuid.substring(0, 8) + '...' });
-          await AsyncStorage.setItem("user_uuid", uuid);
-          console.log('[AuthService] Stored UUID in AsyncStorage');
-        } else {
-          console.log('[AuthService] No user available for UUID generation');
+      if (session && session.user) {
+        // We have an active session - verify with MCP server to ensure API key is still valid
+        const apiKey = await secureStorage.getItem("api_key");
+        if (apiKey) {
+          const mcpValid = await this.validateWithMCPServer(apiKey);
+          if (mcpValid) {
+            console.log('[AuthService] User verification successful - active session + valid MCP');
+            return { isValid: true, user: session.user };
+          } else {
+            console.log('[AuthService] User invalid - MCP server rejected API key (user likely deleted)');
+            return { isValid: false };
+          }
         }
       }
       
-      console.log('[AuthService] Returning UUID:', { hasUuid: !!uuid, uuidLength: uuid?.length });
-      return uuid;
+      // No active session - check if API key is still valid with MCP server
+      const apiKey = await secureStorage.getItem("api_key");
+      if (apiKey) {
+        const mcpValid = await this.validateWithMCPServer(apiKey);
+        if (mcpValid) {
+          // API key is valid with MCP - allow offline mode (session just expired)
+          console.log('[AuthService] Session expired but API key valid, allowing offline mode');
+          return { isValid: true, isOffline: true };
+        } else {
+          // API key rejected by MCP - user was deleted
+          console.log('[AuthService] User invalid - MCP server rejected API key (user deleted)');
+          return { isValid: false };
+        }
+      }
+      
+      // No API key stored
+      console.log('[AuthService] No API key stored');
+      return { isValid: false };
+    } catch (networkError) {
+      // Network error - allow offline mode if we have an API key
+      const apiKey = await secureStorage.getItem("api_key");
+      if (apiKey) {
+        console.log('[AuthService] Network error during verification, allowing offline mode');
+        return { isValid: true, isOffline: true };
+      }
+      console.log('[AuthService] Network error and no API key stored');
+      return { isValid: false };
+    }
+  }
+
+  private async validateWithMCPServer(apiKey: string): Promise<boolean> {
+    try {
+      // Make a simple health check call to MCP server with the API key
+      const response = await fetch(`${this.currentUrl}/ai/health`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // 200 = valid user, 401 = invalid user, anything else = network issue
+      if (response.status === 200) {
+        console.log('[AuthService] MCP validation successful');
+        return true;
+      } else if (response.status === 401) {
+        console.log('[AuthService] MCP validation failed - 401 Unauthorized');
+        return false;
+      } else {
+        console.log('[AuthService] MCP validation unclear - status:', response.status);
+        // TODO: Implement proper error handling for ambiguous HTTP status codes
+        return true; // Assume valid on unclear responses to avoid false logouts
+      }
     } catch (error) {
-      console.error('[AuthService] getAuthToken failed:', error);
+      console.log('[AuthService] MCP validation failed due to network error:', error);
+      return true; // Network error - assume valid for offline mode
+    }
+  }
+
+  async getApiKey() {
+    try {
+      console.log('[AuthService] getApiKey called');
+      
+      // Get API key from SecureStorage
+      const apiKey = await secureStorage.getItem("api_key");
+      console.log('[AuthService] Retrieved API key from SecureStorage:', { hasApiKey: !!apiKey, apiKeyLength: apiKey?.length });
+      
+      console.log('[AuthService] Returning API key:', { hasApiKey: !!apiKey, apiKeyLength: apiKey?.length });
+      return apiKey;
+    } catch (error) {
+      console.error('[AuthService] getApiKey failed:', error);
       return null;
     }
   }
 
-  // Debug test key removed - using UUID authentication only
+  // Debug test key removed - using API key authentication only
 
   onAuthStateChange(
     callback: (event: string, session: Session | null) => void
   ) {
     return supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
-        const uuid = this.generateAuthToken(session.user.id);
-        // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
-        await AsyncStorage.setItem("user_uuid", uuid);
+        const apiKey = this.generateApiKey(session.user.id);
+        await secureStorage.setItem("api_key", apiKey);
       } else if (event === "SIGNED_OUT") {
-        // TODO: Replace AsyncStorage with secureStorage once Keychain issue is fixed
-        await AsyncStorage.removeItem("user_uuid");
+        // Using secureStorage for API key storage
+        await secureStorage.removeItem("api_key");
       }
       callback(event, session);
     });

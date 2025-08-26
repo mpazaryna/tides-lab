@@ -35,9 +35,3 @@ export interface User {
   name?: string;
   created_at: string;
 }
-
-export interface AuthTokens {
-  access_token: string;
-  refresh_token: string;
-  expires_at: number;
-}

@@ -37,37 +37,62 @@ class MCPService {
   }
 
   async getConnectionStatus() {
-    const authToken = await authService.getAuthToken();
+    const apiKey = await authService.getApiKey();
     
-    if (!authToken || !this.baseUrl) {
-      return { isConnected: false, hasAuthToken: !!authToken };
+    if (!apiKey || !this.baseUrl) {
+      return { isConnected: false, hasApiKey: !!apiKey };
     }
 
-    // Validate auth token format (should be a UUID)
-    if (authToken.length < 10 || !authToken.match(/^[a-f0-9-]{8,}$/i)) {
+    // Validate API key format (should be tides_userId_randomId format)
+    const isValidFormat = apiKey.match(/^tides_[a-f0-9-]{36}_[a-z0-9]{6}$/i);
+    
+    if (!isValidFormat) {
       console.error('[MCPService] Invalid auth token format:', { 
-        tokenLength: authToken.length,
-        tokenPrefix: authToken.substring(0, 8) + '...'
+        tokenLength: apiKey.length,
+        tokenPrefix: apiKey.substring(0, 12) + '...',
+        expectedFormat: 'tides_userId_randomId'
       });
-      return { isConnected: false, hasAuthToken: false };
+      return { isConnected: false, hasApiKey: false };
     }
 
-    // Simple connectivity test with auth token
+    // Simple connectivity test with API key
+    // TODO: Remove debug logging before production release
+    console.log('[DEBUG] MCP Health Check Details:', {
+      url: `${this.baseUrl}/ai/health`,
+      apiKey: apiKey,
+      tokenLength: apiKey.length,
+      tokenFormat: apiKey.substring(0, 15) + '...' + apiKey.substring(apiKey.length - 10),
+      startsWithTides: apiKey.startsWith('tides_'),
+      isValidFormat: !!apiKey.match(/^tides_[a-f0-9-]{36}_[a-z0-9]{6}$/i)
+    });
+    
     try {
-      const response = await fetch(`${this.baseUrl}/health`, {
+      const response = await fetch(`${this.baseUrl}/ai/health`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${apiKey}`
         }
       });
-      console.log(`[MCPService] Health check status: ${response.status} with auth token`);
-      return { isConnected: response.ok, hasAuthToken: !!authToken };
+      console.log(`[MCPService] Health check status: ${response.status} with API key`);
+      
+      if (response.status === 401) {
+        const responseText = await response.text();
+        // TODO: Replace debug logging with proper error analytics
+        console.log('[DEBUG] 401 Response details:', {
+          status: response.status,
+          statusText: response.statusText,
+          responseBody: responseText,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+      }
+      return { isConnected: response.ok, hasApiKey: !!apiKey };
     } catch (error) {
       console.error(`[MCPService] Health check failed:`, error);
-      // If health check fails, still return true if we have auth token
+      // TODO: Implement proper health check fallback strategy
+      // If health check fails, still return true if we have API key
       // The actual MCP request will reveal the real connectivity issue
-      return { isConnected: false, hasAuthToken: !!authToken };
+      return { isConnected: false, hasApiKey: !!apiKey };
     }
   }
 
@@ -87,12 +112,14 @@ class MCPService {
   }
 
   private async request(method: string, params?: any) {
-    const authToken = await authService.getAuthToken();
-    if (!authToken) throw new Error('No auth token');
+    const apiKey = await authService.getApiKey();
+    if (!apiKey) throw new Error('No API key');
     
-    // Validate auth token format before making requests
-    if (authToken.length < 10 || !authToken.match(/^[a-f0-9-]{8,}$/i)) {
-      throw new Error('Invalid auth token format');
+    // Validate API key format before making requests
+    const isValidFormat = apiKey.match(/^tides_[a-f0-9-]{36}_[a-z0-9]{6}$/i);
+    
+    if (!isValidFormat) {
+      throw new Error('Invalid API key format - expected tides_userId_randomId');
     }
     
     const currentUrl = this.getCurrentUrl();
@@ -110,7 +137,7 @@ class MCPService {
     console.log(`[MCPService] Request to ${currentUrl}/mcp:`, {
       method,
       params,
-      authTokenPrefix: authToken.substring(0, 10) + '...',
+      apiKeyPrefix: apiKey.substring(0, 10) + '...',
       baseUrl: currentUrl
     });
 
@@ -131,7 +158,7 @@ class MCPService {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json, text/event-stream',
-            'Authorization': `Bearer ${authToken}`,
+            'Authorization': `Bearer ${apiKey}`,
             'User-Agent': 'TidesMobile/1.0 React-Native/0.80.2'
           },
           body: JSON.stringify(body),

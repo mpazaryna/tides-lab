@@ -1,12 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import {
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  View,
-  Text,
-} from "react-native";
+import { StyleSheet, ScrollView, View } from "react-native";
 import { useRoute, RouteProp } from "@react-navigation/native";
 
 import { useMCP } from "../../context/MCPContext";
@@ -26,6 +19,7 @@ import { useChatInput } from "../../hooks/useChatInput";
 import { ChatMessages } from "../../components/chat/ChatMessages";
 import { ChatInput } from "../../components/chat/ChatInput";
 import { ToolMenu } from "../../components/tools/ToolMenu";
+import { TideInfo } from "../../components/tides/TideInfo";
 // import { AIInsightsSection } from "../../components/ai/AIInsightsSection";
 import {
   createAgentContext,
@@ -251,9 +245,10 @@ export default function Home() {
 
   return (
     <View style={[styles.container]}>
+      {/* <View style={styles.headerBedWetter} /> */}
       <View style={styles.tideInfoHeader}>
         <View style={styles.tideInfoInnerHeader}>
-          <Text>Nut</Text>
+          <TideInfo />
         </View>
       </View>
       {/* Error Display
@@ -344,30 +339,31 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   tideInfoHeader: {
-    height: 124,
-    maxHeight: 124,
-    // paddingTop: 8,
+    height: 300,
+    maxHeight: 300,
+    paddingTop: 0,
     backgroundColor: colors.background.primary,
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },
   tideInfoInnerHeader: {
     flex: 1,
 
-    borderTopWidth: 0.5,
-    borderBottomWidth: 0.5,
+    borderWidth: 0.5,
+    // borderBottomWidth: 0.5,
     borderColor: colors.neutral[200],
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1.5,
-    },
-    shadowRadius: 1.5,
-    shadowOpacity: 0.03,
+    // shadowColor: "#000",
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 1.5,
+    // },
+    // shadowRadius: 1.5,
+    // shadowOpacity: 0.03,
     backgroundColor: colors.background.secondary,
-    borderRadius: 16,
+    borderRadius: 20,
   },
+
   container: {
     backgroundColor: colors.background.primary,
     flex: 1,

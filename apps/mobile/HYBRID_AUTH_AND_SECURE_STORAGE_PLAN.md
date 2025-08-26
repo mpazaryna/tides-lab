@@ -1,7 +1,29 @@
 # Hybrid Authentication & SecureStorage Implementation Plan
 
 ## Overview
-Complete implementation of secure, hybrid authentication with Supabase verification and UUID tokens, plus migration to SecureStorage for sensitive data.
+Complete implementation of secure, hybrid authentication with Supabase verification and persistent API keys, plus migration to SecureStorage for sensitive data.
+
+## Phase 0: API Key Format Implementation (Critical - 5 mins)
+
+### 0.1 Update API Key Generation Format
+**File:** `src/services/authService.ts`
+
+**Fix generateApiKey method:**
+```typescript
+private generateApiKey(userId: string) {
+  // Generate a random suffix for uniqueness (6 chars)
+  const randomId = Math.random().toString(36).substring(2, 8);
+  // Format: tides_userId_randomId (per server auth requirements)
+  return `tides_${userId}_${randomId}`;
+}
+```
+
+**Benefits:**
+- ✅ Matches MCP server format requirements (`tides_` prefix)
+- ✅ Persistent API keys across app restarts
+- ✅ Unique API keys per device/session
+- ✅ Industry-standard format for future API key management
+- ✅ Enables future revocation and multi-device support
 
 ## Phase 1: Hybrid Auth Implementation (Critical - 20 mins)
 
@@ -37,16 +59,16 @@ async verifyStoredAuth(): Promise<{
 ### 1.2 Update AuthContext Initialization Logic
 **File:** `src/context/AuthContext.tsx`
 
-**Replace current UUID-only check with hybrid verification:**
+**Replace current API key-only check with hybrid verification:**
 ```typescript
 // Replace getInitialAuth function logic:
 const getInitialAuth = async () => {
   try {
-    // Step 1: Check for stored UUID
-    const uuid = await AsyncStorage.getItem("user_uuid");
+    // Step 1: Check for stored API key
+    const apiKey = await secureStorage.getItem("api_key");
     
-    if (!uuid) {
-      // No UUID - user needs to authenticate
+    if (!apiKey) {
+      // No API key - user needs to authenticate
       dispatch({ type: "CLEAR_AUTH" });
       return;
     }
@@ -56,13 +78,13 @@ const getInitialAuth = async () => {
     
     if (verification.isValid) {
       // Valid user - set authenticated state
-      const user = verification.user || { id: uuid } as any;
+      const user = verification.user || { id: apiKey.split('_')[1] } as any;
       dispatch({
         type: "SET_AUTH_SUCCESS",
         payload: { 
           user, 
           session: null, 
-          authToken: uuid 
+          authToken: apiKey 
         }
       });
       
@@ -73,7 +95,7 @@ const getInitialAuth = async () => {
     } else {
       // User no longer valid - clear auth data
       console.log('[AuthContext] Clearing invalid auth data');
-      await AsyncStorage.removeItem("user_uuid");
+      await secureStorage.removeItem("api_key");
       dispatch({ type: "CLEAR_AUTH" });
     }
   } catch (error) {
@@ -90,8 +112,8 @@ const getInitialAuth = async () => {
 **Ensure offline-friendly sign out:**
 ```typescript
 async signOut() {
-  // Clear local UUID first (works offline)
-  await AsyncStorage.removeItem("user_uuid");
+  // Clear local API key first (works offline)
+  await secureStorage.removeItem("api_key");
   
   // Then try Supabase signout (may fail if offline)
   try {
@@ -118,49 +140,77 @@ import { secureStorage } from "./secureStorage";
 import AsyncStorage from "@react-native-async-storage/async-storage"; // Keep for non-sensitive data
 ```
 
-**Update all UUID storage calls (9 locations):**
+**Update all API key storage calls:**
 ```typescript
-// Lines 65, 96, 109, 142, 153, 163, 187, 190
-// Change: AsyncStorage.setItem("user_uuid", uuid)
-// To:     secureStorage.setItem("user_uuid", uuid)
+// Change storage key from "user_uuid" to "api_key" for industry standard naming
+// Change: AsyncStorage.setItem("user_uuid", apiKey)
+// To:     secureStorage.setItem("api_key", apiKey)
 
 // Change: AsyncStorage.getItem("user_uuid") 
-// To:     secureStorage.getItem("user_uuid")
+// To:     secureStorage.getItem("api_key")
 
 // Change: AsyncStorage.removeItem("user_uuid")
-// To:     secureStorage.removeItem("user_uuid")
+// To:     secureStorage.removeItem("api_key")
 ```
 
-**Add Migration Logic in getAuthToken():**
+**Add Migration Logic in getApiKey():**
 ```typescript
-async getAuthToken() {
+async getApiKey() {
   try {
-    // Try SecureStorage first
-    let uuid = await secureStorage.getItem("user_uuid");
+    // Try SecureStorage first (new format)
+    let apiKey = await secureStorage.getItem("api_key");
     
-    // Migration: Check AsyncStorage if not in SecureStorage
-    if (!uuid) {
-      uuid = await AsyncStorage.getItem("user_uuid");
-      if (uuid) {
-        console.log('[AuthService] Migrating UUID from AsyncStorage to SecureStorage');
-        await secureStorage.setItem("user_uuid", uuid);
-        await AsyncStorage.removeItem("user_uuid"); // Clean up
-        console.log('[AuthService] UUID migration completed');
+    // Migration: Check old UUID storage if not found
+    if (!apiKey) {
+      // Check old SecureStorage key
+      const oldToken = await secureStorage.getItem("user_uuid");
+      if (oldToken) {
+        console.log('[AuthService] Migrating from old storage key');
+        // If old token is in wrong format, regenerate
+        if (!oldToken.startsWith("tides_")) {
+          const verification = await this.verifyStoredAuth();
+          if (verification.isValid && verification.user) {
+            apiKey = this.generateApiKey(verification.user.id);
+            await secureStorage.setItem("api_key", apiKey);
+            await secureStorage.removeItem("user_uuid"); // Clean up old key
+            console.log('[AuthService] API key format migration completed');
+          }
+        } else {
+          // Old token has correct format, just move it
+          apiKey = oldToken;
+          await secureStorage.setItem("api_key", apiKey);
+          await secureStorage.removeItem("user_uuid"); // Clean up old key
+        }
+      } else {
+        // Check legacy AsyncStorage
+        const legacyToken = await AsyncStorage.getItem("user_uuid");
+        if (legacyToken) {
+          console.log('[AuthService] Migrating from AsyncStorage to SecureStorage');
+          // Legacy tokens need format update
+          const verification = await this.verifyStoredAuth();
+          if (verification.isValid && verification.user) {
+            apiKey = this.generateApiKey(verification.user.id);
+            await secureStorage.setItem("api_key", apiKey);
+            await AsyncStorage.removeItem("user_uuid"); // Clean up
+            console.log('[AuthService] AsyncStorage migration completed');
+          }
+        }
       }
     }
     
-    // Rest of existing verification logic...
-    if (!uuid) {
+    // Generate new API key if none exists and user is authenticated
+    if (!apiKey) {
       const verification = await this.verifyStoredAuth();
       if (verification.isValid && verification.user) {
-        uuid = this.generateAuthToken(verification.user.id);
-        await secureStorage.setItem("user_uuid", uuid);
+        apiKey = this.generateApiKey(verification.user.id);
+        await secureStorage.setItem("api_key", apiKey);
+        console.log('[AuthService] Generated new API key');
       }
     }
     
-    return uuid;
+    return apiKey;
   } catch (error) {
-    console.error('[AuthService] getAuthToken failed:', error);
+    console.error('[AuthService] getApiKey failed:', error);
     return null;
   }
 }
@@ -169,21 +219,26 @@ async getAuthToken() {
 ### 2.3 Update AuthContext for SecureStorage
 **File:** `src/context/AuthContext.tsx`
 
-**Update initialization to use secureStorage:**
+**Update initialization to use secureStorage with new key:**
 ```typescript
 // In getInitialAuth function:
-const uuid = await secureStorage.getItem("user_uuid");
+const apiKey = await secureStorage.getItem("api_key");
 ```
 
 **Add fallback for SecureStorage failures:**
 ```typescript
 try {
-  const uuid = await secureStorage.getItem("user_uuid");
+  const apiKey = await secureStorage.getItem("api_key");
   // ... verification logic
 } catch (secureStorageError) {
-  console.warn('[AuthContext] SecureStorage failed, trying AsyncStorage:', secureStorageError);
+  console.warn('[AuthContext] SecureStorage failed, trying legacy storage:', secureStorageError);
   try {
-    const uuid = await AsyncStorage.getItem("user_uuid");
+    // Try old SecureStorage key first
+    let apiKey = await secureStorage.getItem("user_uuid");
+    if (!apiKey) {
+      // Try AsyncStorage as final fallback
+      apiKey = await AsyncStorage.getItem("user_uuid");
+    }
     // ... verification logic
   } catch (fallbackError) {
     console.error('[AuthContext] All storage methods failed:', fallbackError);
@@ -195,37 +250,43 @@ try {
 ## Phase 3: Integration Testing (10 mins)
 
 ### Test Scenarios
-1. **Fresh install** - Sign up new user
-2. **App restart with valid user** - Should verify and continue
+1. **Fresh install** - Sign up new user with `tides_userId_randomId` format
+2. **App restart with valid user** - Should verify and continue with persistent auth token
 3. **App restart with deleted user** - Should clear auth and show login
-4. **App restart offline** - Should work in offline mode
-5. **SecureStorage migration** - Existing AsyncStorage users should migrate
-6. **SecureStorage failure** - Should fallback gracefully
+4. **App restart offline** - Should work in offline mode with stored auth token
+5. **Token format migration** - Existing raw UUID users should get new format
+6. **SecureStorage migration** - Existing AsyncStorage users should migrate
+7. **SecureStorage failure** - Should fallback gracefully
 
 ### Success Criteria
-✅ Users verified on each app launch
-✅ Offline mode works when network unavailable  
-✅ Invalid users are logged out automatically
-✅ SecureStorage handles sensitive data
-✅ AsyncStorage used for non-sensitive data
-✅ Migration from old storage works seamlessly
+✅ Users verified on each app launch with hybrid auth
+✅ API keys generated in correct `tides_userId_randomId` format
+✅ Offline mode works when network unavailable with persistent API keys
+✅ Invalid users are logged out automatically via MCP validation
+✅ SecureStorage handles sensitive API keys securely
+✅ AsyncStorage used for non-sensitive data only
+✅ Migration from old UUID format works seamlessly
+✅ Migration from AsyncStorage to SecureStorage works
 ✅ Graceful fallbacks for storage failures
+✅ MCP server accepts API keys (no more 401 errors)
 
 ## Implementation Order
-1. **Phase 1.1**: Add verifyStoredAuth to authService
-2. **Phase 1.2**: Update AuthContext initialization  
-3. **Phase 1.3**: Update signOut method
-4. **Test Phase 1**: Verify hybrid auth works
-5. **Phase 2.1**: Test SecureStorage functionality
-6. **Phase 2.2-2.3**: Implement SecureStorage migration (if test passes)
-7. **Phase 3**: Comprehensive testing
+1. **Phase 0.1**: Fix API key format generation (CRITICAL - fixes 401 errors)
+2. **Phase 1.1**: Add verifyStoredAuth to authService  
+3. **Phase 1.2**: Update AuthContext initialization
+4. **Phase 1.3**: Update signOut method
+5. **Test Phase 1**: Verify hybrid auth works with proper API key format
+6. **Phase 2.1**: Test SecureStorage functionality
+7. **Phase 2.2-2.3**: Implement SecureStorage migration with new API key format
+8. **Phase 3**: Comprehensive testing
 
 ## Rollback Plan
-If SecureStorage fails: Keep Phase 1 (hybrid auth) and stay with AsyncStorage for now. The hybrid auth improvements are valuable independently.
+If SecureStorage fails: Keep Phase 0-1 (API key format + hybrid auth) and stay with AsyncStorage for now. The API key format fix and hybrid auth improvements are valuable independently.
 
 ## Current Status
 - Navigation fix: ✅ Complete (RootNavigator checks user+authToken)
-- API terminology cleanup: ✅ Complete 
-- SecureStorage test: ✅ Ready (button in Settings)
-- Hybrid auth: ⏳ Ready to implement
-- SecureStorage migration: ⏳ Pending test results
+- SecureStorage test: ✅ Complete (Keychain working)
+- SecureStorage migration: ✅ Complete (implemented)
+- API key format: ❌ **NEEDS FIX** (currently causes 401 errors)
+- Hybrid auth: ✅ Complete (implemented but broken by API key format)
+- **Next Step: Phase 0.1** - Fix API key generation format to resolve MCP authentication

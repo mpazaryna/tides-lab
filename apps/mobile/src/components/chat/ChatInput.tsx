@@ -8,7 +8,7 @@ import {
 } from "react-native";
 // import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowUp, Plus } from "lucide-react-native";
-import { colors, spacing } from "../../design-system/tokens";
+import { colors, spacing, typography } from "../../design-system/tokens";
 import { ToolSuggestion } from "./ToolSuggestion";
 import type { DetectedTool } from "../../config/toolPhrases";
 
@@ -50,17 +50,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       ]}
     >
       {/* Tool Suggestion */}
-      {showSuggestion && toolSuggestion && onAcceptSuggestion && onDismissSuggestion && (
-        <View style={styles.suggestionContainer}>
-          <ToolSuggestion
-            suggestion={toolSuggestion}
-            onAccept={onAcceptSuggestion}
-            onDismiss={onDismissSuggestion}
-            isVisible={showSuggestion}
-          />
-        </View>
-      )}
-      
+      {showSuggestion &&
+        toolSuggestion &&
+        onAcceptSuggestion &&
+        onDismissSuggestion && (
+          <View style={styles.suggestionContainer}>
+            <ToolSuggestion
+              suggestion={toolSuggestion}
+              onAccept={onAcceptSuggestion}
+              onDismiss={onDismissSuggestion}
+              isVisible={showSuggestion}
+            />
+          </View>
+        )}
+
       <View style={styles.mainRow}>
         <TouchableOpacity style={styles.toolButton} onPress={toggleToolMenu}>
           <Animated.View
@@ -76,7 +79,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             }}
           >
             <Plus
-              size={28}
+              size={22}
               color={
                 toolButtonActive ? colors.primary[500] : colors.neutral[400]
               }
@@ -111,7 +114,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 !inputMessage.trim() && styles.sendButtonColorDisabled,
               ]}
             >
-              <ArrowUp size={20} color="white" />
+              <ArrowUp size={18} color="white" />
             </View>
           </TouchableOpacity>
         </View>
@@ -139,17 +142,18 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   mainRow: {
-    padding: spacing[4],
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingLeft: 12,
+    paddingRight: 12,
+    paddingBottom: 12,
+    paddingTop: 8,
     backgroundColor: colors.background.secondary,
     display: "flex",
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 10,
-    borderTopWidth: 0.5,
     borderTopColor: colors.neutral[200],
     shadowColor: "#000",
+    borderTopWidth: 0.5,
     shadowOffset: {
       width: 0,
       height: -0.5,
@@ -163,7 +167,6 @@ const styles = StyleSheet.create({
     gap: spacing[2],
     borderWidth: 0.5,
     borderColor: colors.neutral[300],
-    borderRadius: 22.5,
     flex: 1,
     shadowColor: "#000",
     shadowOffset: {
@@ -173,19 +176,22 @@ const styles = StyleSheet.create({
     shadowRadius: 1.5,
     shadowOpacity: 0.03,
     backgroundColor: "white",
+    borderRadius: 18,
+    maxHeight: 100,
   },
   messageInput: {
     flex: 1,
-    paddingLeft: spacing[4],
-    paddingRight: 56,
-    paddingVertical: spacing[3],
-    fontSize: 16,
+    paddingLeft: 12,
+    paddingRight: 48,
+    fontSize: typography.fontSize.base,
     color: colors.text.primary,
-    maxHeight: 100,
+    paddingTop: 8,
+    paddingBottom: 8,
+    lineHeight: typography.fontSize.base * typography.lineHeight.pro,
   },
   toolButton: {
-    height: 44,
-    width: 44,
+    height: 34,
+    width: 34,
     backgroundColor: colors.neutral[200],
     borderRadius: 100,
     display: "flex",
@@ -195,14 +201,13 @@ const styles = StyleSheet.create({
   sendButton: {
     margin: 0,
     borderRadius: 1000,
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
     position: "absolute",
     right: 0,
     bottom: 0,
-    padding: 6,
   },
   sendButtonColor: {
     backgroundColor: colors.primary[500],
@@ -210,8 +215,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "absolute",
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
   },
   sendButtonDisabled: {
     opacity: 0.5,

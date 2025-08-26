@@ -4,13 +4,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { authService } from "../../services/authService";
+// import { authService } from "../../services/authService";
 import { useAuth } from "../../context/AuthContext";
 import { AuthNavigationParams } from "../../navigation/AuthNavigator";
-import { colors, spacing } from "../../design-system/tokens.ts";
-import { Text } from "../../components/Text.tsx";
-import { Input } from "../../components/Input.tsx";
-import { Button } from "../../components/Button.tsx";
+import { colors, spacing, Text, Input, Button } from "../../design-system";
 
 interface InitialScreenProps {}
 

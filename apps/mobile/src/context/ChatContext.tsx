@@ -10,6 +10,7 @@ import React, {
 import { agentService } from "../services/agentService";
 import { useAuth } from "./AuthContext";
 import { useMCP } from "./MCPContext";
+import { extractUserIdFromApiKey } from "../utils/apiKeyUtils";
 import type {
   ChatState,
   ChatAction,
@@ -147,7 +148,7 @@ interface ChatProviderProps {
 }
 
 export function ChatProvider({ children }: ChatProviderProps) {
-  const { user } = useAuth();
+  const { apiKey } = useAuth();
   const {
     isConnected: mcpConnected,
     createTide,
@@ -168,29 +169,36 @@ export function ChatProvider({ children }: ChatProviderProps) {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }, []);
 
-  // Initialize conversation context when user changes
+  // Initialize conversation context when API key changes
   useEffect(() => {
-    if (user) {
-      const sessionId = generateId();
-      const conversationId = generateId();
+    if (apiKey) {
+      const userId = extractUserIdFromApiKey(apiKey);
+      if (userId) {
+        const sessionId = generateId();
+        const conversationId = generateId();
 
-      dispatch({
-        type: "SET_CONVERSATION_CONTEXT",
-        payload: {
-          userId: user.id,
+        dispatch({
+          type: "SET_CONVERSATION_CONTEXT",
+          payload: {
+            userId,
+            sessionId,
+            activeConversationId: conversationId,
+            mcpConnectionStatus: mcpConnected,
+          },
+        });
+
+        loggingService.info("ChatContext", "Conversation context initialized", {
+          userId,
           sessionId,
-          activeConversationId: conversationId,
-          mcpConnectionStatus: mcpConnected,
-        },
-      });
-
-      loggingService.info("ChatContext", "Conversation context initialized", {
-        userId: user.id,
-        sessionId,
-        conversationId,
-      });
+          conversationId,
+        });
+      } else {
+        loggingService.warn("ChatContext", "Could not extract user ID from API key", {
+          apiKeyPrefix: apiKey.substring(0, 15) + '...'
+        });
+      }
     }
-  }, [user, generateId, mcpConnected]);
+  }, [apiKey, generateId, mcpConnected]);
 
   // Configure agentService with current server URL and MCP tool executor
   useEffect(() => {

@@ -107,7 +107,7 @@ export interface AuthResponse extends BaseResponse {
     refreshToken: string;
     expiresAt: string;
   };
-  authToken?: string;
+  apiKey?: string;
 }
 
 // HTTP client types

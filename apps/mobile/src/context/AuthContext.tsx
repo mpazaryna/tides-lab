@@ -9,10 +9,11 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "../services/secureStorage";
 import { authService } from "../services/authService";
 import { loggingService } from "../services/loggingService";
 import { authReducer, initialAuthState, type AuthState } from "./authTypes";
+import { extractUserIdFromApiKey } from "../utils/apiKeyUtils";
 
 interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<void>;
@@ -33,51 +34,70 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     loggingService.info("AuthContext", "Initializing auth context", undefined);
 
-    // Check for UUID authentication (bypass Supabase)
+    // Hybrid authentication: Check API key and verify with Supabase
     const getInitialAuth = async () => {
       try {
-        loggingService.info("AuthContext", "Checking for stored UUID authentication", {});
+        // Step 1: Check for stored API key
+        const apiKey = await secureStorage.getItem("api_key");
+        loggingService.info("AuthContext", "Retrieved API key from SecureStorage", { hasApiKey: !!apiKey });
         
-        // Check if we have a stored UUID (our authentication token)
-        const uuid = await AsyncStorage.getItem("user_uuid");
+        if (!apiKey) {
+          // No API key - user needs to authenticate
+          loggingService.info("AuthContext", "No API key found, user needs to authenticate", {});
+          dispatch({ type: "CLEAR_AUTH" });
+          return;
+        }
         
-        if (uuid) {
-          loggingService.info("AuthContext", "Found stored UUID, user is authenticated", { 
-            uuidLength: uuid.length 
-          });
-          
-          // Create a mock user object with the UUID
-          const mockUser = { id: uuid } as any;
-          
+        loggingService.info("AuthContext", "Found stored API key, verifying with Supabase", { 
+          apiKeyLength: apiKey.length 
+        });
+        
+        // Step 2: Verify with Supabase
+        const verification = await authService.verifyStoredAuth();
+        
+        if (verification.isValid) {
+          // Valid user - set authenticated state
+          let user = verification.user;
+          if (!user && apiKey) {
+            // Extract user ID from API key for offline mode
+            const userId = extractUserIdFromApiKey(apiKey);
+            if (userId) {
+              user = { id: userId } as any;
+              loggingService.info("AuthContext", "Created user object from API key", { userId });
+            }
+          }
           dispatch({
             type: "SET_AUTH_SUCCESS",
             payload: { 
-              user: mockUser, 
-              session: null, // We don't need Supabase session for UUID auth
-              authToken: uuid
+              user, 
+              session: null, 
+              apiKey: apiKey 
             }
           });
-        } else {
-          loggingService.info("AuthContext", "No UUID found, user needs to authenticate", {});
           
-          // No UUID means user is not authenticated
+          if (verification.isOffline) {
+            loggingService.info("AuthContext", "Running in offline mode", {});
+            // Could add offline indicator to state if needed
+          } else {
+            loggingService.info("AuthContext", "User verification successful", { userId: user?.id });
+          }
+        } else {
+          // User no longer valid - clear auth data
+          loggingService.info("AuthContext", "Clearing invalid auth data", {});
+          await secureStorage.removeItem("api_key");
           dispatch({ type: "CLEAR_AUTH" });
         }
       } catch (error) {
-        loggingService.error("AuthContext", "Failed to check UUID authentication", {
-          error,
-        });
-        dispatch({
-          type: "SET_ERROR",
-          payload: "Failed to check authentication",
-        });
+        // Handle any unexpected errors
+        loggingService.error("AuthContext", "Auth initialization failed", { error });
+        dispatch({ type: "SET_ERROR", payload: "Failed to verify authentication" });
       }
     };
 
     getInitialAuth();
 
-    // TODO: Auth state listener disabled for UUID-only authentication
-    // We don't need Supabase to watch for session changes since we use UUIDs
+    // TODO: Consider implementing selective auth state listening for hybrid auth scenarios
+    // We don't need Supabase to watch for session changes since we use API keys
     /*
     const {
       data: { subscription },
@@ -115,14 +135,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           throw result.error;
         }
 
-        // Manually update auth state since auth listener is disabled for UUID auth
+        // Manually update auth state since auth listener is disabled for API key auth
         if (result.user) {
-          console.log('[AuthContext] Getting auth token for signed in user...');
-          const authToken = await authService.getAuthToken();
-          console.log('[AuthContext] Retrieved auth token:', { 
-            hasAuthToken: !!authToken, 
-            authTokenLength: authToken?.length,
-            authTokenPrefix: authToken ? authToken.substring(0, 8) + '...' : 'null'
+          console.log('[AuthContext] Getting API key for signed in user...');
+          const apiKey = await authService.getApiKey();
+          console.log('[AuthContext] Retrieved API key:', { 
+            hasApiKey: !!apiKey, 
+            apiKeyLength: apiKey?.length,
+            apiKeyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'null'
           });
           
           console.log('[AuthContext] Dispatching SET_AUTH_SUCCESS...');
@@ -131,7 +151,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             payload: { 
               user: result.user, 
               session: result.session, 
-              authToken
+              apiKey
             }
           });
           console.log('[AuthContext] Auth state updated successfully');
@@ -168,14 +188,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           throw result.error;
         }
 
-        // Manually update auth state since auth listener is disabled for UUID auth
+        // Manually update auth state since auth listener is disabled for API key auth
         if (result.user) {
-          console.log('[AuthContext] Getting auth token for signed up user...');
-          const authToken = await authService.getAuthToken();
-          console.log('[AuthContext] Retrieved auth token:', { 
-            hasAuthToken: !!authToken, 
-            authTokenLength: authToken?.length,
-            authTokenPrefix: authToken ? authToken.substring(0, 8) + '...' : 'null'
+          console.log('[AuthContext] Getting API key for signed up user...');
+          const apiKey = await authService.getApiKey();
+          console.log('[AuthContext] Retrieved API key:', { 
+            hasApiKey: !!apiKey, 
+            apiKeyLength: apiKey?.length,
+            apiKeyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'null'
           });
           
           console.log('[AuthContext] Dispatching SET_AUTH_SUCCESS for sign up...');
@@ -184,7 +204,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             payload: { 
               user: result.user, 
               session: result.session, 
-              authToken
+              apiKey
             }
           });
           console.log('[AuthContext] Auth state updated successfully after sign up');
@@ -209,7 +229,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       await authService.signOut();
-      // State will be updated by the auth state change listener
+      // Manually clear auth state since auth listener is disabled for API key auth
+      console.log('[AuthContext] Clearing auth state after sign out');
+      dispatch({ type: "CLEAR_AUTH" });
       loggingService.info("AuthContext", "Sign out successful", undefined);
     } catch (error) {
       loggingService.error("AuthContext", "Sign out failed", { error });

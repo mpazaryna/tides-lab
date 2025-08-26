@@ -75,7 +75,7 @@ export const SERVER_ENVIRONMENTS: Record<
     description: "Mason's development environment with complete auth setup",
     url: "https://tides-006.mpazbot.workers.dev",
     environment: "mason-development",
-    features: ["D1 Database", "UUID Authentication", "Supabase Auth", "Durable Objects", "Working MCP Flow"],
+    features: ["D1 Database", "API Key Authentication", "Supabase Auth", "Durable Objects", "Working MCP Flow"],
     isDefault: true,
   },
   "mason-c32": {

@@ -7,19 +7,19 @@ import AuthNavigator from "./AuthNavigator";
 import MainNavigator from "./MainNavigator";
 
 import { RootStackParamList, Routes, NavigationOptions } from "./types";
-import { LoadingScreen } from "../components/Loading";
+import { Loading as LoadingScreen } from "../design-system";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  const { user, authToken, loading } = useAuth();
+  const { user, apiKey, loading } = useAuth();
 
   // Show loading screen while determining auth state
   if (loading) {
     return <LoadingScreen message="Initializing app..." />;
   }
 
-  const isAuthenticated = user && authToken;
+  const isAuthenticated = user && apiKey;
 
   return (
     <RootStack.Navigator

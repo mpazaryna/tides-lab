@@ -10,12 +10,7 @@ import { ChevronLeft, Activity, Clock, Zap } from "lucide-react-native";
 
 import { MainStackParamList, TideDetailsScreenProps } from "../../navigation/types";
 import { useMCP } from "../../context/MCPContext";
-import { Text } from "../../components/Text";
-import { Card } from "../../components/Card";
-import { Button } from "../../components/Button";
-import { SafeArea } from "../../components/SafeArea";
-import { Loading } from "../../components/Loading";
-import { colors, spacing } from "../../design-system/tokens";
+import { colors, spacing, Text, Card, Button, SafeArea, Loading } from "../../design-system";
 import { loggingService } from "../../services/loggingService";
 import type { Tide, TideReport } from "../../types/models";
 

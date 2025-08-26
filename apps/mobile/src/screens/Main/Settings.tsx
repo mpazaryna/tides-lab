@@ -5,6 +5,7 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 import { useMCP } from "../../context/MCPContext";
@@ -13,14 +14,10 @@ import { ServerEnvironmentSelector } from "../../components/ServerEnvironmentSel
 import { secureStorage } from "../../services/secureStorage";
 
 import { getRobotoMonoFont } from "../../utils/fonts";
-import { Text } from "../../components/Text";
-import { Card } from "../../components/Card";
-import { Container } from "../../components/Container";
-import { Button } from "../../components/Button";
-import { colors, spacing } from "../../design-system/tokens";
+import { colors, spacing, Text, Card, Container, Button } from "../../design-system";
 
 export default function Settings() {
-  const { user, signOut, authToken } = useAuth();
+  const { user, signOut, apiKey } = useAuth();
   const { isConnected, loading, error, checkConnection, getCurrentServerUrl } =
     useMCP();
   const { getCurrentEnvironment } = useServerEnvironment();
@@ -61,6 +58,7 @@ export default function Settings() {
 
   const handleTestSecureStorage = async () => {
     try {
+      // TODO: Replace console logging with proper test result reporting
       console.log('[Settings] Testing SecureStorage...');
       
       // Test write
@@ -75,10 +73,10 @@ export default function Settings() {
       await secureStorage.removeItem('test_key');
       console.log('✅ SecureStorage remove successful');
       
-      alert('✅ SecureStorage test passed! Check console for details.');
+      Alert.alert('SecureStorage Test', '✅ Test passed! Check console for details.');
     } catch (error) {
       console.error('❌ SecureStorage test failed:', error);
-      alert('❌ SecureStorage test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      Alert.alert('SecureStorage Test', '❌ Test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -122,11 +120,11 @@ export default function Settings() {
               </Text>
               <Text
                 variant="bodySmall"
-                color={authToken ? "success" : "error"}
+                color={apiKey ? "success" : "error"}
                 align="center"
-                style={styles.authTokenStatusStyle}
+                style={styles.apiKeyStatusStyle}
               >
-                Auth Token: {authToken ? "✓ Available" : "✗ Missing"}
+                API Key: {apiKey ? "✓ Available" : "✗ Missing"}
               </Text>
             </Card>
           )}
@@ -243,6 +241,7 @@ export default function Settings() {
           </Card>
 
           {/* Debug Information Section */}
+          {/* TODO: Move debug panel to dedicated development screen */}
           {user && (
             <Card variant="outlined" padding={5} style={styles.debugCardStyle}>
               <Text variant="h3" style={styles.sectionTitleStyle}>
@@ -264,26 +263,26 @@ export default function Settings() {
 
               <View style={styles.debugSection}>
                 <Text variant="body" weight="medium" style={styles.debugLabel}>
-                  Authorization Token:
+                  API Key:
                 </Text>
-                {authToken ? (
+                {apiKey ? (
                   <Text
                     variant="mono"
                     color="success"
                     style={styles.debugTokenStyle}
                   >
-                    Bearer {authToken}
+                    Bearer {apiKey}
                   </Text>
                 ) : (
                   <Text variant="body" color="error" style={styles.debugValue}>
-                    No auth token available
+                    No API key available
                   </Text>
                 )}
               </View>
 
               <View style={styles.debugSection}>
                 <Text variant="body" weight="medium" style={styles.debugLabel}>
-                  Token Format Expected:
+                  API Key Format Expected:
                 </Text>
                 <Text
                   variant="bodySmall"
@@ -297,25 +296,25 @@ export default function Settings() {
                   color="tertiary"
                   style={styles.debugNote}
                 >
-                  Mobile clients use UUID auth tokens for enhanced security.
+                  Mobile clients use API keys for enhanced security.
                   Desktop clients use UUID-based Bearer tokens.
                 </Text>
               </View>
 
               <View style={styles.debugSection}>
                 <Text variant="body" weight="medium" style={styles.debugLabel}>
-                  Token Validation:
+                  API Key Validation:
                 </Text>
                 <Text
                   variant="bodySmall"
                   color="info"
                   style={styles.debugValue}
                 >
-                  {authToken && authToken.startsWith("tides_")
+                  {apiKey && apiKey.startsWith("tides_")
                     ? "✓ Valid mobile client format"
-                    : authToken
-                    ? "⚠️ Non-standard format (may be desktop UUID)"
-                    : "✗ No token available"}
+                    : apiKey
+                    ? "⚠️ Non-standard format (may be legacy UUID)"
+                    : "✗ No API key available"}
                 </Text>
               </View>
             </Card>
@@ -384,7 +383,7 @@ const styles = StyleSheet.create({
   userEmailStyle: {
     marginBottom: spacing[2],
   },
-  authTokenStatusStyle: {
+  apiKeyStatusStyle: {
     marginTop: spacing[2],
   },
   serverConfigHeader: {

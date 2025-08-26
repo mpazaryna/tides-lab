@@ -170,7 +170,7 @@ export const TOOL_PHRASES: ToolPhrase[] = [
       // Extract duration if mentioned
       const durationMatch = text.match(/(\d+)\s*min/);
       if (durationMatch) {
-        params.duration = parseInt(durationMatch[1]);
+        params.duration = parseInt(durationMatch[1], 10);
       }
       
       return params;
