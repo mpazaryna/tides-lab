@@ -23,5 +23,40 @@ build/
 # OS files
 Thumbs.db
 
+# React Native iOS
+apps/mobile/ios/Pods/
+apps/mobile/ios/build/
+apps/mobile/ios/*.pbxuser
+apps/mobile/ios/!default.pbxuser
+apps/mobile/ios/*.mode1v3
+apps/mobile/ios/!default.mode1v3
+apps/mobile/ios/*.mode2v3
+apps/mobile/ios/!default.mode2v3
+apps/mobile/ios/*.perspectivev3
+apps/mobile/ios/!default.perspectivev3
+apps/mobile/ios/xcuserdata
+apps/mobile/ios/*.xccheckout
+apps/mobile/ios/*.moved-aside
+apps/mobile/ios/DerivedData
+apps/mobile/ios/*.hmap
+apps/mobile/ios/*.ipa
+apps/mobile/ios/*.xcuserstate
+apps/mobile/ios/project.xcworkspace
+
+# React Native Android
+apps/mobile/android/app/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/android/*.keystore
+apps/mobile/android/!debug.keystore
+
+# Metro bundler
+apps/mobile/*.jsbundle
+
+# Testing
+apps/mobile/coverage/
+
+# Temporary files
+apps/mobile/.metro-health-check*
+
 # App-specific ignores are handled by individual apps
-EOF < /dev/null
