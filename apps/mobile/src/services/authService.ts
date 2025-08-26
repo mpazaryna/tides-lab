@@ -4,11 +4,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session } from "@supabase/supabase-js";
 
 class AuthService {
-  private currentUrl = "https://supabase-tides-demo-1.mason-c32.workers.dev";
+  private currentUrl = "https://tides-001.mpazbot.workers.dev"; // Fallback to env001
   private urlReady = false;
+  private urlProvider: (() => string) | null = null;
 
   constructor() {
     this.initUrl();
+  }
+
+  /**
+   * Configure the service with a URL provider from MCP context
+   */
+  setUrlProvider(getServerUrl: () => string): void {
+    this.urlProvider = getServerUrl;
+    this.currentUrl = getServerUrl();
   }
 
   private async initUrl() {

@@ -96,6 +96,14 @@ export function MCPProvider({ children }: MCPProviderProps) {
     useServerEnvironment();
   const [state, dispatch] = useReducer(mcpReducer, initialMCPState);
 
+  // Configure authService with current server URL  
+  useEffect(() => {
+    if (getEnvironmentServerUrl) {
+      authService.setUrlProvider(getEnvironmentServerUrl);
+      loggingService.info("MCPContext", "AuthService configured with environment URL provider");
+    }
+  }, [getEnvironmentServerUrl]);
+
   const checkConnection = useCallback(async (): Promise<void> => {
     loggingService.info("MCPContext", "Checking MCP connection", undefined);
     dispatch({ type: "SET_LOADING", payload: true });

@@ -1,0 +1,1 @@
+when an agent proactively does a tool, it asks permission to do so unless the tool was selected. it shoud be a prompwith the parameters created by the agent, and then the options should be "continue or edit , edit will allow you to edit the parameters, continue will submit the tides tool. this eppearas as a message udnerneath the last agent message

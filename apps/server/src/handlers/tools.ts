@@ -67,6 +67,37 @@ export function registerTideTools(server: McpServer, storage: TideStorage) {
   );
 
   /**
+   * MCP Tool: tide_get_or_create_daily
+   * 
+   * Gets today's daily tide or creates one automatically. This enables ambient
+   * productivity tracking without requiring explicit user action. The tide's name
+   * can be updated retroactively as the day's context becomes clear.
+   * 
+   * Following service_noun_verb pattern: tide_get_or_create_daily
+   */
+  server.registerTool(
+    "tide_get_or_create_daily",
+    {
+      title: "Get or Create Daily Tide",
+      description: "Automatically get today's daily tide or create one if it doesn't exist. Enables ambient productivity tracking without explicit user action. The tide starts with just the date as its name but can be renamed retroactively as the day unfolds. Accepts optional timezone for correct date handling.",
+      inputSchema: {
+        timezone: z.string().optional().describe("User's timezone (e.g., 'America/New_York'). Defaults to UTC if not provided"),
+      },
+    },
+    async ({ timezone }) => {
+      const result = await tideTools.getOrCreateDailyTide({ timezone }, storage);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    },
+  );
+
+  /**
    * MCP Tool: tide_list
    * 
    * Lists tides with optional filtering - perfect for React Native FlatList components.

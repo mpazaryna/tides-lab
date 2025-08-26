@@ -167,13 +167,13 @@ interface MCPSessionStorage {
 
 ## Related Decisions
 
-- Tide data storage format (see ADR 0002)
+- Tide data storage format (see /decisions/002-tide-data-storage.md)
 - Server-side JSONB storage strategy
 - Offline capabilities roadmap
 
 ## References
 
-- Current implementation in `src/context/AuthContext.tsx`
-- Current implementation in `src/context/MCPContext.tsx`
-- MCP service in `src/services/mcpService.ts`
-- Server-side storage in `supabase-tides-demo-1/src/storage/index.ts`
+- Current implementation in `apps/mobile/src/context/AuthContext.tsx`
+- Current implementation in `apps/mobile/src/context/MCPContext.tsx`
+- MCP service in `apps/mobile/src/services/mcpService.ts`
+- Server-side storage in `apps/server/src/storage/index.ts`

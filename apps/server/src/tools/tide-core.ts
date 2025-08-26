@@ -192,6 +192,121 @@ export async function createTide(
 }
 
 /**
+ * Gets today's tide or creates one automatically
+ * This is the key innovation - treat tides as ambient containers that 
+ * capture all daily activity without user intervention
+ * 
+ * @param {Object} params - The creation parameters
+ * @param {string} [params.timezone] - User's timezone (e.g., "America/New_York")
+ * @param {TideStorage} storage - Storage instance for data operations
+ * 
+ * @returns {Promise<GetOrCreateDailyTideResponse>} Promise resolving to daily tide
+ * 
+ * @example
+ * // Automatically get or create today's tide
+ * const result = await getOrCreateDailyTide({
+ *   timezone: "America/New_York"
+ * }, storage);
+ * 
+ * if (result.success) {
+ *   const dailyTide = result.tide;
+ *   // User can now interact without thinking about tide creation
+ * }
+ * 
+ * @since 3.0.0
+ */
+export async function getOrCreateDailyTide(
+  params: {
+    timezone?: string;
+  },
+  storage: TideStorage
+) {
+  try {
+    // Get today's date in the user's timezone
+    const timezone = params.timezone || "UTC";
+    const now = new Date();
+    
+    console.log('[getOrCreateDailyTide] Debug:', {
+      receivedTimezone: params.timezone,
+      usingTimezone: timezone,
+      currentUTC: now.toISOString(),
+      currentLocal: now.toString()
+    });
+    
+    // Format date in user's timezone using ISO date format (YYYY-MM-DD)
+    const formatter = new Intl.DateTimeFormat('sv-SE', { // sv-SE gives YYYY-MM-DD format
+      timeZone: timezone
+    });
+    const todayKey = formatter.format(now); // Will be YYYY-MM-DD format
+    
+    console.log('[getOrCreateDailyTide] Formatted date:', {
+      todayKey,
+      timezone,
+      formattedInTimezone: new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      }).format(now)
+    });
+    
+    // Check for existing daily tide
+    const existingTides = await storage.listTides({
+      flow_type: 'daily',
+      active_only: true
+    });
+    
+    const todaysTide = existingTides.find(tide => {
+      // Check if tide name matches today's date or was created today
+      return tide.name === todayKey || 
+             (tide.metadata?.initial_date === todayKey) ||
+             (tide.created_at && tide.created_at.startsWith(todayKey));
+    });
+    
+    if (todaysTide) {
+      return {
+        success: true,
+        tide: todaysTide,
+        created: false,
+        message: `Retrieved existing daily tide: ${todaysTide.name}`
+      };
+    }
+    
+    // Create new daily tide with minimal metadata
+    const newTide = await storage.createTide({
+      name: todayKey,
+      flow_type: 'daily',
+      description: `Daily tide for ${todayKey}`,
+      metadata: {
+        auto_created: true,
+        initial_date: todayKey,
+        timezone: timezone,
+        can_rename: true,
+        aggregation_eligible: true,
+        created_automatically_at: new Date().toISOString()
+      }
+    });
+    
+    return {
+      success: true,
+      tide: newTide,
+      created: true,
+      message: `Created new daily tide for ${todayKey}`
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get or create daily tide',
+      created: false
+    };
+  }
+}
+
+/**
  * Lists tides with optional filtering
  * 
  * @description Retrieves a list of tides with optional filtering by flow type and status.

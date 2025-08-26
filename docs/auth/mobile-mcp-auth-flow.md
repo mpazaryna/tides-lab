@@ -228,17 +228,17 @@ tides_testuser_{001-005}
 
 ### Mobile App
 
-- `src/services/authService.ts` - Authentication service
-- `src/services/mcpService.ts` - MCP communication
-- `src/services/base/BaseService.ts` - HTTP base class
-- `src/context/AuthContext.tsx` - Authentication state management
-- `src/context/MCPContext.tsx` - MCP connection management
+- `apps/mobile/src/services/authService.ts` - Authentication service
+- `apps/mobile/src/services/mcpService.ts` - MCP communication
+- `apps/mobile/src/services/base/BaseService.ts` - HTTP base class
+- `apps/mobile/src/context/AuthContext.tsx` - Authentication state management
+- `apps/mobile/src/context/MCPContext.tsx` - MCP connection management
 
 ### Server
 
-- `src/auth/index.ts` - Authentication validation
-- `src/server.ts` - MCP server implementation
-- `src/handlers/auth.ts` - Authentication handlers
+- `apps/server/src/auth/index.ts` - Authentication validation
+- `apps/server/src/server.ts` - MCP server implementation
+- `apps/server/src/handlers/auth.ts` - Authentication handlers
 
 ## Development and Testing
 

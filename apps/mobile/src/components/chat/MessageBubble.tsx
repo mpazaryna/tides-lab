@@ -1,8 +1,9 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Image } from "react-native";
 import { Text } from "../Text";
-import { colors, spacing } from "../../design-system/tokens";
+import { colors, spacing, typography } from "../../design-system/tokens";
 import type { ChatMessage } from "../../types/chat";
+import { getInterFont } from "../../utils/fonts";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -52,6 +53,35 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     return String(result);
   };
 
+  const renderFormattedText = (text: string) => {
+    // Clean the text first - remove "Assistant:" prefix and trim whitespace
+    let cleanText = text
+      .replace(/^Assistant:\s*/i, "") // Remove "Assistant:" at the start
+      .replace(/^assistant:\s*/i, "") // Remove "assistant:" at the start
+      .trim(); // Remove leading/trailing whitespace
+
+    // Split text by **bold** patterns
+    const parts = cleanText.split(/(\*\*.*?\*\*)/g);
+
+    return (
+      <Text variant="body" color={getTextColor()}>
+        {parts.map((part, index) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            // Remove ** and render as bold (nested Text for inline styling)
+            const boldText = part.slice(2, -2);
+            return (
+              <Text key={index} style={styles.boldText}>
+                {boldText}
+              </Text>
+            );
+          }
+          // Regular text - just return the string, no wrapper
+          return part;
+        })}
+      </Text>
+    );
+  };
+
   return (
     <View
       style={[
@@ -66,34 +96,41 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </Text>
         )}
 
-        {message.metadata?.agentResponse && (
+        {/* {message.metadata?.agentResponse && (
           <Text variant="bodySmall" color="tertiary" style={styles.agentHeader}>
             Tides Agent
           </Text>
+        )} */}
+
+        {message.type === "tool_result" && message.metadata?.toolResult ? (
+          <Text variant="body" color={getTextColor()}>
+            {formatToolResult(message.metadata.toolResult)}
+          </Text>
+        ) : (
+          renderFormattedText(message.content)
         )}
-
-        <Text variant="body" color={getTextColor()}>
-          {message.type === "tool_result" && message.metadata?.toolResult
-            ? formatToolResult(message.metadata.toolResult)
-            : message.content}
-        </Text>
-
+        {message.type === "user" && (
+          <Image
+            source={require("../../../assets/graphics/chatstrike.png")}
+            style={styles.chatStrike}
+          />
+        )}
         {message.metadata?.error && (
           <Text variant="bodySmall" color="error" style={styles.errorText}>
             ⚠️ Error occurred
           </Text>
         )}
       </View>
-      <Text variant="bodySmall" color="tertiary" style={styles.timestamp}>
+      {/* <Text variant="bodySmall" color="tertiary" style={styles.timestamp}>
         {message.timestamp.toLocaleTimeString()}
-      </Text>
+      </Text> */}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   messageContainer: {
-    marginVertical: spacing[2],
+    marginVertical: spacing[3],
     alignItems: "flex-start",
   },
   ownMessageContainer: {
@@ -102,13 +139,19 @@ const styles = StyleSheet.create({
   messageBubble: {
     maxWidth: "100%",
   },
+  chatStrike: {
+    position: "absolute",
+    right: -5,
+    bottom: 0,
+    zIndex: 1,
+  },
   userBubble: {
     backgroundColor: colors.neutral[200],
     paddingLeft: 12,
     paddingRight: 12,
     paddingVertical: 7.5,
     borderRadius: 18,
-    borderBottomRightRadius: 0,
+    marginRight: 5,
   },
   assistantBubble: {
     borderBottomLeftRadius: 4,
@@ -124,7 +167,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   agentBubble: {
-    paddingRight: spacing[4],
+    paddingRight: 10,
   },
   toolName: {
     marginBottom: spacing[1],
@@ -139,5 +182,9 @@ const styles = StyleSheet.create({
   timestamp: {
     marginTop: spacing[1],
     fontSize: 11,
+  },
+  boldText: {
+    fontFamily: getInterFont("semiBold"),
+    fontWeight: typography.fontWeight.semibold,
   },
 });

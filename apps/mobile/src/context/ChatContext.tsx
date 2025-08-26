@@ -7,7 +7,6 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { loggingService } from "../services/loggingService";
 import { agentService } from "../services/agentService";
 import { useAuth } from "./AuthContext";
 import { useMCP } from "./MCPContext";
@@ -18,6 +17,7 @@ import type {
   MCPToolCall,
   AvailableMCPTool,
 } from "../types/chat";
+import { loggingService } from "../services/loggingService";
 
 const initialChatState: ChatState = {
   messages: [],
@@ -157,6 +157,9 @@ export function ChatProvider({ children }: ChatProviderProps) {
     linkTaskToTide,
     getTaskLinks,
     getTideParticipants,
+    refreshTides,
+    tides,
+    getCurrentServerUrl,
   } = useMCP();
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
 
@@ -189,6 +192,14 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }
   }, [user, generateId, mcpConnected]);
 
+  // Configure agentService with current server URL
+  useEffect(() => {
+    if (getCurrentServerUrl) {
+      agentService.setUrlProvider(getCurrentServerUrl);
+      loggingService.info("ChatContext", "AgentService configured with MCP URL provider");
+    }
+  }, [getCurrentServerUrl]);
+
   // Update connection statuses
   useEffect(() => {
     dispatch({
@@ -206,56 +217,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
       },
     });
   }, [mcpConnected]);
-
-  const sendMessage = useCallback(
-    async (content: string): Promise<void> => {
-      if (!content.trim()) return;
-
-      const messageId = generateId();
-      const userMessage: ChatMessage = {
-        id: messageId,
-        type: "user",
-        content: content.trim(),
-        timestamp: new Date(),
-        metadata: {
-          conversationId: state.conversationContext.activeConversationId,
-          userId: state.conversationContext.userId,
-        },
-      };
-
-      dispatch({ type: "ADD_MESSAGE", payload: userMessage });
-      dispatch({ type: "SET_LOADING", payload: true });
-
-      loggingService.info("ChatContext", "User message sent", {
-        messageId,
-        content: content.substring(0, 50) + "...",
-      });
-
-      try {
-        // Here we would implement message processing logic
-        // For now, add a simple echo response
-        const responseMessage: ChatMessage = {
-          id: generateId(),
-          type: "assistant",
-          content: `I received your message: "${content}". Integration with MCP tools and agent is in progress.`,
-          timestamp: new Date(),
-          metadata: {
-            conversationId: state.conversationContext.activeConversationId,
-          },
-        };
-
-        dispatch({ type: "ADD_MESSAGE", payload: responseMessage });
-        dispatch({ type: "SET_LOADING", payload: false });
-      } catch (error) {
-        loggingService.error("ChatContext", "Failed to process message", {
-          error,
-          messageId,
-        });
-        dispatch({ type: "SET_ERROR", payload: "Failed to process message" });
-      }
-    },
-    [state.conversationContext, generateId]
-  );
 
   const executeMCPTool = useCallback(
     async (toolName: string, parameters: any): Promise<void> => {
@@ -287,6 +248,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
         // Route to appropriate MCP tool based on name
         switch (toolName) {
+          case "tide_create":
           case "createTide":
             result = await createTide(
               parameters.name,
@@ -294,6 +256,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
               parameters.flowType
             );
             break;
+          case "tide_flow":
           case "startTideFlow":
             result = await startTideFlow(
               parameters.tideId,
@@ -303,6 +266,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
               parameters.workContext
             );
             break;
+          case "tide_add_energy":
           case "addEnergyToTide":
             result = await addEnergyToTide(
               parameters.tideId,
@@ -310,9 +274,11 @@ export function ChatProvider({ children }: ChatProviderProps) {
               parameters.context
             );
             break;
+          case "tide_get_report":
           case "getTideReport":
             result = await getTideReport(parameters.tideId, parameters.format);
             break;
+          case "tide_link_task":
           case "linkTaskToTide":
             result = await linkTaskToTide(
               parameters.tideId,
@@ -321,9 +287,11 @@ export function ChatProvider({ children }: ChatProviderProps) {
               parameters.taskType
             );
             break;
+          case "tide_list_task_links":
           case "getTaskLinks":
             result = await getTaskLinks(parameters.tideId);
             break;
+          case "tides_get_participants":
           case "getTideParticipants":
             result = await getTideParticipants(
               parameters.statusFilter,
@@ -331,6 +299,15 @@ export function ChatProvider({ children }: ChatProviderProps) {
               parameters.dateTo,
               parameters.limit
             );
+            break;
+          case "tide_list":
+            // Refresh tides and return the current list
+            await refreshTides();
+            result = { 
+              tides: tides,
+              message: `Found ${tides.length} tides`,
+              count: tides.length
+            };
             break;
           default:
             throw new Error(`Unknown tool: ${toolName}`);
@@ -418,7 +395,318 @@ export function ChatProvider({ children }: ChatProviderProps) {
       linkTaskToTide,
       getTaskLinks,
       getTideParticipants,
+      refreshTides,
+      tides,
     ]
+  );
+
+  // Handle slash commands for direct tool execution
+  const handleSlashCommand = useCallback(
+    async (command: string): Promise<void> => {
+      const parts = command.substring(1).split(' '); // Remove '/' and split
+      const toolName = parts[0];
+      const args = parts.slice(1);
+
+      loggingService.info("ChatContext", "Processing slash command", {
+        toolName,
+        argsCount: args.length,
+      });
+
+      // Map slash commands to tool names
+      let mappedTool: string | undefined;
+      
+      // Handle different command patterns
+      if (toolName === 'tide') {
+        switch (args[0]) {
+          case 'create':
+            mappedTool = 'tide_create';
+            break;
+          case 'list':
+            mappedTool = 'tide_list';
+            break;
+          case 'report':
+            mappedTool = 'tide_get_report';
+            break;
+          case 'flow':
+            mappedTool = 'tide_flow';
+            break;
+          default:
+            // If no valid subcommand, show error
+            mappedTool = undefined;
+        }
+      } else if (toolName === 'task') {
+        switch (args[0]) {
+          case 'link':
+            mappedTool = 'tide_link_task';
+            break;
+          case 'list':
+            mappedTool = 'tide_list_task_links';
+            break;
+          default:
+            mappedTool = undefined;
+        }
+      } else if (toolName === 'energy') {
+        mappedTool = 'tide_add_energy';
+      } else if (toolName === 'participants') {
+        mappedTool = 'tides_get_participants';
+      } else if (toolName === 'help') {
+        mappedTool = 'help';
+      }
+      
+      if (mappedTool === 'help') {
+        const helpMessage: ChatMessage = {
+          id: generateId(),
+          type: "system",
+          content: `Available commands:
+• /tide list - Show all your tides
+• /tide create [name] - Create a new tide
+• /tide report [id] - Get tide report
+• /tide flow [id] - Start flow session
+• /energy [level] - Add energy (low/medium/high) to most recent tide
+• /energy [level] [tideId] - Add energy to specific tide
+• /task link [tideId] [url] [title] - Link task to tide
+• /task list [tideId] - List linked tasks
+• /participants - Get tide participants
+• Just type naturally - I can understand regular conversation too!`,
+          timestamp: new Date(),
+          metadata: {
+            conversationId: state.conversationContext.activeConversationId,
+            helpCommand: true,
+          },
+        };
+        dispatch({ type: "ADD_MESSAGE", payload: helpMessage });
+        dispatch({ type: "SET_LOADING", payload: false });
+        return;
+      }
+
+      if (mappedTool) {
+        // Build parameters based on the command
+        let parameters: any = {};
+        
+        if (mappedTool === 'tide_create') {
+          parameters = {
+            name: args.slice(1).join(' ') || 'New Tide',
+            description: `Created via chat command`,
+            flowType: 'daily'
+          };
+        } else if (mappedTool === 'tide_get_report' && args[1]) {
+          parameters = {
+            tideId: args[1],
+            format: 'json'
+          };
+        } else if (mappedTool === 'tide_add_energy') {
+          // Check if user provided a tide ID as second argument
+          let tideId = args[1];
+          let energyLevel = args[0];
+          
+          // If no tide ID provided, try to use the first available tide
+          if (!tideId) {
+            if (state.conversationContext.currentTideId) {
+              tideId = state.conversationContext.currentTideId;
+            } else if (tides && tides.length > 0) {
+              // Use the most recent tide
+              tideId = tides[0].id;
+              loggingService.info("ChatContext", "Using most recent tide for energy update", {
+                tideId,
+                tideName: tides[0].name
+              });
+            } else {
+              // No tides available
+              const errorMessage: ChatMessage = {
+                id: generateId(),
+                type: "system",
+                content: `No active tides found. Please create a tide first using '/tide create [name]' or specify a tide ID: '/energy [level] [tideId]'`,
+                timestamp: new Date(),
+                metadata: {
+                  conversationId: state.conversationContext.activeConversationId,
+                  error: true,
+                },
+              };
+              dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
+              dispatch({ type: "SET_LOADING", payload: false });
+              return;
+            }
+          }
+          
+          parameters = {
+            tideId: tideId,
+            energyLevel: energyLevel || 'medium',
+            context: 'Chat command'
+          };
+        } else if (mappedTool === 'tide_flow' && args[1]) {
+          parameters = {
+            tideId: args[1],
+            intensity: 'moderate',
+            duration: 25
+          };
+        } else if (mappedTool === 'tide_link_task' && args[1]) {
+          parameters = {
+            tideId: args[1],
+            taskUrl: args[2] || 'https://example.com/task',
+            taskTitle: args.slice(3).join(' ') || 'Task',
+            taskType: 'general'
+          };
+        } else if (mappedTool === 'tide_list_task_links' && args[1]) {
+          parameters = {
+            tideId: args[1]
+          };
+        } else if (mappedTool === 'tides_get_participants') {
+          parameters = {
+            limit: 10
+          };
+        }
+
+        await executeMCPTool(mappedTool, parameters);
+      } else {
+        // Provide more specific error messages for known commands with invalid subcommands
+        let errorContent = `Unknown command: /${toolName}`;
+        
+        if (toolName === 'tide' && args[0]) {
+          errorContent = `Invalid tide subcommand: '${args[0]}'. Valid options are: create, list, report, flow`;
+        } else if (toolName === 'task' && args[0]) {
+          errorContent = `Invalid task subcommand: '${args[0]}'. Valid options are: link, list`;
+        } else if (!mappedTool) {
+          errorContent = `Unknown command: /${command.substring(1).split(' ')[0]}. Type '/help' to see available commands.`;
+        }
+        
+        const errorMessage: ChatMessage = {
+          id: generateId(),
+          type: "system",
+          content: errorContent,
+          timestamp: new Date(),
+          metadata: {
+            conversationId: state.conversationContext.activeConversationId,
+            error: true,
+          },
+        };
+        dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
+        dispatch({ type: "SET_LOADING", payload: false });
+      }
+    },
+    [state.conversationContext, generateId, executeMCPTool, tides]
+  );
+
+  const sendMessage = useCallback(
+    async (content: string): Promise<void> => {
+      if (!content.trim()) return;
+
+      const messageId = generateId();
+      const userMessage: ChatMessage = {
+        id: messageId,
+        type: "user",
+        content: content.trim(),
+        timestamp: new Date(),
+        metadata: {
+          conversationId: state.conversationContext.activeConversationId,
+          userId: state.conversationContext.userId,
+        },
+      };
+
+      dispatch({ type: "ADD_MESSAGE", payload: userMessage });
+      dispatch({ type: "SET_LOADING", payload: true });
+
+      loggingService.info("ChatContext", "Processing message with AI enhancement", {
+        messageId,
+        content: content.substring(0, 50) + "...",
+      });
+
+      try {
+        // Check if message starts with slash command
+        if (content.startsWith('/')) {
+          loggingService.info("ChatContext", "Detected slash command, routing to handleSlashCommand", {
+            command: content
+          });
+          try {
+            await handleSlashCommand(content);
+            return;
+          } catch (slashError) {
+            loggingService.error("ChatContext", "Slash command failed, falling back to AI", {
+              error: slashError,
+              command: content
+            });
+            // Don't return - let it fall through to AI processing
+          }
+        }
+
+        // Use enhanced agent service for natural language processing
+        try {
+          const agentResponse = await agentService.sendMessage(content, {
+            tideId: state.conversationContext.currentTideId,
+          });
+
+          const assistantMessage: ChatMessage = {
+            id: generateId(),
+            type: "assistant",
+            content: agentResponse.content,
+            timestamp: new Date(),
+            metadata: {
+              conversationId: state.conversationContext.activeConversationId,
+              agentResponse: true,
+              agentId: agentResponse.agentId,
+              responseType: agentResponse.type,
+              suggestedTools: agentResponse.suggestedTools,
+            },
+          };
+
+          dispatch({ type: "ADD_MESSAGE", payload: assistantMessage });
+
+          // If the agent suggested a tool call, show suggestions
+          if (agentResponse.toolCall) {
+            const toolSuggestionMessage: ChatMessage = {
+              id: generateId(),
+              type: "system",
+              content: `I can execute "${agentResponse.toolCall.name}" for you. Would you like me to proceed?`,
+              timestamp: new Date(),
+              metadata: {
+                conversationId: state.conversationContext.activeConversationId,
+                toolSuggestion: agentResponse.toolCall,
+              },
+            };
+            dispatch({ type: "ADD_MESSAGE", payload: toolSuggestionMessage });
+          }
+
+        } catch (agentError) {
+          loggingService.warn("ChatContext", "Agent service unavailable, using fallback", agentError);
+          
+          // Fallback to basic response
+          const fallbackMessage: ChatMessage = {
+            id: generateId(),
+            type: "assistant",
+            content: `I understand your message about "${content}". I'm having trouble accessing my AI analysis tools right now. You can use direct commands like '/tide list' or '/tide create' to manage your flows.`,
+            timestamp: new Date(),
+            metadata: {
+              conversationId: state.conversationContext.activeConversationId,
+              fallbackResponse: true,
+            },
+          };
+          dispatch({ type: "ADD_MESSAGE", payload: fallbackMessage });
+        }
+
+        dispatch({ type: "SET_LOADING", payload: false });
+        
+      } catch (error) {
+        loggingService.error("ChatContext", "Failed to process message", {
+          error,
+          messageId,
+        });
+        
+        const errorMessage: ChatMessage = {
+          id: generateId(),
+          type: "system",
+          content: "I'm having trouble processing your message right now. Please try again or use direct commands like '/tide list'.",
+          timestamp: new Date(),
+          metadata: {
+            conversationId: state.conversationContext.activeConversationId,
+            error: true,
+          },
+        };
+        
+        dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
+        dispatch({ type: "SET_ERROR", payload: "Failed to process message" });
+        dispatch({ type: "SET_LOADING", payload: false });
+      }
+    },
+    [state.conversationContext, generateId, handleSlashCommand]
   );
 
   const sendToolMessage = useCallback(

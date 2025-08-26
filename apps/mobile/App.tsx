@@ -7,20 +7,55 @@ import { AuthProvider } from "./src/context/AuthContext";
 import { MCPProvider } from "./src/context/MCPContext";
 import { ChatProvider } from "./src/context/ChatContext";
 import RootNavigator from "./src/navigation/RootNavigator";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { colors } from "./src/design-system/tokens";
+
+const AppContent: React.FC = () => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <>
+      <View
+        style={{
+          height: insets.top,
+          backgroundColor: colors.background.primary,
+        }}
+      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ServerEnvironmentProvider>
+          <AuthProvider>
+            <MCPProvider>
+              <ChatProvider>
+                <NavigationContainer>
+                  <RootNavigator />
+                </NavigationContainer>
+              </ChatProvider>
+            </MCPProvider>
+          </AuthProvider>
+        </ServerEnvironmentProvider>
+      </KeyboardAvoidingView>
+      <View
+        style={{
+          height: insets.bottom,
+          backgroundColor: colors.background.secondary,
+        }}
+      />
+    </>
+  );
+};
 
 const App: React.FC = () => {
   return (
-    <ServerEnvironmentProvider>
-      <AuthProvider>
-        <MCPProvider>
-          <ChatProvider>
-            <NavigationContainer>
-              <RootNavigator />
-            </NavigationContainer>
-          </ChatProvider>
-        </MCPProvider>
-      </AuthProvider>
-    </ServerEnvironmentProvider>
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
   );
 };
 

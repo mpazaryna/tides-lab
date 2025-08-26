@@ -17,6 +17,14 @@ export interface ChatMessageMetadata {
   agentId?: string;
   responseType?: string;
   isAgentMessage?: boolean;
+  suggestedTools?: string[];
+  toolSuggestion?: {
+    name: string;
+    parameters: Record<string, any>;
+    confidence: number;
+  };
+  fallbackResponse?: boolean;
+  helpCommand?: boolean;
 }
 
 export interface MCPToolCall {

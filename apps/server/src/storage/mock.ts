@@ -21,6 +21,7 @@ export class MockTideStorage implements TideStorage {
       flow_sessions: [],
       energy_updates: [],
       task_links: [],
+      metadata: input.metadata || undefined,
     };
 
     this.tides.set(tide.id, tide);

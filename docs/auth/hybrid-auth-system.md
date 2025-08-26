@@ -93,7 +93,7 @@ Current implementation uses custom API keys (`tides_{userId}_{randomId}`) which 
 
 #### 1.1 Enhanced Authentication Middleware
 
-**File:** `supabase-tides-demo-1/src/storage/index.ts`
+**File:** `apps/server/src/storage/index.ts`
 
 ```typescript
 export interface AuthContext {
@@ -186,7 +186,7 @@ export class StorageService {
 
 #### 1.2 UUID Registration Endpoint
 
-**File:** `supabase-tides-demo-1/src/index.ts`
+**File:** `apps/server/src/index.ts`
 
 ```typescript
 // Add admin endpoint for UUID registration
@@ -313,7 +313,7 @@ CREATE TRIGGER on_user_created
 
 #### 3.1 UUID Export Feature
 
-**File:** `src/services/authService.ts`
+**File:** `apps/mobile/src/services/authService.ts`
 
 ```typescript
 class AuthenticationService {
@@ -375,7 +375,7 @@ class AuthenticationService {
 
 #### 3.2 Desktop Setup Screen
 
-**File:** `src/screens/Settings/DesktopSetup.tsx`
+**File:** `apps/mobile/src/screens/Settings/DesktopSetup.tsx`
 
 ```typescript
 import React, { useState } from 'react';

@@ -6,9 +6,11 @@ import {
   Animated,
   StyleSheet,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+// import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowUp, Plus } from "lucide-react-native";
 import { colors, spacing } from "../../design-system/tokens";
+import { ToolSuggestion } from "./ToolSuggestion";
+import type { DetectedTool } from "../../config/toolPhrases";
 
 interface ChatInputProps {
   inputMessage: string;
@@ -18,6 +20,10 @@ interface ChatInputProps {
   toolButtonActive: boolean;
   rotationAnim: Animated.Value;
   toggleToolMenu: () => void;
+  toolSuggestion?: DetectedTool | null;
+  showSuggestion?: boolean;
+  onAcceptSuggestion?: () => void;
+  onDismissSuggestion?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -28,19 +34,41 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   toolButtonActive,
   rotationAnim,
   toggleToolMenu,
+  toolSuggestion,
+  showSuggestion = false,
+  onAcceptSuggestion,
+  onDismissSuggestion,
 }) => {
   const inputRef = useRef<TextInput>(null);
-  const insets = useSafeAreaInsets();
+  // const insets = useSafeAreaInsets();
 
   return (
     <View
       style={[
         styles.inputContainer,
-        { paddingBottom: insets.bottom, height: 65 + insets.bottom },
+        // { paddingBottom: insets.bottom, height: 65 + insets.bottom },
       ]}
     >
+      {/* Tool Suggestion */}
+      {showSuggestion && toolSuggestion && onAcceptSuggestion && onDismissSuggestion && (
+        <View style={styles.suggestionContainer}>
+          <ToolSuggestion
+            suggestion={toolSuggestion}
+            onAccept={onAcceptSuggestion}
+            onDismiss={onDismissSuggestion}
+            isVisible={showSuggestion}
+          />
+        </View>
+      )}
+      
       <View style={styles.mainRow}>
-        <TouchableOpacity style={styles.toolButton} onPress={toggleToolMenu}>
+        <TouchableOpacity 
+          style={
+            styles.toolButton
+
+          } 
+          onPress={toggleToolMenu}
+        >
           <Animated.View
             style={{
               transform: [
@@ -61,7 +89,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             />
           </Animated.View>
         </TouchableOpacity>
-        
+
         <View style={styles.inputRow}>
           <TextInput
             ref={inputRef}
@@ -102,10 +130,19 @@ const styles = StyleSheet.create({
   inputContainer: {
     backgroundColor: colors.background.secondary,
     display: "flex",
-    height: 100,
+    // borderWidth: 1,
+    // borderColor: "red",
     flexDirection: "column",
     alignItems: "flex-end",
     justifyContent: "flex-end",
+    position: "relative",
+  },
+  suggestionContainer: {
+    position: "absolute",
+    bottom: 70,
+    left: 0,
+    right: 0,
+    zIndex: 100,
   },
   mainRow: {
     padding: spacing[4],

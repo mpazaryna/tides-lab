@@ -1,11 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import {
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { StyleSheet, ScrollView, View } from "react-native";
 import { useRoute, RouteProp } from "@react-navigation/native";
 
 import { useMCP } from "../../context/MCPContext";
@@ -13,9 +7,7 @@ import { useChat } from "../../context/ChatContext";
 import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
 import { MainStackParamList } from "../../navigation/types";
 import { loggingService } from "../../services/loggingService";
-import { Text } from "../../components/Text";
 import { colors, spacing } from "../../design-system/tokens";
-import { Card } from "../../components/Card";
 import { useTidesManagement } from "../../hooks/useTidesManagement";
 import { useToolMenu } from "../../hooks/useToolMenu";
 import { useDebugPanel } from "../../hooks/useDebugPanel";
@@ -23,10 +15,11 @@ import { useChatInput } from "../../hooks/useChatInput";
 // import { useAIFeatures, TideSession, UserContext } from "../../hooks/useAIFeatures";
 // import { TidesSection } from "../../components/tides/TidesSection";
 // import { ToolCallDisplay } from "../../components/tools/ToolCallDisplay";
-import { DebugPanel } from "../../components/debug/DebugPanel";
+// import { DebugPanel } from "../../components/debug/DebugPanel";
 import { ChatMessages } from "../../components/chat/ChatMessages";
 import { ChatInput } from "../../components/chat/ChatInput";
 import { ToolMenu } from "../../components/tools/ToolMenu";
+import { TideInfo } from "../../components/tides/TideInfo";
 // import { AIInsightsSection } from "../../components/ai/AIInsightsSection";
 import {
   createAgentContext,
@@ -45,22 +38,20 @@ export default function Home() {
   const {
     messages,
     isLoading,
-    error,
     // pendingToolCalls,
     sendMessage,
     executeMCPTool,
     sendAgentMessage,
-    checkConnections,
   } = useChat();
 
   const [_agentInitialized, setAgentInitialized] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   // Tides state management
   const {
     activeTides,
     //  tidesLoading,
     //   tidesError,
-    refreshing,
     refreshTides,
   } = useTidesManagement(isConnected);
 
@@ -80,10 +71,22 @@ export default function Home() {
     sendMessage,
   });
 
+  // Handle input focus to disable tool menu
+  const handleInputFocus = useCallback(() => {
+    setIsInputFocused(true);
+    if (showToolMenu) {
+      toggleToolMenu();
+    }
+  }, [showToolMenu, toggleToolMenu]);
+
+  const handleInputBlur = useCallback(() => {
+    setIsInputFocused(false);
+  }, []);
+
   // Debug panel state management
   const {
-    showDebugPanel,
-    debugTestResults,
+    // showDebugPanel,
+    // debugTestResults,
     setShowDebugPanel,
     setDebugTestResults,
     runDebugTests,
@@ -98,16 +101,25 @@ export default function Home() {
   });
 
   // Chat input state management
-  const { inputMessage, setInputMessage, handleSendMessage } = useChatInput({
+  const {
+    inputMessage,
+    setInputMessage,
+    handleSendMessage,
+    toolSuggestion,
+    showSuggestion,
+    acceptSuggestion,
+    dismissSuggestion,
+  } = useChatInput({
     activeTides,
     tideId,
     isConnected,
     getCurrentServerUrl,
-    sendAgentMessage,
+    sendMessage,
     runDebugTests,
     testEdgeCases,
     setShowDebugPanel,
     setDebugTestResults,
+    executeMCPTool,
   });
 
   // AI features state management
@@ -245,11 +257,14 @@ export default function Home() {
   // }, [clearAIState]);
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.keyboardContainer]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      {/* Error Display */}
+    <View style={[styles.container]}>
+      {/* <View style={styles.headerBedWetter} /> */}
+      <View style={styles.tideInfoHeader}>
+        <View style={styles.tideInfoInnerHeader}>
+          <TideInfo />
+        </View>
+      </View>
+      {/* Error Display
       {error && (
         <Card variant="outlined" padding={3} style={styles.errorCard}>
           <Text variant="body" color="error">
@@ -264,7 +279,7 @@ export default function Home() {
             </Text>
           </TouchableOpacity>
         </Card>
-      )}
+      )} */}
 
       {/* Active Tides Section */}
       {/* <TidesSection
@@ -291,20 +306,15 @@ export default function Home() {
       )} */}
 
       {/* Messages */}
-      <ChatMessages
-        ref={scrollViewRef}
-        messages={messages}
-        refreshing={refreshing}
-        refreshTides={refreshTides}
-      />
+      <ChatMessages ref={scrollViewRef} messages={messages} />
 
       {/* Debug Panel */}
-      <DebugPanel
+      {/* <DebugPanel
         showDebugPanel={showDebugPanel}
         debugTestResults={debugTestResults}
         setShowDebugPanel={setShowDebugPanel}
         setDebugTestResults={setDebugTestResults}
-      />
+      /> */}
 
       {/* Pending Tool Calls */}
       {/* {pendingToolCalls.map((toolCall) => (
@@ -331,15 +341,48 @@ export default function Home() {
         toolButtonActive={toolButtonActive}
         rotationAnim={rotationAnim}
         toggleToolMenu={toggleToolMenu}
+        toolSuggestion={toolSuggestion}
+        showSuggestion={showSuggestion}
+        onAcceptSuggestion={acceptSuggestion}
+        onDismissSuggestion={dismissSuggestion}
+        onInputFocus={handleInputFocus}
+        onInputBlur={handleInputBlur}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardContainer: {
-    flex: 1,
+  tideInfoHeader: {
+    height: 300,
+    maxHeight: 300,
+    paddingTop: 0,
     backgroundColor: colors.background.primary,
+    paddingVertical: 12,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  tideInfoInnerHeader: {
+    flex: 1,
+
+    borderWidth: 0.5,
+    // borderBottomWidth: 0.5,
+    borderColor: colors.neutral[200],
+    // shadowColor: "#000",
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 1.5,
+    // },
+    // shadowRadius: 1.5,
+    // shadowOpacity: 0.03,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 20,
+  },
+
+
+  container: {
+    backgroundColor: colors.background.primary,
+    flex: 1,
   },
   errorCard: {
     margin: spacing[4],

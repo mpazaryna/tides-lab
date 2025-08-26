@@ -55,7 +55,7 @@
  */
 
 // Core tide management operations
-export { createTide, listTides } from './tide-core';
+export { createTide, listTides, getOrCreateDailyTide } from './tide-core';
 
 // Flow sessions and energy tracking
 export { startTideFlow, addTideEnergy } from './tide-sessions';

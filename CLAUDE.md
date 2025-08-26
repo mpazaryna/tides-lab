@@ -6,7 +6,7 @@
 
 - **Server** (`apps/server/`): Cloudflare Workers MCP server
 - **Mobile** (`apps/mobile/`): React Native workflow tracker
-- **Architecture**: Mobile → HTTP/JSON-RPC 2.0 → MCP Server → Supabase
+- **Architecture**: Mobile → HTTP/JSON-RPC 2.0 → MCP Server → Cloudflare D1/R2
 
 ### Structure
 
@@ -69,6 +69,13 @@ npm run build:mobile:ios
 **Protocol**: MCP over HTTP (JSON-RPC 2.0)
 **Auth**: Bearer tokens (`tides_{userId}_{randomId}` mobile, `{uuid}` desktop)
 
+**Data Storage:**
+- **Primary**: Cloudflare D1 (SQL) + R2 (Object Storage)
+  - D1: User auth, API keys, tide metadata
+  - R2: Full tide JSON data at `users/{userId}/tides/{tideId}.json`
+- **Supabase**: ONLY for user authentication & initial API key generation
+- **NOT in Supabase**: Tide data, flow sessions, energy levels, task links
+
 **MCP Tools:**
 
 1. `tide_create`, `tide_list`, `tide_flow`
@@ -78,7 +85,7 @@ npm run build:mobile:ios
 
 ### Config
 
-**Supabase**: `hcfxujzqlyaxvbetyano.supabase.co`
+**Supabase**: `hcfxujzqlyaxvbetyano.supabase.co` (auth only)
 **Mobile**: Bundle ID `com.tidesmobile`
 **Workers Envs**:
 
