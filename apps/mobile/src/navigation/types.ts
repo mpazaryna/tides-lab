@@ -7,6 +7,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 export type AuthStackParamList = {
   Initial: undefined;
   CreateAccount: undefined;
+  EmailConfirmation: { email: string };
   AuthLoading: { email?: string };
 };
 
@@ -65,6 +66,7 @@ export type SettingsScreenProps = MainStackScreenProps<'Settings'>;
 
 export type InitialScreenProps = AuthStackScreenProps<'Initial'>;
 export type CreateAccountScreenProps = AuthStackScreenProps<'CreateAccount'>;
+export type EmailConfirmationScreenProps = AuthStackScreenProps<'EmailConfirmation'>;
 
 // Navigation Helper Types
 export type AllStackParamList = RootStackParamList & MainStackParamList & AuthStackParamList;
@@ -80,6 +82,7 @@ export const ScreenNames = {
   // Auth screens
   INITIAL: 'Initial' as const,
   CREATE_ACCOUNT: 'CreateAccount' as const,
+  EMAIL_CONFIRMATION: 'EmailConfirmation' as const,
   AUTH_LOADING: 'AuthLoading' as const,
   
   // Main screens
@@ -101,6 +104,7 @@ export const Routes = {
   auth: {
     initial: ScreenNames.INITIAL,
     createAccount: ScreenNames.CREATE_ACCOUNT,
+    emailConfirmation: ScreenNames.EMAIL_CONFIRMATION,
     authLoading: ScreenNames.AUTH_LOADING,
   },
   main: {

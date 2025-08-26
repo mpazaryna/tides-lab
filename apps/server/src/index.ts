@@ -89,18 +89,27 @@ async function handleAgentRequest(
       ) {
         try {
           authContext = await (storage as any).validateApiKey(apiKey);
+          console.log("[AGENT] ✅ D1 validation successful:", { userId: authContext?.userId, email: authContext?.email });
         } catch (error) {
-          console.error("[AGENT] Error validating API key:", error);
+          console.error("[AGENT] ❌ Error validating API key with D1:", error);
         }
       }
 
-      // If D1 validation failed, fallback to basic auth
+      // If D1 validation failed, fallback to basic auth for test keys only
       if (!authContext) {
         console.log(
-          "[AGENT] D1 validation failed, falling back to basic auth validation"
+          "[AGENT] D1 validation failed, checking if it's a test key"
         );
         const { validateApiKey } = await import("./auth");
-        authContext = await validateApiKey(apiKey);
+        const fallbackAuth = await validateApiKey(apiKey);
+        
+        // Only allow fallback for test keys (testuser_001-005), not for mobile keys
+        if (fallbackAuth && apiKey.includes("testuser")) {
+          authContext = fallbackAuth;
+          console.log("[AGENT] ✅ Using test key fallback auth");
+        } else {
+          console.log("[AGENT] ❌ Not a test key - rejecting fallback auth for mobile keys");
+        }
       }
 
       // If authentication failed, return 401
@@ -224,18 +233,27 @@ export default {
       ) {
         try {
           authContext = await (storage as any).validateApiKey(apiKey);
+          console.log("✅ D1 validation successful:", { userId: authContext?.userId, email: authContext?.email });
         } catch (error) {
-          console.error("Error validating API key:", error);
+          console.error("❌ Error validating API key with D1:", error);
         }
       }
 
-      // If D1 validation failed or storage doesn't support it, fallback to basic auth
+      // If D1 validation failed or storage doesn't support it, fallback to basic auth for test keys only
       if (!authContext) {
         console.log(
-          "D1 validation failed or not available, falling back to basic auth validation"
+          "D1 validation failed or not available, checking if it's a test key"
         );
         const { validateApiKey } = await import("./auth");
-        authContext = await validateApiKey(apiKey);
+        const fallbackAuth = await validateApiKey(apiKey);
+        
+        // Only allow fallback for test keys (testuser_001-005), not for mobile keys
+        if (fallbackAuth && apiKey.includes("testuser")) {
+          authContext = fallbackAuth;
+          console.log("✅ Using test key fallback auth");
+        } else {
+          console.log("❌ Not a test key - rejecting fallback auth for mobile keys");
+        }
       }
     }
 

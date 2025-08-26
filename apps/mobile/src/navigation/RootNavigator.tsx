@@ -5,8 +5,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
 import AuthNavigator from "./AuthNavigator";
 import MainNavigator from "./MainNavigator";
-import { LoadingScreen } from "../design-system";
+
 import { RootStackParamList, Routes, NavigationOptions } from "./types";
+import { LoadingScreen } from "../components/Loading";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 

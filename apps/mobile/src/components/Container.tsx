@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, ViewProps, StyleSheet } from "react-native";
-import { spacing } from "../tokens";
+import { spacing } from "../design-system/tokens";
 
 export interface ContainerProps extends ViewProps {
   padding?: keyof typeof spacing;

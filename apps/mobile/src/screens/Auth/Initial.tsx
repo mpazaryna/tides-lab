@@ -7,7 +7,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { supabase } from "../../config/supabase.ts";
 import { AuthNavigationParams } from "../../navigation/AuthNavigator";
 import { colors, spacing } from "../../design-system/tokens.ts";
-import { Button, Input, Text } from "../../design-system/index.ts";
+import { Text } from "../../components/Text.tsx";
+import { Input } from "../../components/Input.tsx";
+import { Button } from "../../components/Button.tsx";
 
 interface InitialScreenProps {}
 
@@ -79,14 +81,14 @@ export default function Initial({}: InitialScreenProps) {
     setLoading(false);
   }
 
-  async function signInWithProvider(provider: "google" | "github" | "apple") {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({ provider });
-    if (error) {
-    } else {
-    }
-    setLoading(false);
-  }
+  // async function signInWithProvider(provider: "google" | "github" | "apple") {
+  //   setLoading(true);
+  //   const { error } = await supabase.auth.signInWithOAuth({ provider });
+  //   if (error) {
+  //   } else {
+  //   }
+  //   setLoading(false);
+  // }
 
   return (
     <View style={styles.container}>
@@ -162,7 +164,7 @@ export default function Initial({}: InitialScreenProps) {
           Create an Account
         </Button>
 
-        <View style={styles.dividerContainer}>
+        {/* <View style={styles.dividerContainer}>
           <Text variant="bodySmall" color="secondary">
             Or continue with
           </Text>
@@ -204,7 +206,7 @@ export default function Initial({}: InitialScreenProps) {
           >
             GitHub
           </Button>
-        </View>
+        </View> */}
       </View>
     </View>
   );

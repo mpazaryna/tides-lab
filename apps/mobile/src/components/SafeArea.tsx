@@ -3,7 +3,7 @@
 import React from "react";
 import { StyleSheet, ViewProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../tokens";
+import { colors } from "../design-system/tokens";
 
 export interface SafeAreaProps extends ViewProps {
   backgroundColor?: string;

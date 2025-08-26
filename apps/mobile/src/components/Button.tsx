@@ -9,7 +9,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { Text } from "./Text";
-import { colors, spacing, borderRadius, shadows, typography } from "../tokens";
+import { colors, spacing, borderRadius, shadows, typography } from "../design-system/tokens";
 
 export interface ButtonProps extends TouchableOpacityProps {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";

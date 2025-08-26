@@ -48,16 +48,59 @@
 - Type-safe navigation
 - Token-based design system
 
+## Recent Architecture Improvements
+
+**🎯 Major Refactoring Completed (Aug 2025)**
+- **86% code reduction** in Home.tsx (1,866 → 269 lines)
+- **14 new focused modules** extracted
+- **Zero breaking changes** - all functionality preserved
+- **Modular architecture** with clean separation of concerns
+
 ### Comprehensive Folder Architecture
 
 ```
 src/
-├── components/         # Sophisticated UI components with memoization
+├── components/         # Modular UI components with memoization
+│   ├── chat/           # Chat-related components (NEW)
+│   │   ├── ChatInput.tsx           # Message input interface
+│   │   ├── ChatMessages.tsx        # Messages container with empty state
+│   │   └── MessageBubble.tsx       # Individual message display
+│   ├── tides/          # Tides display components (NEW)
+│   │   ├── TidesSection.tsx        # Active tides section with loading states
+│   │   └── TideCard.tsx            # Individual tide card with icons
+│   ├── tools/          # Tool-related components (NEW)
+│   │   ├── ToolMenu.tsx            # Tool selection menu with animations
+│   │   └── ToolCallDisplay.tsx     # Tool execution display
+│   ├── debug/          # Debug components (NEW)
+│   │   └── DebugPanel.tsx          # Debug test interface
+│   ├── [design-system components]  # Existing design system
+│   │   ├── Button.tsx              # 5 variants × 3 sizes with loading states
+│   │   ├── Card.tsx                # 3 variants with shadow system
+│   │   ├── Text.tsx                # Variant-based with font loading
+│   │   ├── Input.tsx               # Form inputs with validation
+│   │   ├── Container.tsx           # Layout containers
+│   │   ├── Stack.tsx               # Spacing and layout utilities
+│   │   ├── SafeArea.tsx            # Safe area management
+│   │   ├── Loading.tsx             # Loading states and indicators
+│   │   ├── Notification.tsx        # User feedback system
+│   │   └── ErrorBoundary.tsx       # Error boundary with logging
 │   ├── Auth.tsx                    # Authentication form with validation
 │   ├── FlowSession.tsx             # Complex flow session management
-│   ├── ServerEnvironmentSelector.tsx # Multi-environment switching
-│   └── debug/                      # Testing and debugging components
-│       └── TestingPanel.tsx        # Comprehensive debug interface
+│   └── ServerEnvironmentSelector.tsx # Multi-environment switching
+├── hooks/             # Custom state management hooks (ENHANCED)
+│   ├── useTidesManagement.ts       # Tides state & operations (NEW)
+│   ├── useToolMenu.ts              # Tool menu state & animations (NEW)
+│   ├── useDebugPanel.ts            # Debug functionality (NEW)
+│   ├── useChatInput.ts             # Chat input logic (NEW)
+│   ├── useAsyncAction.ts           # Base async operation pattern
+│   ├── useAuthActions.ts           # Authentication action helpers
+│   ├── useAuthStatus.ts            # Authentication state utilities
+│   ├── useMCPConnection.ts         # MCP connection management
+│   └── index.ts                    # Hook exports
+├── utils/             # Utility functions (ENHANCED)
+│   ├── agentCommandUtils.ts        # Agent context & execution (NEW)
+│   ├── debugUtils.ts               # Debug test functions (NEW)
+│   └── fonts.ts                    # Font loading utilities
 ├── config/            # Environment and service configuration
 │   └── supabase.ts                 # Supabase client configuration
 ├── context/           # Advanced state management with useReducer
@@ -70,17 +113,6 @@ src/
 │   └── ServerEnvironmentTypes.ts   # Environment configuration types
 ├── design-system/     # Comprehensive design token system
 │   ├── tokens.ts                   # Colors, typography, spacing, shadows
-│   ├── components/                 # Reusable UI components
-│   │   ├── Button.tsx              # 5 variants × 3 sizes with loading states
-│   │   ├── Card.tsx                # 3 variants with shadow system
-│   │   ├── Text.tsx                # Variant-based with font loading
-│   │   ├── Input.tsx               # Form inputs with validation
-│   │   ├── Container.tsx           # Layout containers
-│   │   ├── Stack.tsx               # Spacing and layout utilities
-│   │   ├── SafeArea.tsx            # Safe area management
-│   │   ├── Loading.tsx             # Loading states and indicators
-│   │   ├── Notification.tsx        # User feedback system
-│   │   └── ErrorBoundary.tsx       # Error boundary with logging
 │   └── index.ts                    # Design system exports
 ├── navigation/        # Type-safe navigation architecture
 │   ├── RootNavigator.tsx           # Auth-gated navigation root
@@ -89,12 +121,12 @@ src/
 │   ├── types.ts                    # Navigation type definitions
 │   ├── hooks.ts                    # Type-safe navigation utilities
 │   └── index.ts                    # Navigation exports
-├── screens/           # Feature-rich screen components
+├── screens/           # Clean, focused screen components (REFACTORED)
 │   ├── Auth/                       # Authentication screens
 │   │   ├── Initial.tsx             # Sign-in with OAuth providers
 │   │   └── CreateAccount.tsx       # Registration with validation
 │   └── Main/                       # Main application screens
-│       ├── Home.tsx                # Chat interface + tides display (1,723 lines)
+│       ├── Home.tsx                # Clean orchestration layer (269 lines, was 1,866)
 │       └── Settings.tsx            # Configuration and debug interface
 ├── services/          # Enterprise-grade service layer
 │   ├── authService.ts              # Supabase auth + API key management
@@ -112,23 +144,17 @@ src/
 │   ├── api.ts                      # API client types
 │   ├── connection.ts               # Connection state types
 │   └── agents.ts                   # Agent service types
-├── hooks/             # Custom hook patterns
-│   ├── useAsyncAction.ts           # Base async operation pattern
-│   ├── useAuthActions.ts           # Authentication action helpers
-│   ├── useAuthStatus.ts            # Authentication state utilities
-│   ├── useMCPConnection.ts         # MCP connection management
-│   └── index.ts                    # Hook exports
-├── utils/             # Utility functions
-│   └── fonts.ts                    # Font loading utilities
 └── constants/         # Application constants
     └── index.ts                    # Centralized constants
 ```
 
 ### Patterns
 
+**Architecture:** Modular components with single responsibility
+**State Management:** Custom hooks + useReducer for complex state
 **Services:** Singleton with `getInstance()`
-**State:** useReducer for complex state
-**Performance:** React.memo + useCallback
+**Performance:** React.memo + useCallback, optimized re-rendering
+**Components:** Extracted, focused, reusable modules
 **Contexts:** Auth, MCP, Chat, Environment
 
 ## MCP Server Integration
@@ -181,12 +207,16 @@ src/
 - ✅ Navigation
 - ✅ Supabase integration
 - ✅ MCP client
+- ✅ **Modular architecture** - 86% code reduction achieved
+- ✅ **Component extraction** - 14 focused modules created
+- ✅ **Custom hooks** - State management properly separated
 
 **Active:**
 
 - 8 tide tools integration
 - Hybrid auth deployment
 - JSONB optimization
+- **Feature expansion** with maintainable codebase
 
 ## Requirements
 

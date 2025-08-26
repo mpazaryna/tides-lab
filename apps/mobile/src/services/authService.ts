@@ -44,6 +44,59 @@ class AuthService {
     return `tides_${userId}_${randomId}`;
   }
 
+  private async registerApiKeyWithServer(apiKey: string, userId: string, userEmail: string) {
+    await this.waitForUrlInitialization();
+    
+    try {
+      console.log('[AUTH] Attempting to register API key with server:', { 
+        url: `${this.currentUrl}/register-api-key`,
+        userId, 
+        email: userEmail,
+        hasApiKey: !!apiKey
+      });
+
+      const response = await fetch(`${this.currentUrl}/register-api-key`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          api_key: apiKey,
+          user_id: userId,
+          user_email: userEmail,
+          name: 'Mobile Generated Key'
+        })
+      });
+
+      console.log('[AUTH] Server response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('[AUTH] Server registration failed with response:', errorData);
+        throw new Error(`Server registration failed: ${errorData.error || response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('[AUTH] API key successfully registered with server:', { 
+        success: result.success, 
+        user_id: userId, 
+        email: userEmail,
+        serverResponse: result
+      });
+      return result;
+    } catch (error) {
+      console.error('[AUTH] Failed to register API key with server:', {
+        error: error instanceof Error ? error.message : String(error),
+        url: `${this.currentUrl}/register-api-key`,
+        userId,
+        email: userEmail
+      });
+      // Still don't throw - allow offline-first functionality
+      // But warn the user that server features may not work
+      console.warn('[AUTH] API key registration failed - server-based features may not work properly');
+    }
+  }
+
   async signUpWithEmail(email: string, password: string) {
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
@@ -52,6 +105,9 @@ class AuthService {
       if (data.user && data.session) {
         const apiKey = this.generateApiKey(data.user.id);
         await secureStorage.setItem("user_api_key", apiKey);
+        
+        // Register API key with server using real email
+        await this.registerApiKeyWithServer(apiKey, data.user.id, email);
       }
 
       return { user: data.user, session: data.session };
@@ -71,6 +127,9 @@ class AuthService {
       if (data.user && data.session) {
         const apiKey = this.generateApiKey(data.user.id);
         await secureStorage.setItem("user_api_key", apiKey);
+        
+        // Register API key with server using real email
+        await this.registerApiKeyWithServer(apiKey, data.user.id, email);
       }
 
       return { user: data.user, session: data.session };
@@ -139,6 +198,11 @@ class AuthService {
       if (event === "SIGNED_IN" && session?.user) {
         const apiKey = this.generateApiKey(session.user.id);
         await secureStorage.setItem("user_api_key", apiKey);
+        
+        // Register API key with server using real email from user session
+        if (session.user.email) {
+          await this.registerApiKeyWithServer(apiKey, session.user.id, session.user.email);
+        }
       } else if (event === "SIGNED_OUT") {
         await secureStorage.removeItem("user_api_key");
       }

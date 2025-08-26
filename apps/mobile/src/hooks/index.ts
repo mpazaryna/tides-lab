@@ -24,3 +24,12 @@ export {
   type AsyncActionState,
   type AsyncActionOptions,
 } from "./useAsyncAction";
+
+export {
+  useAIFeatures,
+  type TideSession,
+  type UserContext,
+  type AIInsights,
+  type AIAnalysisResult,
+  type AISuggestionResult,
+} from "./useAIFeatures";

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, ViewProps, StyleSheet } from "react-native";
-import { colors, spacing, borderRadius, shadows } from "../tokens";
+import { colors, spacing, borderRadius, shadows } from "../design-system/tokens";
 
 export interface CardProps extends ViewProps {
   variant?: "default" | "outlined" | "elevated";

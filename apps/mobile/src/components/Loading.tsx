@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Text } from './Text';
-import { colors, spacing, typography } from '../tokens';
+import { colors, spacing, typography } from '../design-system/tokens';
 
 export interface LoadingProps {
   /** Size of the loading indicator */

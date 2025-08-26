@@ -15,6 +15,7 @@ interface D1Config {
 
 export interface AuthContext {
   userId: string;
+  email?: string;
   apiKeyName?: string;
 }
 
@@ -542,8 +543,10 @@ export class D1R2HybridStorage implements TideStorage {
     const keyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     
     const result = await this.db.prepare(`
-      SELECT user_id, name FROM api_keys 
-      WHERE key_hash = ?
+      SELECT ak.user_id, ak.name, u.email 
+      FROM api_keys ak
+      JOIN users u ON ak.user_id = u.id
+      WHERE ak.key_hash = ?
     `).bind(keyHash).first();
 
     if (!result) {
@@ -557,7 +560,37 @@ export class D1R2HybridStorage implements TideStorage {
 
     return {
       userId: result.user_id as string,
+      email: result.email as string,
       apiKeyName: result.name as string,
     };
+  }
+
+  async storeApiKey(keyHash: string, userId: string, userEmail: string, name: string): Promise<void> {
+    // Check if user exists, create if not
+    const existingUser = await this.db.prepare(
+      "SELECT id FROM users WHERE id = ?"
+    ).bind(userId).first();
+
+    if (!existingUser) {
+      console.log("[STORAGE] Creating new user:", { userId, email: userEmail });
+      await this.db.prepare(
+        "INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, datetime('now'))"
+      ).bind(userId, userEmail, `Mobile User ${userId}`).run();
+    }
+
+    // Check if key already exists
+    const existingKey = await this.db.prepare(
+      "SELECT key_hash FROM api_keys WHERE key_hash = ?"
+    ).bind(keyHash).first();
+
+    if (!existingKey) {
+      // Insert the API key
+      await this.db.prepare(
+        "INSERT INTO api_keys (key_hash, user_id, name, created_at) VALUES (?, ?, ?, datetime('now'))"
+      ).bind(keyHash, userId, name).run();
+      console.log("[STORAGE] API key stored successfully");
+    } else {
+      console.log("[STORAGE] API key already exists");
+    }
   }
 }

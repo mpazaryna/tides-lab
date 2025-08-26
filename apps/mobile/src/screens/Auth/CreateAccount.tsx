@@ -1,24 +1,27 @@
 // BLUE
 
 import React, { useState, useRef, useEffect } from "react";
-import { View, TouchableOpacity, TextInput, StyleSheet } from "react-native";
+import {
+  View,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { supabase } from "../../config/supabase";
-import { AuthNavigationParams } from "../../navigation/AuthNavigator";
-import {
-  colors,
-  spacing,
-  Text,
-  Input,
-  Button,
-  Container,
-} from "../../design-system";
+import { AuthStackParamList, Routes } from "../../navigation/types";
+import { colors, spacing } from "../../design-system/tokens";
+import { Container } from "../../components/Container";
+import { Text } from "../../components/Text";
+import { Input } from "../../components/Input";
+import { Button } from "../../components/Button";
 
 interface CreateAccountScreenProps {}
 
 type NavigationProp = NativeStackNavigationProp<
-  AuthNavigationParams,
+  AuthStackParamList,
   "CreateAccount"
 >;
 
@@ -35,6 +38,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    gap: spacing[3],
   },
   passwordRequirements: {
     marginBottom: spacing[4],
@@ -155,7 +159,12 @@ export default function CreateAccount({}: CreateAccountScreenProps) {
     });
 
     if (error) {
+      Alert.alert("Error", error.message);
     } else {
+      // Navigate to email confirmation screen
+      navigation.navigate(Routes.auth.emailConfirmation, {
+        email: email.trim(),
+      });
     }
 
     setLoading(false);
@@ -193,7 +202,6 @@ export default function CreateAccount({}: CreateAccountScreenProps) {
           autoComplete="email"
           autoCorrect={false}
           error={emailError}
-          style={{ marginBottom: spacing[4] }}
         />
 
         <Input
@@ -219,16 +227,11 @@ export default function CreateAccount({}: CreateAccountScreenProps) {
               </Text>
             </TouchableOpacity>
           }
-          style={{ marginBottom: spacing[4] }}
         />
 
         {password.length > 0 && (
           <View style={styles.passwordRequirements}>
-            <Text
-              variant="caption"
-              color="secondary"
-              style={{ marginBottom: spacing[2] }}
-            >
+            <Text variant="caption" color="secondary">
               Password Requirements:
             </Text>
             {getPasswordRequirements().map((req, index) => (
@@ -267,7 +270,6 @@ export default function CreateAccount({}: CreateAccountScreenProps) {
               </Text>
             </TouchableOpacity>
           }
-          style={{ marginBottom: spacing[6] }}
         />
 
         <Button

@@ -6,8 +6,8 @@ import {
   TextProps as RNTextProps,
   StyleSheet,
 } from "react-native";
-import { colors, typography } from "../tokens";
-import { getInterFont, getRobotoMonoFont, numericToFontWeight } from "../../utils/fonts";
+import { colors, typography } from "../design-system/tokens";
+import { getInterFont, getRobotoMonoFont, numericToFontWeight } from "../utils/fonts";
 
 export interface TextProps extends RNTextProps {
   variant?:

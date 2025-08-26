@@ -6,8 +6,8 @@ import { Text } from "./Text";
 import { Button } from "./Button";
 import { Card } from "./Card";
 import { Stack } from "./Stack";
-import { colors, spacing, borderRadius } from "../tokens";
-import { loggingService } from "../../services/loggingService";
+import { colors, spacing, borderRadius } from "../design-system/tokens";
+import { loggingService } from "../services/loggingService";
 
 interface ErrorBoundaryProps {
   /** Child components to render */

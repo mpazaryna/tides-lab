@@ -98,7 +98,7 @@ npm run build:mobile:ios
 **Standards:**
 
 - Server: MCP patterns, Zod validation, 90%+ test coverage
-- Mobile: NO Expo, TypeScript interfaces in components, AsyncStorage auth
+- Mobile: NO Expo, TypeScript interfaces in components, AsyncStorage auth, **modular architecture with extracted components and hooks**
 - Database: JSONB over enterprise complexity
 
 **Workflow:**
@@ -115,8 +115,8 @@ npm run build:mobile:ios
 
 ### Status
 
-**Completed**: Monorepo, MCP foundation, mobile auth, navigation
-**Active**: 8 tide tools integration, hybrid auth optimization
+**Completed**: Monorepo, MCP foundation, mobile auth, navigation, **major mobile refactoring** (86% code reduction)
+**Active**: 8 tide tools integration, hybrid auth optimization, feature expansion with maintainable codebase
 **Next**: Complete MCP integration, desktop UUID/QR setup
 
 **Requirements**:
@@ -191,12 +191,22 @@ See `apps/server/CLAUDE.md` and `apps/mobile/CLAUDE.md` for app-specific docs.
 
 ```
 src/
-├── components/         # Sophisticated UI components with memoization
+├── components/         # Modular UI components with memoization (REFACTORED)
+│   ├── chat/                       # Chat-related components (NEW)
+│   │   ├── ChatInput.tsx           # Message input interface
+│   │   ├── ChatMessages.tsx        # Messages container with empty state
+│   │   └── MessageBubble.tsx       # Individual message display
+│   ├── tides/                      # Tides display components (NEW)
+│   │   ├── TidesSection.tsx        # Active tides section with loading states
+│   │   └── TideCard.tsx            # Individual tide card with icons
+│   ├── tools/                      # Tool-related components (NEW)
+│   │   ├── ToolMenu.tsx            # Tool selection menu with animations
+│   │   └── ToolCallDisplay.tsx     # Tool execution display
+│   ├── debug/                      # Debug components (NEW)
+│   │   └── DebugPanel.tsx          # Debug test interface
 │   ├── Auth.tsx                    # Authentication form with validation
 │   ├── FlowSession.tsx             # Complex flow session management
-│   ├── ServerEnvironmentSelector.tsx # Multi-environment switching
-│   └── debug/                      # Testing and debugging components
-│       └── TestingPanel.tsx        # Comprehensive debug interface
+│   └── ServerEnvironmentSelector.tsx # Multi-environment switching
 ├── config/            # Environment and service configuration
 │   └── supabase.ts                 # Supabase client configuration
 ├── context/           # Advanced state management with useReducer
@@ -233,7 +243,7 @@ src/
 │   │   ├── Initial.tsx             # Sign-in with OAuth providers
 │   │   └── CreateAccount.tsx       # Registration with validation
 │   └── Main/                       # Main application screens
-│       ├── Home.tsx                # Chat interface + tides display (1,723 lines)
+│       ├── Home.tsx                # Clean orchestration layer (269 lines, refactored from 1,866)
 │       └── Settings.tsx            # Configuration and debug interface
 ├── services/          # Enterprise-grade service layer
 │   ├── authService.ts              # Supabase auth + API key management
@@ -251,13 +261,19 @@ src/
 │   ├── api.ts                      # API client types
 │   ├── connection.ts               # Connection state types
 │   └── agents.ts                   # Agent service types
-├── hooks/             # Custom hook patterns
+├── hooks/             # Custom hook patterns (ENHANCED)
+│   ├── useTidesManagement.ts       # Tides state & operations (NEW)
+│   ├── useToolMenu.ts              # Tool menu state & animations (NEW)
+│   ├── useDebugPanel.ts            # Debug functionality (NEW)
+│   ├── useChatInput.ts             # Chat input logic (NEW)
 │   ├── useAsyncAction.ts           # Base async operation pattern
 │   ├── useAuthActions.ts           # Authentication action helpers
 │   ├── useAuthStatus.ts            # Authentication state utilities
 │   ├── useMCPConnection.ts         # MCP connection management
 │   └── index.ts                    # Hook exports
-├── utils/             # Utility functions
+├── utils/             # Utility functions (ENHANCED)
+│   ├── agentCommandUtils.ts        # Agent context & execution (NEW)
+│   ├── debugUtils.ts               # Debug test functions (NEW)
 │   └── fonts.ts                    # Font loading utilities
 └── constants/         # Application constants
     └── index.ts                    # Centralized constants

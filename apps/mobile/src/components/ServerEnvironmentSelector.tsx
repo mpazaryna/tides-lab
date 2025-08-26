@@ -7,8 +7,10 @@ import type {
   ServerEnvironmentId,
   ServerEnvironment,
 } from "../context/ServerEnvironmentTypes";
-import { Card, Text, colors, spacing } from "../design-system";
 import { getRobotoMonoFont } from "../utils/fonts";
+import { Text } from "./Text";
+import { colors, spacing } from "../design-system/tokens";
+import { Card } from "./Card";
 
 interface ServerEnvironmentSelectorProps {
   onEnvironmentSelected?: (environment: ServerEnvironment) => void;
@@ -256,7 +258,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing[4],
   },
   currentUrl: {
-    fontFamily: getRobotoMonoFont('regular'),
+    fontFamily: getRobotoMonoFont("regular"),
     marginTop: spacing[1],
   },
   environmentsList: {
@@ -325,7 +327,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   environmentUrl: {
-    fontFamily: getRobotoMonoFont('regular'),
+    fontFamily: getRobotoMonoFont("regular"),
     marginBottom: spacing[2],
   },
   environmentMeta: {

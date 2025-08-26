@@ -655,7 +655,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
       const userMessage: ChatMessage = {
         id: generateId(),
         type: "user",
-        content: `/agent ${message.trim()}`,
+        content: `${message.trim()}`,
         timestamp: new Date(),
         metadata: {
           conversationId: state.conversationContext.activeConversationId,

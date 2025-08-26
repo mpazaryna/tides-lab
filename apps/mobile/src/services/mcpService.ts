@@ -124,7 +124,7 @@ class MCPService {
     }
   }
 
-  private tool(name: string, args?: any) {
+  tool(name: string, args?: any) {
     return this.request('tools/call', { name, arguments: args || {} });
   }
 
@@ -158,6 +158,14 @@ class MCPService {
 
   async getTideParticipants(statusFilter?: string, dateFrom?: string, dateTo?: string, limit?: number) {
     return this.tool('tides_get_participants', { status_filter: statusFilter, date_from: dateFrom, date_to: dateTo, limit });
+  }
+
+  /**
+   * Call any MCP tool by name with arguments
+   * This is a generic method for calling AI tools and other MCP tools
+   */
+  async callTool(name: string, args?: any) {
+    return this.tool(name, args);
   }
 }
 

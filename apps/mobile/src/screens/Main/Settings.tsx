@@ -10,15 +10,13 @@ import { useAuth } from "../../context/AuthContext";
 import { useMCP } from "../../context/MCPContext";
 import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
 import { ServerEnvironmentSelector } from "../../components/ServerEnvironmentSelector";
-import {
-  Button,
-  Card,
-  colors,
-  Container,
-  spacing,
-  Text,
-} from "../../design-system";
+
 import { getRobotoMonoFont } from "../../utils/fonts";
+import { Text } from "../../components/Text";
+import { Card } from "../../components/Card";
+import { Container } from "../../components/Container";
+import { Button } from "../../components/Button";
+import { colors, spacing } from "../../design-system/tokens";
 
 export default function Settings() {
   const { user, signOut, apiKey } = useAuth();

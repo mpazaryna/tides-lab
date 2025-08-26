@@ -70,11 +70,8 @@ export class QuestionsHandler {
         const relevantTideId = await this.tideFetcher.getMostRelevantTide(question);
         
         if (!relevantTideId) {
-          await this.sendErrorToUser(userId, question, 'No relevant tides found');
-          return { 
-            error: true, 
-            message: 'No relevant tides found for this question' 
-          };
+          // Instead of returning an error, provide general AI conversation
+          return await this.handleGeneralConversation(userId, question, context);
         }
         
         tideId = relevantTideId;
@@ -162,6 +159,103 @@ export class QuestionsHandler {
         question
       };
     }
+  }
+
+  /**
+   * Handle general conversation when no specific tides are found
+   */
+  async handleGeneralConversation(userId: string, question: string, context?: string): Promise<any> {
+    try {
+      console.log(`[QuestionsHandler] Handling general conversation: ${question}`);
+
+      // Create a general productivity conversation prompt for Workers AI
+      const conversationPrompt = [
+        {
+          role: "system",
+          content: `You are a helpful productivity assistant for the Tides workflow management app. 
+            
+            You help users with:
+            - Productivity tips and strategies
+            - Time management advice 
+            - Flow state and focus techniques
+            - Energy management
+            - Goal setting and planning
+            - General workflow optimization
+
+            Be conversational, helpful, and encouraging. All messages should be concise with clear points and clear asks.
+            If users ask about specific features, explain how Tides can help them manage their workflows.`
+        },
+        {
+          role: "user", 
+          content: question
+        }
+      ];
+
+      // Get AI response for general conversation
+      const analysis = await this.aiAnalyzer.runAnalysis(conversationPrompt);
+
+      console.log(`[QuestionsHandler] General conversation AI response generated`);
+
+      // Send real-time response via WebSocket
+      await this.webSocketManager.broadcastToUser(userId, {
+        type: 'general_conversation_result',
+        question,
+        response: analysis.response,
+        confidence: analysis.confidence,
+        timestamp: new Date().toISOString()
+      });
+
+      return {
+        message: analysis.response,
+        confidence: analysis.confidence,
+        actionable: analysis.actionable,
+        conversationType: 'general',
+        question
+      };
+
+    } catch (error) {
+      console.error('[QuestionsHandler] Failed to handle general conversation:', error);
+      
+      // Fallback response if AI fails
+      const fallbackResponse = this.getFallbackResponse(question);
+      
+      await this.webSocketManager.broadcastToUser(userId, {
+        type: 'general_conversation_result',
+        question,
+        response: fallbackResponse,
+        confidence: 0.5,
+        timestamp: new Date().toISOString()
+      });
+
+      return {
+        message: fallbackResponse,
+        confidence: 0.5,
+        actionable: true,
+        conversationType: 'fallback',
+        question
+      };
+    }
+  }
+
+  /**
+   * Get fallback response when AI is unavailable
+   */
+  private getFallbackResponse(question: string): string {
+    const lowerQuestion = question.toLowerCase();
+    
+    if (lowerQuestion.includes('help') || lowerQuestion.includes('what') || lowerQuestion.includes('how')) {
+      return "I'm here to help you with productivity and workflow management! I can provide tips on time management, focus techniques, and help you optimize your work sessions. What specific area would you like to improve?";
+    }
+    
+    if (lowerQuestion.includes('productivity') || lowerQuestion.includes('focus')) {
+      return "Great question about productivity! I recommend breaking your work into focused 25-minute sessions, tracking your energy levels, and reviewing what works best for you. Would you like specific tips for any particular type of work?";
+    }
+    
+    if (lowerQuestion.includes('energy') || lowerQuestion.includes('tired')) {
+      return "Energy management is crucial for productivity! Try tracking when you feel most energized during the day, take regular breaks, and match your most demanding tasks to your peak energy times. How has your energy been lately?";
+    }
+    
+    return "Thanks for your question! I'm your productivity assistant and I'm here to help you work more effectively. I can provide advice on focus techniques, time management, energy optimization, and workflow strategies. What would you like to explore?";
   }
 
   /**

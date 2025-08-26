@@ -39,13 +39,16 @@ export async function validateApiKey(
   }
 
   // React Native format: tides_userId_randomId (3+ parts supported)
+  // NOTE: This fallback should not be used in production with D1 database
+  // Real email lookup should happen through D1R2HybridStorage.validateApiKey
   if (parts.length >= 3 && parts[1] !== "testuser") {
     const userId = parts[1];
     // Validate userId is non-empty and reasonable
     if (userId && userId.length > 0 && userId.length <= 50) {
+      console.warn("[AUTH-FALLBACK] Using fallback auth validation without database lookup - real email not available");
       return {
         userId,
-        email: `${userId}@mobile.tides.app`,
+        email: `${userId}@mobile.tides.app`, // Fallback - real email should come from database
         keyId: apiKey,
       };
     }

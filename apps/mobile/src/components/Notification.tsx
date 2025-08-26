@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Text } from './Text';
 import { Card } from './Card';
-import { colors, spacing, borderRadius, shadows, zIndex } from '../tokens';
+import { colors, spacing, borderRadius, shadows, zIndex } from '../design-system/tokens';
 
 export interface NotificationProps {
   /** Type of notification */

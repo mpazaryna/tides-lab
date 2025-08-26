@@ -118,6 +118,7 @@ export function registerAuthHandlers(server: McpServer, storage: TideStorage) {
 const ApiKeyRegistrationSchema = z.object({
   api_key: z.string().min(1).describe("The API key to register"),
   user_id: z.string().min(1).describe("The user ID associated with this key"),
+  user_email: z.string().email().describe("The user's email address from Supabase"),
   name: z.string().optional().describe("Optional name for the API key")
 });
 
@@ -154,6 +155,7 @@ export async function registerApiKey(request: Request, env: Env): Promise<Respon
     console.log("[API-KEY-REG] Request body received:", { 
       hasApiKey: !!body.api_key, 
       hasUserId: !!body.user_id,
+      hasUserEmail: !!body.user_email,
       apiKeyLength: body.api_key?.length || 0
     });
 
@@ -174,7 +176,7 @@ export async function registerApiKey(request: Request, env: Env): Promise<Respon
       });
     }
 
-    const { api_key, user_id, name } = validation.data;
+    const { api_key, user_id, user_email, name } = validation.data;
 
     // Validate API key format (must start with tides_)
     if (!api_key.startsWith("tides_")) {
@@ -203,7 +205,7 @@ export async function registerApiKey(request: Request, env: Env): Promise<Respon
     if ('storeApiKey' in storage && typeof storage.storeApiKey === 'function') {
       console.log("[API-KEY-REG] Using storage.storeApiKey method");
       try {
-        await (storage as any).storeApiKey(keyHash, user_id, name || 'Mobile Generated Key');
+        await (storage as any).storeApiKey(keyHash, user_id, user_email, name || 'Mobile Generated Key');
         console.log("[API-KEY-REG] API key stored successfully via storage method");
       } catch (storageError) {
         console.error("[API-KEY-REG] Storage method failed:", storageError);
@@ -243,10 +245,10 @@ export async function registerApiKey(request: Request, env: Env): Promise<Respon
       ).bind(user_id).first();
 
       if (!existingUser) {
-        console.log("[API-KEY-REG] Creating new user for mobile client:", user_id);
+        console.log("[API-KEY-REG] Creating new user for mobile client:", { user_id, email: user_email });
         await env.DB.prepare(
           "INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, datetime('now'))"
-        ).bind(user_id, `${user_id}@mobile.tides.app`, `Mobile User ${user_id}`).run();
+        ).bind(user_id, user_email, `Mobile User ${user_id}`).run();
       }
 
       // Insert the API key
