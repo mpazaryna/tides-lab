@@ -3,6 +3,7 @@
   "name": "tides",
   "main": "src/index.ts",
   "compatibility_date": "2025-06-17",
+  "account_id": "01bfa3fc31e4462e21428e9ca7d63e98",
 
   // Workers Logs configuration - enables logging by default
   "observability": {
@@ -26,6 +27,17 @@
       },
     ],
   },
+
+  // Migrations for root-level Durable Objects
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": [
+        "HelloAgent",
+        "TideProductivityAgent"
+      ]
+    }
+  ],
 
   // Default environment configuration
   "d1_databases": [
@@ -67,6 +79,17 @@
           },
         ],
       },
+
+      // Migrations for production environment
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_classes": [
+            "HelloAgent",
+            "TideProductivityAgent"
+          ]
+        }
+      ],
 
       // AI binding for Workers AI
       "ai": {
@@ -165,6 +188,17 @@
           },
         ],
       },
+
+      // Migrations for development environment
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_classes": [
+            "HelloAgent",
+            "TideProductivityAgent"
+          ]
+        }
+      ],
 
       // AI binding for Workers AI
       "ai": {
