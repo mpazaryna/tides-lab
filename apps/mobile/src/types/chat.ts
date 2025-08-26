@@ -13,6 +13,10 @@ export interface ChatMessageMetadata {
   error?: boolean;
   conversationId?: string;
   userId?: string;
+  agentResponse?: boolean;
+  agentId?: string;
+  responseType?: string;
+  isAgentMessage?: boolean;
 }
 
 export interface MCPToolCall {

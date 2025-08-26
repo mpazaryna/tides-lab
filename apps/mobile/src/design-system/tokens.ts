@@ -1,4 +1,4 @@
-import { getInterFont, getRobotoMonoFont } from '../utils/fonts';
+import { getInterFont, getRobotoMonoFont } from "../utils/fonts";
 
 export const colors = {
   // Primary - Brand Blue
@@ -61,6 +61,7 @@ export const colors = {
     primary: "#111618",
     secondary: "#374151",
     tertiary: "#6b7280",
+    tertiaryNull: "rgba(17, 22, 24, .5)",
     inverse: "#FFFFFF",
   },
 
@@ -73,11 +74,10 @@ export const colors = {
   },
 };
 
-
 export const typography = {
   fontFamily: {
-    primary: getInterFont('regular'),
-    mono: getRobotoMonoFont('regular'),
+    primary: getInterFont("regular"),
+    mono: getRobotoMonoFont("regular"),
   },
 
   fontSize: {
@@ -126,6 +126,7 @@ export const typography = {
     caption2: 13,
     // Additional line heights for Text component compatibility
     tight: 1.25,
+    pro: 1.29,
     normal: 1.5,
     relaxed: 1.75,
   },
@@ -136,77 +137,77 @@ export const typography = {
 
   textStyles: {
     largeTitle: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 34,
       fontWeight: "400" as const,
       lineHeight: 41,
       letterSpacing: -0.68, // -2% of 34
     },
     title1: {
-      fontFamily: getInterFont('semiBold'),
+      fontFamily: getInterFont("semiBold"),
       fontSize: 28,
       fontWeight: "600" as const,
       lineHeight: 34,
       letterSpacing: -0.56,
     },
     title2: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 22,
       fontWeight: "400" as const,
       lineHeight: 28,
       letterSpacing: -0.44,
     },
     title3: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 20,
       fontWeight: "400" as const,
       lineHeight: 25,
       letterSpacing: -0.4,
     },
     headline: {
-      fontFamily: getInterFont('semiBold'),
+      fontFamily: getInterFont("semiBold"),
       fontSize: 17,
       fontWeight: "600" as const,
       lineHeight: 22,
       letterSpacing: -0.34,
     },
     body: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 17,
       fontWeight: "400" as const,
       lineHeight: 22,
       letterSpacing: -0.34,
     },
     callout: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 16,
       fontWeight: "400" as const,
       lineHeight: 21,
       letterSpacing: -0.32,
     },
     subhead: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 15,
       fontWeight: "400" as const,
       lineHeight: 20,
       letterSpacing: -0.3,
     },
     footnote: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 13,
       fontWeight: "400" as const,
       lineHeight: 18,
       letterSpacing: -0.26,
     },
     caption1: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 12,
       fontWeight: "400" as const,
       lineHeight: 16,
       letterSpacing: -0.24,
     },
     caption2: {
-      fontFamily: getInterFont('regular'),
+      fontFamily: getInterFont("regular"),
       fontSize: 11,
       fontWeight: "400" as const,
       lineHeight: 13,
@@ -216,28 +217,28 @@ export const typography = {
 
   monoTextStyles: {
     monoXs: {
-      fontFamily: getRobotoMonoFont('regular'),
+      fontFamily: getRobotoMonoFont("regular"),
       fontSize: 12,
       fontWeight: "400" as const,
       lineHeight: 16,
       letterSpacing: 0,
     },
     monoSm: {
-      fontFamily: getRobotoMonoFont('regular'),
+      fontFamily: getRobotoMonoFont("regular"),
       fontSize: 14,
       fontWeight: "400" as const,
       lineHeight: 18,
       letterSpacing: 0,
     },
     monoBase: {
-      fontFamily: getRobotoMonoFont('regular'),
+      fontFamily: getRobotoMonoFont("regular"),
       fontSize: 16,
       fontWeight: "400" as const,
       lineHeight: 22,
       letterSpacing: 0,
     },
     monoLg: {
-      fontFamily: getRobotoMonoFont('regular'),
+      fontFamily: getRobotoMonoFont("regular"),
       fontSize: 18,
       fontWeight: "400" as const,
       lineHeight: 24,

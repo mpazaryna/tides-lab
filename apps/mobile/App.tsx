@@ -16,7 +16,7 @@ const App: React.FC = () => {
         <MCPProvider>
           <ChatProvider>
             <NotificationProvider>
-              <NavigationContainer>
+              <NavigationContainer >
                 <RootNavigator />
               </NavigationContainer>
             </NotificationProvider>

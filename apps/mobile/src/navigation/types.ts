@@ -12,8 +12,8 @@ export type AuthStackParamList = {
 
 // Main Stack Parameters
 export type MainStackParamList = {
-  Home: undefined;
-  Chat: undefined;
+  Home: { tideId?: string; tideName?: string; };
+  Chat: { tideId?: string; tideName?: string; };
   Server: undefined;
   Mcp: undefined;
   Settings: undefined;

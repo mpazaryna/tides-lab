@@ -68,7 +68,7 @@ export const Text: React.FC<TextProps> = React.memo(({
           fontSize: typography.fontSize.base,
           fontFamily: getInterFont('regular'),
           fontWeight: typography.fontWeight.normal,
-          lineHeight: typography.fontSize.base * typography.lineHeight.normal,
+          lineHeight: typography.fontSize.base * typography.lineHeight.pro,
         };
       case "bodySmall":
         return {

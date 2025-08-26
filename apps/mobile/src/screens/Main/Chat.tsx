@@ -2,33 +2,30 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TextInput,
   TouchableOpacity,
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  Alert,
+  Alert
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRoute, RouteProp } from '@react-navigation/native';
+import { ArrowUp, Settings as SettingsIcon } from "lucide-react-native";
+
 import { LoggingService } from "../../services/LoggingService";
 import { NotificationService } from "../../services/NotificationService";
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
+import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
 import { agentService } from "../../services/agentService";
-import {
-  Button,
-  Card,
-  colors,
-  spacing,
-  Text,
-  Stack,
-} from "../../design-system";
-import type {
-  ChatMessage,
-  MCPToolCall,
-  AvailableMCPTool,
-} from "../../types/chat";
+import { Card, colors, spacing, Text, Stack } from "../../design-system";
+import { ShortcutBar, type Shortcut } from "../../components/chat";
+import { TestingPanel } from "../../components/debug";
+import ConnectionMonitor from "../../components/agents/ConnectionMonitor";
+import type { ChatMessage, MCPToolCall } from "../../types/chat";
+import { MainStackParamList } from "../../navigation/types";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -40,6 +37,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   isOwnMessage,
 }) => {
   const getBubbleStyle = () => {
+    // Check if this is an agent message
+    if (message.metadata?.agentResponse) {
+      return [styles.messageBubble, styles.agentBubble];
+    }
+
     switch (message.type) {
       case "user":
         return [styles.messageBubble, styles.userBubble];
@@ -87,6 +89,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           </Text>
         )}
 
+        {message.metadata?.agentResponse && (
+          <Text variant="bodySmall" color="tertiary" style={styles.agentHeader}>
+            Tides Agent
+          </Text>
+        )}
+
         <Text variant="body" color={getTextColor()}>
           {message.type === "tool_result" && message.metadata?.toolResult
             ? formatToolResult(message.metadata.toolResult)
@@ -107,11 +115,32 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   );
 };
 
-interface ToolCallDisplayProps {
+interface LoadingIndicatorProps {
+  message?: string;
+}
+
+const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
+  message = "Agent is thinking..."
+}) => (
+  <Card variant="outlined" padding={3} style={styles.loadingCard}>
+    <View style={styles.loadingContent}>
+      <View style={styles.loadingDots}>
+        <View style={[styles.loadingDot, styles.loadingDot1]} />
+        <View style={[styles.loadingDot, styles.loadingDot2]} />
+        <View style={[styles.loadingDot, styles.loadingDot3]} />
+      </View>
+      <Text variant="bodySmall" color="secondary" style={styles.loadingText}>
+        {message}
+      </Text>
+    </View>
+  </Card>
+);
+
+interface ToolCallIndicatorProps {
   toolCall: MCPToolCall;
 }
 
-const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall }) => {
+const ToolCallIndicator: React.FC<ToolCallIndicatorProps> = ({ toolCall }) => {
   const getStatusColor = () => {
     switch (toolCall.status) {
       case "completed":
@@ -128,9 +157,9 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall }) => {
   const getStatusIcon = () => {
     switch (toolCall.status) {
       case "completed":
-        return "✓";
+        return "✅";
       case "failed":
-        return "✗";
+        return "❌";
       case "executing":
         return "⏳";
       default:
@@ -175,75 +204,96 @@ const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall }) => {
   );
 };
 
-interface QuickToolsProps {
-  tools: AvailableMCPTool[];
-  onToolSelect: (toolName: string) => void;
-  isLoading: boolean;
+interface ErrorMessageProps {
+  error: string;
+  onRetry?: () => void;
 }
 
-const QuickTools: React.FC<QuickToolsProps> = ({
-  tools,
-  onToolSelect,
-  isLoading,
-}) => {
-  const popularTools = tools.slice(0, 4); // Show first 4 tools as quick access
+const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, onRetry }) => (
+  <Card variant="outlined" padding={3} style={styles.errorCard}>
+    <Text variant="body" color="error" weight="medium">
+      Connection Error
+    </Text>
+    <Text variant="bodySmall" color="error" style={styles.errorText}>
+      {error}
+    </Text>
+    {onRetry && (
+      <TouchableOpacity onPress={onRetry} style={styles.retryButton}>
+        <Text variant="bodySmall" color="primary">
+          Retry Connection
+        </Text>
+      </TouchableOpacity>
+    )}
+  </Card>
+);
 
-  return (
-    <View style={styles.quickToolsContainer}>
-      <Text
-        variant="bodySmall"
-        color="secondary"
-        style={styles.quickToolsTitle}
-      >
-        Quick Tools:
-      </Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.quickToolsList}>
-          {popularTools.map((tool) => (
-            <TouchableOpacity
-              key={tool.name}
-              style={styles.quickToolButton}
-              onPress={() => onToolSelect(tool.name)}
-              disabled={isLoading}
-            >
-              <Text variant="bodySmall" color="primary" weight="medium">
-                {tool.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
-  );
-};
+type ChatScreenRouteProp = RouteProp<MainStackParamList, 'Chat'>;
 
 export default function Chat() {
+  const route = useRoute<ChatScreenRouteProp>();
+  const { tideId, tideName } = route.params || {};
+  
   const { getCurrentServerUrl } = useMCP();
   const {
     messages,
     isLoading,
     error,
     agentStatus,
-    connectionStatus,
     pendingToolCalls,
+    connectionStatus,
     sendMessage,
-    sendToolMessage,
     executeMCPTool,
-    getAvailableTools,
     sendAgentMessage,
-    clearMessages,
     checkConnections,
   } = useChat();
 
   const [inputMessage, setInputMessage] = useState("");
-  const [showTools, setShowTools] = useState(false);
-  const [selectedTool, setSelectedTool] = useState<AvailableMCPTool | null>(
-    null
-  );
-  const [toolParameters, setToolParameters] = useState<Record<string, string>>(
-    {}
-  );
   const [agentInitialized, setAgentInitialized] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [showConnectionMonitor, setShowConnectionMonitor] = useState(false);
+  const [shortcuts, setShortcuts] = useState<Shortcut[]>([
+    {
+      id: 'agent_insights',
+      label: 'Get Insights',
+      type: 'agent_command',
+      command: 'get insights for my recent tides',
+      category: 'agent',
+      description: 'Ask the agent for productivity insights'
+    },
+    {
+      id: 'mcp_list_tides',
+      label: 'List Tides',
+      type: 'mcp_direct',
+      command: 'tide_list',
+      category: 'tide',
+      description: 'Show all your tides'
+    },
+    {
+      id: 'mcp_create_tide',
+      label: 'Create Tide',
+      type: 'mcp_direct',
+      command: 'tide_create',
+      category: 'tide',
+      params: { name: 'New Tide', description: 'Quick tide', flowType: 'daily' },
+      description: 'Create a new tide workflow'
+    },
+    {
+      id: 'agent_analyze',
+      label: 'Analyze',
+      type: 'agent_command', 
+      command: 'analyze my current tide patterns',
+      category: 'agent',
+      description: 'Get analysis of your tide patterns'
+    },
+    {
+      id: 'mcp_get_report',
+      label: 'Get Report',
+      type: 'mcp_direct',
+      command: 'tide_get_report',
+      category: 'analytics',
+      description: 'Generate tide analytics report'
+    }
+  ]);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
@@ -294,6 +344,15 @@ export default function Chat() {
     const message = inputMessage.trim();
     setInputMessage("");
 
+    // Check for debug commands
+    if (message === "/debug") {
+      setShowDebugPanel(!showDebugPanel);
+      return;
+    } else if (message === "/monitor") {
+      setShowConnectionMonitor(!showConnectionMonitor);
+      return;
+    }
+
     LoggingService.info(
       "Chat",
       "Sending user message",
@@ -322,8 +381,8 @@ export default function Chat() {
 
         await executeMCPTool(toolName, parameters);
       } else {
-        // Regular message
-        await sendMessage(message);
+        // Send to agent by default for intelligent routing
+        await sendAgentMessage(message, tideId ? { tideId } : undefined);
       }
     } catch (sendError) {
       LoggingService.error(
@@ -334,100 +393,48 @@ export default function Chat() {
       );
       NotificationService.error("Failed to send message", "Error");
     }
-  }, [inputMessage, sendMessage, sendAgentMessage, executeMCPTool]);
+  }, [inputMessage, sendAgentMessage, executeMCPTool, showDebugPanel, showConnectionMonitor, tideId]);
 
-  const handleToolSelect = useCallback(
-    (toolName: string) => {
-      const tool = getAvailableTools().find((t) => t.name === toolName);
-      if (tool) {
-        setSelectedTool(tool);
-        setShowTools(true);
-
-        // Initialize parameters with empty values
-        const params: Record<string, string> = {};
-        tool.parameters.forEach((param) => {
-          params[param.name] = "";
-        });
-        setToolParameters(params);
-      }
-    },
-    [getAvailableTools]
-  );
-
-  const handleExecuteTool = useCallback(async () => {
-    if (!selectedTool) return;
-
-    // Validate required parameters
-    const missingRequired = selectedTool.parameters
-      .filter((param) => param.required && !toolParameters[param.name]?.trim())
-      .map((param) => param.name);
-
-    if (missingRequired.length > 0) {
-      Alert.alert(
-        "Missing Parameters",
-        `Please provide values for: ${missingRequired.join(", ")}`
-      );
-      return;
-    }
-
-    // Convert parameters to appropriate types
-    const processedParams: Record<string, any> = {};
-    selectedTool.parameters.forEach((param) => {
-      const value = toolParameters[param.name];
-      if (value) {
-        processedParams[param.name] =
-          param.type === "number" ? Number(value) : value;
-      }
-    });
-
+  const handleShortcutPress = useCallback(async (shortcut: Shortcut) => {
     try {
-      await sendToolMessage(selectedTool.name, processedParams);
-      setShowTools(false);
-      setSelectedTool(null);
-      setToolParameters({});
-
+      if (shortcut.type === 'agent_command') {
+        await sendAgentMessage(shortcut.command, tideId ? { tideId } : undefined);
+      } else {
+        // For MCP direct calls, include tideId in params if available
+        const params = { ...shortcut.params };
+        if (tideId && !params.tideId) {
+          params.tideId = tideId;
+        }
+        await executeMCPTool(shortcut.command, params);
+      }
+      
       LoggingService.info(
-        "Chat",
-        "Tool executed via UI",
-        { toolName: selectedTool.name, parameters: processedParams },
-        "CHAT_UI_005"
+        'Chat',
+        'Shortcut executed',
+        { shortcutId: shortcut.id, type: shortcut.type },
+        'CHAT_SHORTCUT_001'
       );
-    } catch (toolError) {
+    } catch (error) {
       LoggingService.error(
-        "Chat",
-        "Failed to execute tool via UI",
-        { error: toolError, toolName: selectedTool.name },
-        "CHAT_UI_006"
+        'Chat',
+        'Failed to execute shortcut',
+        { error, shortcutId: shortcut.id },
+        'CHAT_SHORTCUT_002'
       );
-      NotificationService.error("Failed to execute tool", "Error");
+      NotificationService.error('Failed to execute shortcut', 'Error');
     }
-  }, [selectedTool, toolParameters, sendToolMessage]);
+  }, [sendAgentMessage, executeMCPTool, tideId]);
 
-  const handleAgentInsights = useCallback(async () => {
-    if (!agentInitialized) {
-      NotificationService.error("Agent service not initialized", "Error");
-      return;
-    }
-
-    try {
-      const insights = await agentService.getInsights();
-      // The agent message will be handled by the context
-      LoggingService.info(
-        "Chat",
-        "Agent insights requested",
-        { messageId: insights.id },
-        "CHAT_UI_007"
-      );
-    } catch (insightError) {
-      LoggingService.error(
-        "Chat",
-        "Failed to get agent insights",
-        { error: insightError },
-        "CHAT_UI_008"
-      );
-      NotificationService.error("Failed to get insights from agent", "Error");
-    }
-  }, [agentInitialized]);
+  const handleConfigurationChange = useCallback((newShortcuts: Shortcut[]) => {
+    setShortcuts(newShortcuts);
+    
+    LoggingService.info(
+      'Chat',
+      'Shortcuts configuration updated',
+      { shortcutCount: newShortcuts.length },
+      'CHAT_CONFIG_001'
+    );
+  }, []);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => (
@@ -440,295 +447,223 @@ export default function Chat() {
     []
   );
 
-  const availableTools = getAvailableTools();
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text variant="h3" weight="medium">
-            Chat Assistant
-          </Text>
-          <View style={styles.connectionStatus}>
-            <View
-              style={[
-                styles.statusDot,
-                connectionStatus.mcp
-                  ? styles.connectedDot
-                  : styles.disconnectedDot,
-              ]}
-            />
-            <Text variant="bodySmall" color="secondary">
-              MCP: {connectionStatus.mcp ? "Connected" : "Disconnected"}
-            </Text>
-            <View
-              style={[
-                styles.statusDot,
-                agentInitialized ? styles.connectedDot : styles.disconnectedDot,
-              ]}
-            />
-            <Text variant="bodySmall" color="secondary">
-              Agent: {agentInitialized ? "Ready" : "Initializing"}
-            </Text>
-          </View>
-        </View>
-
-        {/* Error Display */}
-        {error && (
-          <Card variant="outlined" padding={3} style={styles.errorCard}>
-            <Text variant="body" color="error">
-              {error}
-            </Text>
-            <TouchableOpacity
-              onPress={() => checkConnections()}
-              style={styles.retryButton}
-            >
-              <Text variant="bodySmall" color="primary">
-                Retry Connection
-              </Text>
-            </TouchableOpacity>
-          </Card>
-        )}
-
-        {/* Agent Status */}
-        {agentStatus !== "idle" && (
-          <Card variant="outlined" padding={2} style={styles.agentStatusCard}>
-            <Text variant="bodySmall" color="secondary">
-              Agent is {agentStatus}...
-            </Text>
-          </Card>
-        )}
-
-        {/* Messages */}
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      style={styles.keyboardContainer}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      {/* Connection Status Bar */}
+      <View style={styles.statusBar}>
+        <TouchableOpacity
+          onPress={() => setShowConnectionMonitor(!showConnectionMonitor)}
+          style={styles.connectionButton}
         >
-          {messages.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text variant="h4" color="secondary" align="center">
-                Welcome to Chat!
-              </Text>
-              <Text
-                variant="body"
-                color="tertiary"
-                align="center"
-                style={styles.emptyStateDescription}
-              >
-                Ask questions, execute tools, or get insights from the
-                TideProductivityAgent.
-              </Text>
-              <Stack spacing={2} style={styles.helpCommands}>
-                <Text variant="bodySmall" color="secondary">
-                  Commands you can try:
-                </Text>
-                <Text variant="bodySmall" color="tertiary">
-                  • Type a question naturally
-                </Text>
-                <Text variant="bodySmall" color="tertiary">
-                  • /agent [question] - Ask the agent
-                </Text>
-                <Text variant="bodySmall" color="tertiary">
-                  • /tool [toolName] param=value - Execute a tool
-                </Text>
-                <Text variant="bodySmall" color="tertiary">
-                  • Use Quick Tools below for easy access
-                </Text>
-              </Stack>
-            </View>
-          ) : (
-            <FlatList
-              data={messages}
-              renderItem={renderMessage}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-            />
-          )}
+          <View style={[
+            styles.connectionDot,
+            (connectionStatus.agent && connectionStatus.mcp) ? styles.connectedDot : styles.disconnectedDot
+          ]} />
+          <Text variant="bodySmall" color="secondary">
+            {(connectionStatus.agent && connectionStatus.mcp) ? 'Connected' : 'Disconnected'}
+          </Text>
+        </TouchableOpacity>
+        
+        {/* Debug Panel Toggle */}
+        <TouchableOpacity
+          onPress={() => setShowDebugPanel(!showDebugPanel)}
+          style={styles.debugButton}
+        >
+          <SettingsIcon size={20} color={colors.text.secondary} />
+        </TouchableOpacity>
+      </View>
 
-          {/* Pending Tool Calls */}
-          {pendingToolCalls.map((toolCall) => (
-            <ToolCallDisplay key={toolCall.id} toolCall={toolCall} />
-          ))}
-        </ScrollView>
+      {/* Connection Monitor */}
+      {showConnectionMonitor && (
+        <View style={styles.connectionMonitorContainer}>
+          <ConnectionMonitor
+            detailed={true}
+            showActions={true}
+            onConnectionChange={(isConnected) => {
+              LoggingService.info(
+                'Chat',
+                'Connection status changed',
+                { isConnected },
+                'CHAT_CONNECTION_001'
+              );
+            }}
+          />
+        </View>
+      )}
 
-        {/* Quick Tools */}
-        {!showTools && availableTools.length > 0 && (
-          <QuickTools
-            tools={availableTools}
-            onToolSelect={handleToolSelect}
-            isLoading={isLoading}
+      {/* Debug Panel */}
+      {showDebugPanel && (
+        <View style={styles.debugPanelContainer}>
+          <TestingPanel 
+            expandedByDefault={false}
+            onTestResultsChange={(results) => {
+              LoggingService.info(
+                'Chat',
+                'Debug test results updated',
+                { resultCount: results.length },
+                'CHAT_DEBUG_001'
+              );
+            }}
+          />
+        </View>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <ErrorMessage 
+          error={error} 
+          onRetry={checkConnections}
+        />
+      )}
+
+      {/* Messages */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.messagesContainer}
+        contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {messages.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text variant="h4" color="secondary" align="center">
+              {tideId ? `Chat about ${tideName || 'this tide'}` : 'Welcome to Agent Chat!'}
+            </Text>
+            <Text
+              variant="body"
+              color="tertiary"
+              align="center"
+              style={styles.emptyStateDescription}
+            >
+              {tideId 
+                ? `Ask the agent about this tide, get insights, or execute actions.`
+                : `Ask questions, execute tools, or get insights from the Tides Agent.`
+              }
+            </Text>
+            <Stack spacing={2} style={styles.helpCommands}>
+              <Text variant="bodySmall" color="secondary">
+                Commands you can try:
+              </Text>
+              <Text variant="bodySmall" color="tertiary">
+                • Type a question naturally
+              </Text>
+              <Text variant="bodySmall" color="tertiary">
+                • /agent [question] - Ask the agent directly
+              </Text>
+              <Text variant="bodySmall" color="tertiary">
+                • /tool [toolName] param=value - Execute a tool
+              </Text>
+              <Text variant="bodySmall" color="tertiary">
+                • /debug - Toggle debug panel
+              </Text>
+              <Text variant="bodySmall" color="tertiary">
+                • /monitor - Toggle connection monitor
+              </Text>
+              <Text variant="bodySmall" color="tertiary">
+                • Use shortcuts below for quick access
+              </Text>
+            </Stack>
+          </View>
+        ) : (
+          <FlatList
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id}
+            scrollEnabled={false}
           />
         )}
 
-        {/* Tool Parameter Input */}
-        {showTools && selectedTool && (
-          <Card variant="outlined" padding={4} style={styles.toolInputCard}>
-            <Text variant="body" weight="medium" style={styles.toolInputTitle}>
-              Execute {selectedTool.name}
-            </Text>
-            <Text
-              variant="bodySmall"
-              color="secondary"
-              style={styles.toolDescription}
-            >
-              {selectedTool.description}
-            </Text>
+        {/* Loading Indicator */}
+        {isLoading && <LoadingIndicator message={`Agent is ${agentStatus}...`} />}
 
-            {selectedTool.parameters.map((param) => (
-              <View key={param.name} style={styles.parameterInput}>
-                <Text variant="bodySmall" weight="medium">
-                  {param.name} {param.required && "*"}
-                </Text>
-                <Text variant="bodySmall" color="tertiary">
-                  {param.description}
-                </Text>
-                <TextInput
-                  style={styles.parameterTextInput}
-                  placeholder={`Enter ${param.name}`}
-                  placeholderTextColor={colors.text.tertiary}
-                  value={toolParameters[param.name] || ""}
-                  onChangeText={(text) =>
-                    setToolParameters((prev) => ({
-                      ...prev,
-                      [param.name]: text,
-                    }))
-                  }
-                />
-              </View>
-            ))}
+        {/* Pending Tool Calls */}
+        {pendingToolCalls.map((toolCall) => (
+          <ToolCallIndicator key={toolCall.id} toolCall={toolCall} />
+        ))}
+      </ScrollView>
 
-            <View style={styles.toolInputActions}>
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={() => {
-                  setShowTools(false);
-                  setSelectedTool(null);
-                  setToolParameters({});
-                }}
-                style={styles.cancelButton}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onPress={handleExecuteTool}
-                loading={isLoading}
-                style={styles.executeButton}
-              >
-                Execute
-              </Button>
-            </View>
-          </Card>
-        )}
+      {/* Shortcuts */}
+      <ShortcutBar
+        shortcuts={shortcuts}
+        onShortcutPress={handleShortcutPress}
+        showConfiguration={true}
+        onConfigurationChange={handleConfigurationChange}
+        maxVisible={6}
+        showCategories={false}
+      />
 
-        {/* Message Input */}
-        <View style={styles.inputContainer}>
-          <View style={styles.inputRow}>
-            <TextInput
-              ref={inputRef}
-              style={styles.messageInput}
-              placeholder="Type a message or command..."
-              placeholderTextColor={colors.text.tertiary}
-              value={inputMessage}
-              onChangeText={setInputMessage}
-              onSubmitEditing={handleSendMessage}
-              returnKeyType="send"
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
+      {/* Message Input */}
+      <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
+        <View style={styles.inputRow}>
+          <TextInput
+            ref={inputRef}
+            style={styles.messageInput}
+            placeholder="Ask anything..."
+            placeholderTextColor={colors.text.tertiary}
+            value={inputMessage}
+            onChangeText={setInputMessage}
+            onSubmitEditing={handleSendMessage}
+            returnKeyType="send"
+            multiline
+            maxLength={1000}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              !inputMessage.trim() && styles.sendButtonDisabled,
+            ]}
+            onPress={handleSendMessage}
+            disabled={!inputMessage.trim() || isLoading}
+          >
+            <View
               style={[
-                styles.sendButton,
-                !inputMessage.trim() && styles.sendButtonDisabled,
+                styles.sendButtonColor,
+                !inputMessage.trim() && styles.sendButtonColorDisabled,
               ]}
-              onPress={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading}
             >
-              <Text variant="bodySmall" color="white" weight="medium">
-                Send
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => setShowTools(!showTools)}
-              disabled={isLoading}
-            >
-              <Text variant="bodySmall" color="primary">
-                🔧 Tools
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={handleAgentInsights}
-              disabled={!agentInitialized || isLoading}
-            >
-              <Text variant="bodySmall" color="primary">
-                💡 Insights
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => {
-                Alert.alert(
-                  "Clear Messages",
-                  "Are you sure you want to clear all messages?",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Clear",
-                      style: "destructive",
-                      onPress: clearMessages,
-                    },
-                  ]
-                );
-              }}
-            >
-              <Text variant="bodySmall" color="secondary">
-                🗑 Clear
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <ArrowUp size={20} color="white" />
+            </View>
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
+// ======================== Styles ========================
+
 const styles = StyleSheet.create({
-  container: {
+  keyboardContainer: {
     flex: 1,
     backgroundColor: colors.background.primary,
   },
-  keyboardContainer: {
-    flex: 1,
-  },
-  header: {
-    padding: spacing[4],
+  statusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
     borderBottomWidth: 1,
     borderBottomColor: colors.neutral[200],
     backgroundColor: colors.background.secondary,
   },
-  connectionStatus: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: spacing[2],
-    gap: spacing[2],
+  connectionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+    backgroundColor: colors.neutral[50],
+    borderRadius: 12,
   },
-  statusDot: {
+  connectionDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+    marginRight: spacing[2],
   },
   connectedDot: {
     backgroundColor: colors.success,
@@ -736,19 +671,20 @@ const styles = StyleSheet.create({
   disconnectedDot: {
     backgroundColor: colors.error,
   },
-  errorCard: {
-    margin: spacing[4],
-    backgroundColor: colors.error + "10",
-    borderColor: colors.error + "30",
+  debugButton: {
+    padding: spacing[2],
   },
-  retryButton: {
-    marginTop: spacing[2],
+  connectionMonitorContainer: {
+    maxHeight: 300,
+    backgroundColor: colors.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral[200],
   },
-  agentStatusCard: {
-    margin: spacing[4],
-    marginBottom: 0,
-    backgroundColor: colors.info + "10",
-    borderColor: colors.info + "30",
+  debugPanelContainer: {
+    maxHeight: 400,
+    backgroundColor: colors.background.secondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral[200],
   },
   messagesContainer: {
     flex: 1,
@@ -758,28 +694,28 @@ const styles = StyleSheet.create({
     paddingBottom: spacing[4],
   },
   emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing[8],
   },
   emptyStateDescription: {
     marginTop: spacing[3],
     marginBottom: spacing[6],
-    textAlign: "center",
+    textAlign: 'center',
     paddingHorizontal: spacing[4],
   },
   helpCommands: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   messageContainer: {
     marginVertical: spacing[2],
-    alignItems: "flex-start",
+    alignItems: 'flex-start',
   },
   ownMessageContainer: {
-    alignItems: "flex-end",
+    alignItems: 'flex-end',
   },
   messageBubble: {
-    maxWidth: "80%",
+    maxWidth: '80%',
     padding: spacing[3],
     borderRadius: 16,
   },
@@ -788,12 +724,20 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderBottomLeftRadius: 4,
+  },
+  agentBubble: {
+    backgroundColor: colors.secondary[50],
+    borderWidth: 1,
+    borderColor: colors.secondary[200],
     borderBottomLeftRadius: 4,
   },
   toolBubble: {
-    backgroundColor: colors.success + "20",
-    borderColor: colors.success + "40",
+    backgroundColor: colors.success + '20',
+    borderColor: colors.success + '40',
     borderWidth: 1,
   },
   systemBubble: {
@@ -803,6 +747,11 @@ const styles = StyleSheet.create({
   },
   toolName: {
     marginBottom: spacing[1],
+    fontWeight: '500',
+  },
+  agentHeader: {
+    marginBottom: spacing[1],
+    fontWeight: '500',
   },
   errorText: {
     marginTop: spacing[1],
@@ -811,14 +760,45 @@ const styles = StyleSheet.create({
     marginTop: spacing[1],
     fontSize: 11,
   },
+  loadingCard: {
+    marginVertical: spacing[2],
+    backgroundColor: colors.neutral[50],
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingDots: {
+    flexDirection: 'row',
+    marginRight: spacing[3],
+  },
+  loadingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary[500],
+    marginHorizontal: 2,
+  },
+  loadingDot1: {
+    // Animation would be added here
+  },
+  loadingDot2: {
+    // Animation would be added here
+  },
+  loadingDot3: {
+    // Animation would be added here
+  },
+  loadingText: {
+    fontStyle: 'italic',
+  },
   toolCallCard: {
     marginVertical: spacing[2],
-    borderLeftWidth: 3,
+    borderLeftWidth: 4,
   },
   toolCallHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing[2],
   },
   toolCallParams: {
@@ -826,109 +806,69 @@ const styles = StyleSheet.create({
   },
   toolCallError: {
     marginTop: spacing[2],
-    backgroundColor: colors.error + "10",
+    backgroundColor: colors.error + '10',
     padding: spacing[2],
     borderRadius: 4,
   },
-  quickToolsContainer: {
-    padding: spacing[4],
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral[200],
-    backgroundColor: colors.background.secondary,
-  },
-  quickToolsTitle: {
-    marginBottom: spacing[2],
-  },
-  quickToolsList: {
-    flexDirection: "row",
-    gap: spacing[2],
-  },
-  quickToolButton: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    backgroundColor: colors.primary[50],
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.primary[200],
-  },
-  toolInputCard: {
+  errorCard: {
     margin: spacing[4],
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.error + '10',
+    borderColor: colors.error + '30',
   },
-  toolInputTitle: {
-    marginBottom: spacing[1],
-  },
-  toolDescription: {
-    marginBottom: spacing[4],
-  },
-  parameterInput: {
-    marginBottom: spacing[3],
-  },
-  parameterTextInput: {
-    borderWidth: 1,
-    borderColor: colors.neutral[300],
-    borderRadius: 8,
-    padding: spacing[3],
-    fontSize: 16,
-    color: colors.text.primary,
-    backgroundColor: colors.background.primary,
-    marginTop: spacing[1],
-  },
-  toolInputActions: {
-    flexDirection: "row",
-    gap: spacing[3],
-    marginTop: spacing[4],
-  },
-  cancelButton: {
-    flex: 1,
-  },
-  executeButton: {
-    flex: 1,
+  retryButton: {
+    marginTop: spacing[2],
   },
   inputContainer: {
-    padding: spacing[4],
     borderTopWidth: 1,
     borderTopColor: colors.neutral[200],
     backgroundColor: colors.background.secondary,
+    padding: spacing[4],
   },
   inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: spacing[3],
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing[2],
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   messageInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.neutral[300],
-    borderRadius: 20,
-    paddingHorizontal: spacing[4],
+    paddingLeft: spacing[4],
+    paddingRight: 56,
     paddingVertical: spacing[3],
     fontSize: 16,
     color: colors.text.primary,
-    backgroundColor: colors.background.primary,
+    backgroundColor: colors.background.secondary,
     maxHeight: 100,
   },
   sendButton: {
+    backgroundColor: colors.background.secondary,
+    margin: 0,
+    borderRadius: 1000,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    padding: 6,
+  },
+  sendButtonColor: {
     backgroundColor: colors.primary[500],
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    borderRadius: 20,
-    minWidth: 60,
-    alignItems: "center",
+    borderRadius: 1000,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    width: 32,
+    height: 32,
   },
   sendButtonDisabled: {
+    opacity: 0.5,
+  },
+  sendButtonColorDisabled: {
     backgroundColor: colors.neutral[400],
-  },
-  quickActions: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: spacing[3],
-    paddingTop: spacing[3],
-    borderTopWidth: 1,
-    borderTopColor: colors.neutral[200],
-  },
-  quickActionButton: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
   },
 });

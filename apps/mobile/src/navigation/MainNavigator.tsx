@@ -2,121 +2,92 @@
 
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { TouchableOpacity, StyleSheet } from "react-native";
+import { Button, TouchableOpacity } from "react-native";
+import { AlignLeft } from "lucide-react-native";
 import Home from "../screens/Main/Home";
 import Chat from "../screens/Main/Chat";
+import TidesList from "../screens/Main/TidesList";
 import Settings from "../screens/Main/Settings";
 import { MainStackParamList, Routes, NavigationOptions } from "./types";
-import { Text } from "../design-system";
+import { colors } from "../design-system/tokens";
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
-const styles = StyleSheet.create({
-  headerButton: {
-    marginRight: 15,
-  },
-});
-
-const SettingsHeaderButton = ({ navigation }: any) => (
+const SettingsHeaderButton = React.memo(({ navigation }: any) => (
   <TouchableOpacity
     onPress={() => navigation.navigate(Routes.main.settings)}
-    style={styles.headerButton}
+    style={{ padding: 8 }}
   >
-    <Text variant="body" color="primary" weight="medium">
-      Settings
-    </Text>
+    <AlignLeft size={24} color={colors.primary[900]} />
   </TouchableOpacity>
-);
+));
+
+const TidesListHeaderButton = React.memo(({ navigation }: any) => (
+  <Button
+    onPress={() => navigation.navigate(Routes.main.tidesList)}
+    title="Chat"
+    color={colors.primary[500]}
+  />
+));
+
+const getHomeScreenOptions = ({ navigation, route }: any) => ({
+  title: route.params?.tideId
+    ? `${route.params?.tideName || "Home"} (${route.params.tideId})`
+    : "Tides",
+  headerTintColor: colors.primary[900],
+  headerShown: true,
+  headerShadowVisible: false,
+  headerRight: () => <TidesListHeaderButton navigation={navigation} />,
+  headerLeft: () => <SettingsHeaderButton navigation={navigation} />,
+
+  back: colors.background.primary,
+});
 
 export default function MainNavigator() {
   return (
     <Stack.Navigator
       initialRouteName={Routes.main.home}
-      screenOptions={NavigationOptions.withHeader}
+      screenOptions={{
+        ...NavigationOptions.withHeader,
+        headerTintColor: colors.primary[500],
+        headerStyle: {
+          backgroundColor: colors.background.primary,
+        },
+      }}
     >
       <Stack.Screen
         name={Routes.main.home}
         component={Home}
-        options={({ navigation }) => ({
-          title: "Home",
-          headerShown: true,
-          headerRight: () => <SettingsHeaderButton navigation={navigation} />,
-        })}
+        options={getHomeScreenOptions}
       />
       <Stack.Screen
         name={Routes.main.chat}
         component={Chat}
-        options={{
-          title: "Chat Assistant",
+        options={({ route }) => ({
+          headerShadowVisible: false,
+          title: route.params?.tideId
+            ? `${route.params?.tideName || "Chat"} (${route.params.tideId})`
+            : "Agent Chat",
           headerShown: true,
-        }}
+        })}
       />
+
       <Stack.Screen
-        name={Routes.main.server}
-        component={Home} // TODO: Replace with actual Server component
+        name={Routes.main.tidesList}
+        component={TidesList}
         options={{
-          title: "Server Settings",
+          headerShadowVisible: false,
+          title: "Tides List",
           headerShown: true,
         }}
       />
-      <Stack.Screen
-        name={Routes.main.mcp}
-        component={Home} // TODO: Replace with actual MCP component
-        options={{
-          title: "MCP Connection",
-          headerShown: true,
-        }}
-      />
+
       <Stack.Screen
         name={Routes.main.settings}
         component={Settings}
         options={{
+          headerShadowVisible: false,
           title: "Settings",
-          headerShown: true,
-        }}
-      />
-      <Stack.Screen
-        name={Routes.main.tidesList}
-        component={Home} // TODO: Replace with actual TidesList component
-        options={{
-          title: "Your Tides",
-          headerShown: true,
-        }}
-      />
-      <Stack.Screen
-        name={Routes.main.tide}
-        component={Home} // TODO: Replace with actual Tide component
-        options={({ route }) => ({
-          title: route.params?.tideName || "Tide Details",
-          headerShown: true,
-        })}
-      />
-      <Stack.Screen
-        name={Routes.main.flowSession}
-        component={Home} // TODO: Replace with actual FlowSession component
-        options={NavigationOptions.fullScreen}
-      />
-      <Stack.Screen
-        name={Routes.main.tideDetails}
-        component={Home} // TODO: Replace with actual TideDetails component
-        options={{
-          title: "Tide Details",
-          headerShown: true,
-        }}
-      />
-      <Stack.Screen
-        name={Routes.main.profile}
-        component={Home} // TODO: Replace with actual Profile component
-        options={{
-          title: "Profile",
-          headerShown: true,
-        }}
-      />
-      <Stack.Screen
-        name={Routes.main.about}
-        component={Home} // TODO: Replace with actual About component
-        options={{
-          title: "About",
           headerShown: true,
         }}
       />

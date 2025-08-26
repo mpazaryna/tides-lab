@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { LoggingService } from "../services/LoggingService";
+import { agentService } from "../services/agentService";
 import { useAuth } from "./AuthContext";
 import { useMCP } from "./MCPContext";
 import type {
@@ -130,7 +131,7 @@ interface ChatContextType extends ChatState {
   getAvailableTools: () => AvailableMCPTool[];
 
   // Agent interaction
-  sendAgentMessage: (message: string) => Promise<void>;
+  sendAgentMessage: (message: string, context?: { tideId?: string }) => Promise<void>;
 
   // Connection management
   checkConnections: () => Promise<void>;
@@ -657,18 +658,85 @@ export function ChatProvider({ children }: ChatProviderProps) {
   }, []);
 
   const sendAgentMessage = useCallback(
-    async (message: string): Promise<void> => {
-      // Placeholder for agent integration - will be implemented with AgentService
+    async (message: string, context?: { tideId?: string }): Promise<void> => {
+      if (!message.trim()) return;
+
+      // Add user message to chat
+      const userMessage: ChatMessage = {
+        id: generateId(),
+        type: "user",
+        content: `/agent ${message.trim()}`,
+        timestamp: new Date(),
+        metadata: {
+          conversationId: state.conversationContext.activeConversationId,
+          userId: state.conversationContext.userId,
+          isAgentMessage: true,
+        },
+      };
+
+      dispatch({ type: "ADD_MESSAGE", payload: userMessage });
+      dispatch({ type: "SET_AGENT_STATUS", payload: "thinking" });
+      dispatch({ type: "SET_LOADING", payload: true });
+
       LoggingService.info(
         "ChatContext",
-        "Agent message sent (placeholder)",
-        { message },
+        "Sending message to agent",
+        { message: message.substring(0, 50) + "...", tideId: context?.tideId },
         "CHAT_009"
       );
 
-      addSystemMessage("Agent integration is not yet implemented");
+      try {
+        // Send message to agent service with tide context
+        const agentResponse = await agentService.sendMessage(message, context);
+
+        // Add successful agent response
+        const assistantMessage: ChatMessage = {
+          id: generateId(),
+          type: "assistant",
+          content: agentResponse.content,
+          timestamp: new Date(),
+          metadata: {
+            conversationId: state.conversationContext.activeConversationId,
+            agentResponse: true,
+            agentId: agentResponse.agentId,
+            responseType: agentResponse.type,
+          },
+        };
+
+        dispatch({ type: "ADD_MESSAGE", payload: assistantMessage });
+        dispatch({ type: "SET_AGENT_STATUS", payload: "idle" });
+      } catch (error) {
+        LoggingService.error(
+          "ChatContext",
+          "Failed to send message to agent",
+          { error, message: message.substring(0, 50) },
+          "CHAT_009_ERROR"
+        );
+
+        const errorMessage: ChatMessage = {
+          id: generateId(),
+          type: "system",
+          content: `Failed to communicate with agent: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          timestamp: new Date(),
+          metadata: {
+            conversationId: state.conversationContext.activeConversationId,
+            error: true,
+          },
+        };
+
+        dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
+        dispatch({ type: "SET_AGENT_STATUS", payload: "idle" });
+        dispatch({
+          type: "SET_ERROR",
+          payload: "Failed to communicate with agent",
+        });
+      } finally {
+        dispatch({ type: "SET_LOADING", payload: false });
+      }
     },
-    [addSystemMessage]
+    [state.conversationContext, generateId]
   );
 
   const checkConnections = useCallback(async (): Promise<void> => {

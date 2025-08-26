@@ -1,4 +1,5 @@
 import { LoggingService } from "./LoggingService";
+import { AuthService } from "./authService";
 import type { AgentServiceConfig, AgentMessage } from "../types/chat";
 
 export class AgentService {
@@ -38,6 +39,48 @@ export class AgentService {
     } catch (error) {
       clearTimeout(timeoutId);
       throw error;
+    }
+  }
+
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    try {
+      LoggingService.info(
+        this.serviceName,
+        "Getting authentication headers",
+        {},
+        "AGENT_AUTH_003"
+      );
+      
+      const apiKey = await AuthService.getApiKey();
+      
+      LoggingService.info(
+        this.serviceName,
+        "Retrieved API key",
+        { hasApiKey: !!apiKey, keyLength: apiKey?.length || 0 },
+        "AGENT_AUTH_004"
+      );
+      
+      if (!apiKey) {
+        LoggingService.warn(
+          this.serviceName,
+          "No API key available for agent authentication",
+          {},
+          "AGENT_AUTH_001"
+        );
+        return {};
+      }
+      
+      return {
+        Authorization: `Bearer ${apiKey}`,
+      };
+    } catch (error) {
+      LoggingService.error(
+        this.serviceName,
+        "Failed to get authentication headers",
+        { error, errorMessage: error?.message, errorStack: error?.stack },
+        "AGENT_AUTH_002"
+      );
+      return {};
     }
   }
 
@@ -92,12 +135,15 @@ export class AgentService {
         "AGENT_004"
       );
 
+      const authHeaders = await this.getAuthHeaders();
+
       const response = await this.fetchWithTimeout(
         `${this.config.agentEndpoint}/status`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            ...authHeaders,
           },
         }
       );
@@ -148,11 +194,19 @@ export class AgentService {
         "AGENT_007"
       );
 
+      // Get user ID from auth service
+      const user = await AuthService.getCurrentUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
       const requestBody = {
-        message,
-        context,
-        timestamp: new Date().toISOString(),
+        question: message,
+        userId: user.id,
+        tideId: context?.tideId || undefined,
       };
+
+      const authHeaders = await this.getAuthHeaders();
 
       const response = await this.fetchWithTimeout(
         `${this.config.agentEndpoint}/question`,
@@ -160,6 +214,7 @@ export class AgentService {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...authHeaders,
           },
           body: JSON.stringify(requestBody),
         }
@@ -173,12 +228,46 @@ export class AgentService {
 
       const result = await response.json();
 
+
+      // Check if this is a special debug command
+      const isDebugCommand = message.toLowerCase().includes("show_me_the_money");
+      
+      // Extract the actual response content from various possible fields
+      let content = "";
+      if (isDebugCommand) {
+        // Show full raw response for debug command
+        content = `**Full Agent Response:**\n\`\`\`json\n${JSON.stringify(result, null, 2)}\n\`\`\``;
+      } else {
+        // Normal response - extract just the message content
+        if (typeof result === "string") {
+          content = result;
+        } else if (result.result && result.result.message) {
+          // Tides agent format: { success: true, result: { message: "..." } }
+          content = result.result.message;
+        } else if (result.message) {
+          content = result.message;
+        } else if (result.response) {
+          content = result.response;
+        } else if (result.answer) {
+          content = result.answer;
+        } else if (result.insights) {
+          content = result.insights;
+        } else if (result.data && typeof result.data === "string") {
+          content = result.data;
+        } else if (result.content) {
+          content = result.content;
+        } else {
+          // Fallback to showing a clean message
+          content = "I received your request and processed it successfully.";
+        }
+      }
+
       const agentMessage: AgentMessage = {
         id: `agent-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 11)}`,
         type: "response",
-        content: result.response || result.message || "No response from agent",
+        content: content,
         timestamp: new Date(),
         agentId: result.agentId,
         toolCalls: result.toolCalls || [],
@@ -192,6 +281,7 @@ export class AgentService {
           messageId: agentMessage.id,
           responseLength: agentMessage.content.length,
           toolCallsCount: agentMessage.toolCalls?.length || 0,
+          content: agentMessage.content,
         },
         "AGENT_008"
       );
@@ -227,10 +317,17 @@ export class AgentService {
         "AGENT_010"
       );
 
+      // Get user ID from auth service
+      const user = await AuthService.getCurrentUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
       const requestBody = {
-        tideId,
-        timestamp: new Date().toISOString(),
+        userId: user.id,
       };
+
+      const authHeaders = await this.getAuthHeaders();
 
       const response = await this.fetchWithTimeout(
         `${this.config.agentEndpoint}/insights`,
@@ -238,6 +335,7 @@ export class AgentService {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...authHeaders,
           },
           body: JSON.stringify(requestBody),
         }
@@ -303,11 +401,18 @@ export class AgentService {
         "AGENT_013"
       );
 
+      // Get user ID from auth service
+      const user = await AuthService.getCurrentUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
       const requestBody = {
-        tideId,
-        preferences,
-        timestamp: new Date().toISOString(),
+        userId: user.id,
+        preferences: preferences || {},
       };
+
+      const authHeaders = await this.getAuthHeaders();
 
       const response = await this.fetchWithTimeout(
         `${this.config.agentEndpoint}/optimize`,
@@ -315,6 +420,7 @@ export class AgentService {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...authHeaders,
           },
           body: JSON.stringify(requestBody),
         }
