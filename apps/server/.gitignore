@@ -1,0 +1,15 @@
+.DS_Store
+node_modules
+.wrangler
+*.tsbuildinfo
+dist
+coverage
+tmp
+.env
+.env.local
+.dev.vars
+logs/*.log
+
+# VS Code workspace files
+*.code-workspace
+.claude/settings.local.json

@@ -1,0 +1,47 @@
+{
+  "name": "tides",
+  "version": "1.0.0",
+  "description": "Multi-platform MCP application suite with React web, React Native mobile, and Cloudflare Workers server",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "apps/server"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "dev:server": "cd apps/server && pnpm run dev",
+    "dev:mobile": "cd apps/mobile && npm run start",
+    "dev:web": "cd apps/web && npm run dev",
+    "build": "npm run build:server && npm run build:web",
+    "build:server": "cd apps/server && pnpm run deploy",
+    "build:web": "cd apps/web && npm run build",
+    "build:mobile:android": "cd apps/mobile && npm run android",
+    "build:mobile:ios": "cd apps/mobile && npm run ios",
+    "test": "npm run test:server && npm run test:mobile && npm run test:web",
+    "test:server": "cd apps/server && pnpm run test",
+    "test:mobile": "cd apps/mobile && npm test",
+    "test:web": "cd apps/web && npm test",
+    "lint": "eslint apps/*/src --ext .js,.jsx,.ts,.tsx --ignore-pattern node_modules",
+    "format": "prettier --write 'apps/*/src/**/*.{js,jsx,ts,tsx,json,md}'",
+    "setup": "node scripts/setup.js",
+    "clean": "npm run clean:server && npm run clean:mobile && npm run clean:web",
+    "clean:server": "cd apps/server && rm -rf node_modules dist .wrangler",
+    "clean:mobile": "cd apps/mobile && rm -rf node_modules && npx react-native clean",
+    "clean:web": "cd apps/web && rm -rf node_modules dist build",
+    "mobile:setup": "cd apps/mobile && npm install && cd ios && bundle install && bundle exec pod install",
+    "server:monitor": "cd apps/server && pnpm run monitor:simple"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "npm@10.0.0"
+}
