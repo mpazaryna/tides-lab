@@ -26,11 +26,6 @@
  * - `getTideRawJson` - Get complete raw JSON data from R2 storage
  * - `getParticipants` - Get system participant information
  * 
- * ### Direct Access & Registry (NEW)
- * - `DirectToolAccess` - Direct programmatic access to all tools
- * - `ToolRegistry` - Dynamic tool discovery and execution
- * - Validation schemas and utilities
- * 
  * ## Import Patterns
  * 
  * ### Server Usage (recommended)
@@ -39,23 +34,6 @@
  * import { createTide, listTides } from './tools';
  * import { startTideFlow, addTideEnergy } from './tools';
  * // etc.
- * ```
- * 
- * ### Direct Access Usage (NEW)
- * ```typescript
- * // Direct tool access without MCP overhead
- * import { DirectToolAccess, createDirectToolAccess } from './tools';
- * const directAccess = createDirectToolAccess(storage);
- * const result = await directAccess.createTide({...});
- * ```
- * 
- * ### Dynamic Tool Registry (NEW)
- * ```typescript
- * // Dynamic tool discovery and execution
- * import { ToolRegistry, createToolRegistry } from './tools';
- * const registry = createToolRegistry(storage);
- * const tools = registry.getToolNames();
- * const result = await registry.execute('createTide', params);
  * ```
  * 
  * ### Test Usage
@@ -72,7 +50,7 @@
  * original monolithic tides.ts implementation.
  * 
  * @author Tides Development Team
- * @version 3.0.0
+ * @version 2.0.0
  * @since 2025-01-01
  */
 
@@ -87,36 +65,3 @@ export { linkTideTask, listTideTaskLinks } from './tide-tasks';
 
 // Analytics and reporting
 export { getTideReport, getTideRawJson, getParticipants } from './tide-analytics';
-
-// Direct access interface (NEW)
-export { 
-  DirectToolAccess, 
-  createDirectToolAccess,
-  type ToolMethodName,
-  type ToolMethodParams,
-  type ToolMethodReturn 
-} from './direct-access';
-
-// Dynamic tool registry (NEW)
-export { 
-  ToolRegistry, 
-  createToolRegistry,
-  type ToolMetadata,
-  type ToolExecutionResult 
-} from './registry';
-
-// Validation schemas and utilities (NEW)
-export {
-  validateInput,
-  ValidationSchemas,
-  type ValidatedToolName,
-  type CreateTideInput,
-  type ListTidesInput,
-  type TideFlowInput,
-  type AddEnergyInput,
-  type LinkTaskInput,
-  type ListTaskLinksInput,
-  type GetReportInput,
-  type GetRawJsonInput,
-  type GetParticipantsInput
-} from './validation';

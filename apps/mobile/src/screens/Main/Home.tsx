@@ -30,33 +30,15 @@ import {
   PauseCircle,
 } from "lucide-react-native";
 
-// Icon mapping for dynamic tool menu
-const iconMap: Record<string, any> = {
-  Plus,
-  Waves,
-  Clock,
-  Zap,
-  Link,
-  FileText,
-  BarChart3,
-  Users,
-  Target,
-  Brain,
-  Eye,
-};
-
-import { LoggingService } from "../../services/LoggingService";
-import { NotificationService } from "../../services/NotificationService";
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
 import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
-import { agentService } from "../../services/agentService";
 import { mcpService } from "../../services/mcpService";
-import type { MobileToolMetadata } from "../../services/ToolRegistryService";
 import { Card, colors, spacing, Text, Stack } from "../../design-system";
 import type { ChatMessage, MCPToolCall } from "../../types/chat";
 import type { Tide } from "../../types";
 import { MainStackParamList } from "../../navigation/types";
+import { loggingService } from "../../services/loggingService";
 
 type HomeScreenRouteProp = RouteProp<MainStackParamList, "Home">;
 
@@ -267,60 +249,6 @@ const TideCard: React.FC<TideCardProps> = ({ tide, onPress }) => {
   );
 };
 
-/**
- * Dynamic Tool Menu Section Component
- */
-interface DynamicMenuSectionProps {
-  title: string;
-  tools: MobileToolMetadata[];
-  onToolSelect: (toolName: string) => void;
-}
-
-const DynamicMenuSection: React.FC<DynamicMenuSectionProps> = ({ 
-  title, 
-  tools, 
-  onToolSelect 
-}) => {
-  if (tools.length === 0) return null;
-
-  return (
-    <View style={styles.menuSection}>
-      <Text
-        variant="caption"
-        color="secondary"
-        style={styles.sectionHeader}
-      >
-        {title.toUpperCase()}
-      </Text>
-
-      {tools.map((tool) => {
-        const IconComponent = iconMap[tool.icon] || Target;
-        
-        return (
-          <TouchableOpacity
-            key={tool.name}
-            style={styles.toolMenuItem}
-            onPress={() => onToolSelect(tool.mcpToolName)}
-          >
-            <View style={styles.toolMenuItemIcon}>
-              <IconComponent size={18} color={colors.primary[500]} />
-            </View>
-            <View style={styles.toolMenuItemContent}>
-              <Text
-                variant="body"
-                color="primary"
-                style={styles.toolMenuItemTitle}
-              >
-                {tool.displayName}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-};
-
 const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({ toolCall }) => {
   const getStatusColor = () => {
     switch (toolCall.status) {
@@ -389,22 +317,13 @@ export default function Home() {
   const route = useRoute<HomeScreenRouteProp>();
   const { tideId } = route.params || {};
 
-  const { 
-    getCurrentServerUrl, 
-    updateServerUrl, 
-    isConnected,
-    getToolsByCategory,
-    getToolMetadata,
-    findToolByPartialName,
-    validateToolParams
-  } = useMCP();
+  const { getCurrentServerUrl, updateServerUrl, isConnected } = useMCP();
   const { currentEnvironment, switchEnvironment, environments } =
     useServerEnvironment();
   const {
     messages,
     isLoading,
     error,
-    agentStatus,
     pendingToolCalls,
     sendMessage,
     executeMCPTool,
@@ -418,9 +337,6 @@ export default function Home() {
   const [debugTestResults, setDebugTestResults] = useState<string[]>([]);
   const [showToolMenu, setShowToolMenu] = useState(false);
   const [toolButtonActive, setToolButtonActive] = useState(false);
-  const [showToolInput, setShowToolInput] = useState(false);
-  const [selectedTool, setSelectedTool] = useState<string | null>(null);
-  const [toolParameters, setToolParameters] = useState<Record<string, any>>({});
 
   // Tides state management
   const [activeTides, setActiveTides] = useState<Tide[]>([]);
@@ -437,12 +353,7 @@ export default function Home() {
   const fetchActiveTides = useCallback(async () => {
     try {
       setTidesError(null);
-      LoggingService.info(
-        "Home",
-        "Fetching active tides",
-        {},
-        "HOME_TIDES_001"
-      );
+      loggingService.info("Home", "Fetching active tides", {});
 
       const response = await mcpService.listTides();
 
@@ -453,12 +364,9 @@ export default function Home() {
         );
         setActiveTides(activeOnly);
 
-        LoggingService.info(
-          "Home",
-          "Active tides fetched successfully",
-          { count: activeOnly.length },
-          "HOME_TIDES_002"
-        );
+        loggingService.info("Home", "Active tides fetched successfully", {
+          count: activeOnly.length,
+        });
       } else {
         throw new Error(response.error || "Failed to fetch tides");
       }
@@ -467,14 +375,9 @@ export default function Home() {
         error instanceof Error ? error.message : "Failed to fetch tides";
       setTidesError(errorMessage);
 
-      LoggingService.error(
-        "Home",
-        "Failed to fetch active tides",
-        { error: errorMessage },
-        "HOME_TIDES_003"
-      );
-
-      NotificationService.error("Failed to load tides", "Error");
+      loggingService.error("Home", "Failed to fetch active tides", {
+        error: errorMessage,
+      });
     }
   }, []);
 
@@ -497,26 +400,13 @@ export default function Home() {
     const initializeAgent = async () => {
       try {
         const serverUrl = getCurrentServerUrl();
-        await agentService.initialize(serverUrl);
         setAgentInitialized(true);
 
-        LoggingService.info(
-          "Chat",
-          "Agent service initialized",
-          { serverUrl },
-          "CHAT_UI_001"
-        );
+        loggingService.info("Chat", "Agent service initialized", { serverUrl });
       } catch (initError) {
-        LoggingService.error(
-          "Chat",
-          "Failed to initialize agent service",
-          { error: initError },
-          "CHAT_UI_002"
-        );
-        NotificationService.error(
-          "Failed to initialize agent service",
-          "Error"
-        );
+        loggingService.error("Chat", "Failed to initialize agent service", {
+          error: initError,
+        });
       }
     };
 
@@ -581,125 +471,116 @@ export default function Home() {
     }
   }, [showToolMenu, rotationAnim, menuHeightAnim]);
 
-  // Handle tool selection - now shows parameter input form
-  const handleToolSelect = useCallback(
-    async (toolName: string) => {
-      toggleToolMenu(); // Close menu first
+  // Smart parameter generation and tool availability
+  const generateDefaultParams = useCallback((toolName: string) => {
+    const now = new Date();
+    const dateString = now.toLocaleDateString();
+    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    switch (toolName) {
+      case "createTide":
+        return {
+          name: `Tide ${dateString} ${timeString}`,
+          description: `Created on ${dateString} at ${timeString}`,
+          flowType: "daily"
+        };
+      case "startTideFlow":
+        return activeTides.length > 0 ? {
+          tideId: activeTides[0].id,
+          intensity: "moderate",
+          duration: 25,
+          initialEnergy: "moderate",
+          workContext: "Quick flow session"
+        } : null;
+      case "addEnergyToTide":
+        return activeTides.length > 0 ? {
+          tideId: activeTides[0].id,
+          energyLevel: "moderate",
+          context: `Energy added at ${timeString}`
+        } : null;
+      case "linkTaskToTide":
+        return activeTides.length > 0 ? {
+          tideId: activeTides[0].id,
+          taskUrl: `https://example.com/task-${Date.now()}`,
+          taskTitle: `Task created ${timeString}`,
+          taskType: "general"
+        } : null;
+      case "getTaskLinks":
+        return activeTides.length > 0 ? {
+          tideId: activeTides[0].id
+        } : null;
+      case "getTideReport":
+        return activeTides.length > 0 ? {
+          tideId: activeTides[0].id,
+          format: "summary"
+        } : null;
+      case "getTideParticipants":
+        return {
+          statusFilter: "active",
+          limit: 10
+        };
+      default:
+        return {};
+    }
+  }, [activeTides]);
 
-      // Get tool metadata to check if it needs parameters
-      const metadata = getToolMetadata(toolName);
+  const getToolAvailability = useCallback((toolName: string) => {
+    switch (toolName) {
+      case "createTide":
+      case "getTideParticipants":
+        return { available: true, reason: "" };
+      case "startTideFlow":
+      case "addEnergyToTide":
+      case "linkTaskToTide":
+      case "getTaskLinks":
+      case "getTideReport":
+        return activeTides.length > 0 
+          ? { available: true, reason: "" }
+          : { available: false, reason: "No active tides available. Create a tide first." };
+      default:
+        return { available: false, reason: "Unknown tool" };
+    }
+  }, [activeTides]);
+
+  // Handle tool selection with smart availability checking
+  const handleToolSelect = useCallback(
+    async (toolName: string, customParameters?: Record<string, any>) => {
+      // Check if tool is available
+      const availability = getToolAvailability(toolName);
       
-      if (!metadata) {
-        NotificationService.error(`Tool '${toolName}' not found`, "Error");
+      if (!availability.available) {
+        // Show helpful message about what's missing
+        sendMessage(availability.reason);
+        toggleToolMenu();
         return;
       }
 
-      // Check if tool has required parameters
-      const hasRequiredParams = metadata.parameters.some(param => param.required);
-      const hasAnyParams = metadata.parameters.length > 0;
-
-      if (hasRequiredParams || hasAnyParams) {
-        // Show parameter input form
-        setSelectedTool(toolName);
-        
-        // Initialize with default values and tide context
-        const initialParams: Record<string, any> = {};
-        if (tideId) {
-          initialParams.tideId = tideId;
-        }
-        
-        // Set default values for parameters
-        metadata.parameters.forEach(param => {
-          if (param.defaultValue !== undefined) {
-            initialParams[param.name] = param.defaultValue;
-          }
-        });
-        
-        setToolParameters(initialParams);
-        setShowToolInput(true);
-
-        LoggingService.info(
-          "ToolMenu",
-          "Showing parameter input for tool",
-          { toolName, parameterCount: metadata.parameters.length },
-          "TOOL_MENU_PARAM_001"
-        );
-      } else {
-        // Execute immediately if no parameters needed
-        try {
-          const params = tideId ? { tideId } : {};
-          await executeMCPTool(toolName, params);
-
-          LoggingService.info(
-            "ToolMenu",
-            "MCP tool executed from menu (no params)",
-            { toolName, tideId },
-            "TOOL_MENU_001"
-          );
-        } catch (error) {
-          LoggingService.error(
-            "ToolMenu",
-            "Failed to execute MCP tool from menu",
-            { error, toolName, tideId },
-            "TOOL_MENU_002"
-          );
-          NotificationService.error("Failed to execute tool", "Error");
-        }
-      }
-    },
-    [toggleToolMenu, executeMCPTool, tideId, getToolMetadata]
-  );
-
-  // Handle tool parameter form submission
-  const handleToolParameterSubmit = useCallback(
-    async () => {
-      if (!selectedTool) return;
+      toggleToolMenu(); // Close menu first
 
       try {
-        // Validate parameters
-        const validation = validateToolParams(selectedTool, toolParameters);
-        if (!validation.success) {
-          NotificationService.error(
-            `Invalid parameters: ${validation.error}`,
-            "Validation Error"
-          );
-          return;
-        }
+        // Use custom parameters, or generate smart defaults, or fall back to tide context
+        const params = customParameters || 
+                      generateDefaultParams(toolName) || 
+                      (tideId ? { tideId } : {});
+        
+        await executeMCPTool(toolName, params);
 
-        // Close the parameter form
-        setShowToolInput(false);
-        setSelectedTool(null);
-        setToolParameters({});
-
-        // Execute the tool with validated parameters
-        await executeMCPTool(selectedTool, validation.validatedParams);
-
-        LoggingService.info(
-          "ToolMenu",
-          "MCP tool executed with parameters",
-          { toolName: selectedTool, parameters: validation.validatedParams },
-          "TOOL_MENU_SUBMIT_001"
-        );
-
+        loggingService.info("ToolMenu", "MCP tool executed from menu", {
+          toolName,
+          tideId,
+          parameters: params,
+          usedDefaults: !customParameters,
+        });
       } catch (error) {
-        LoggingService.error(
+        loggingService.error(
           "ToolMenu",
-          "Failed to execute MCP tool with parameters",
-          { error, toolName: selectedTool, parameters: toolParameters },
-          "TOOL_MENU_SUBMIT_002"
+          "Failed to execute MCP tool from menu",
+          { error, toolName, tideId, parameters: customParameters }
         );
-        NotificationService.error("Failed to execute tool", "Error");
       }
     },
-    [selectedTool, toolParameters, validateToolParams, executeMCPTool]
+    [toggleToolMenu, executeMCPTool, tideId, getToolAvailability, generateDefaultParams, sendMessage]
   );
-
-  // Cancel tool parameter input
-  const handleToolParameterCancel = useCallback(() => {
-    setShowToolInput(false);
-    setSelectedTool(null);
-    setToolParameters({});
-  }, []);
 
   // Handle agent commands
   const handleAgentCommand = useCallback(
@@ -736,33 +617,25 @@ export default function Home() {
           requestedAt: new Date().toISOString(),
         };
 
-        LoggingService.info(
-          "ToolMenu",
-          "Sending agent command with context",
-          {
-            command,
-            contextKeys: Object.keys(context),
-            activeTidesCount: activeTides.length,
-          },
-          "TOOL_MENU_003A"
-        );
+        loggingService.info("ToolMenu", "Sending agent command with context", {
+          command,
+          contextKeys: Object.keys(context),
+          activeTidesCount: activeTides.length,
+        });
 
         await sendAgentMessage(command, context);
 
-        LoggingService.info(
-          "ToolMenu",
-          "Agent command executed from menu",
-          { command, tideId, contextProvided: true },
-          "TOOL_MENU_003"
-        );
+        loggingService.info("ToolMenu", "Agent command executed from menu", {
+          command,
+          tideId,
+          contextProvided: true,
+        });
       } catch (agentError) {
-        LoggingService.error(
+        loggingService.error(
           "ToolMenu",
           "Failed to execute agent command from menu",
-          { error: agentError, command, tideId },
-          "TOOL_MENU_004"
+          { error: agentError, command, tideId }
         );
-        NotificationService.error("Failed to execute agent command", "Error");
       }
     },
     [
@@ -924,12 +797,9 @@ export default function Home() {
       return;
     }
 
-    LoggingService.info(
-      "Chat",
-      "Sending user message",
-      { messageLength: message.length },
-      "CHAT_UI_003"
-    );
+    loggingService.info("Chat", "Sending user message", {
+      messageLength: message.length,
+    });
 
     try {
       // Check if message starts with agent commands
@@ -965,44 +835,28 @@ export default function Home() {
           requestedAt: new Date().toISOString(),
         };
 
-        LoggingService.info(
+        loggingService.info(
           "Chat",
           "Sending agent message with context via text input",
           {
             agentQuery,
             contextKeys: Object.keys(context),
             activeTidesCount: activeTides.length,
-          },
-          "CHAT_UI_003B"
+          }
         );
 
         await sendAgentMessage(agentQuery, context);
       } else if (message.startsWith("/tool ")) {
-        // Enhanced direct tool execution with partial matching and validation
+        // Direct tool execution
         const toolCommand = message.substring(6);
-        const [partialToolName, ...paramParts] = toolCommand.split(" ");
+        const [toolName, ...paramParts] = toolCommand.split(" ");
 
-        // Find the exact tool name using partial matching
-        const exactToolName = findToolByPartialName(partialToolName);
-        if (!exactToolName) {
-          NotificationService.error(
-            `Tool '${partialToolName}' not found. Available tools: ${getToolsByCategory().core?.map(t => t.name).join(', ') || 'none'}`,
-            "Tool Error"
-          );
-          return;
-        }
-
-        // Enhanced parameter parsing (tool param1=value1 param2=value2)
+        // Simple parameter parsing (tool param1=value1 param2=value2)
         const parameters: Record<string, any> = {};
         paramParts.forEach((part) => {
           const [key, value] = part.split("=");
           if (key && value) {
-            // Try to parse JSON values for complex parameters
-            try {
-              parameters[key] = JSON.parse(value);
-            } catch {
-              parameters[key] = value;
-            }
+            parameters[key] = value;
           }
         });
 
@@ -1011,40 +865,16 @@ export default function Home() {
           parameters.tideId = tideId;
         }
 
-        // Validate parameters before execution
-        const validation = validateToolParams(exactToolName, parameters);
-        if (!validation.success) {
-          NotificationService.error(
-            `Invalid parameters: ${validation.error}`,
-            "Validation Error"
-          );
-          return;
-        }
-
-        LoggingService.info(
-          "Home",
-          "Enhanced tool execution via slash command",
-          { 
-            partialName: partialToolName, 
-            exactName: exactToolName, 
-            parameters: validation.validatedParams 
-          },
-          "HOME_ENHANCED_TOOL_001"
-        );
-
-        await executeMCPTool(exactToolName, validation.validatedParams);
+        await executeMCPTool(toolName, parameters);
       } else {
         // Regular message
         await sendMessage(message);
       }
     } catch (sendError) {
-      LoggingService.error(
-        "Chat",
-        "Failed to send message",
-        { error: sendError, message: message.substring(0, 50) },
-        "CHAT_UI_004"
-      );
-      NotificationService.error("Failed to send message", "Error");
+      loggingService.error("Chat", "Failed to send message", {
+        error: sendError,
+        message: message.substring(0, 50),
+      });
     }
   }, [
     inputMessage,
@@ -1057,9 +887,6 @@ export default function Home() {
     activeTides,
     isConnected,
     getCurrentServerUrl,
-    findToolByPartialName,
-    getToolsByCategory,
-    validateToolParams,
   ]);
 
   const renderMessage = useCallback(
@@ -1072,6 +899,43 @@ export default function Home() {
     ),
     []
   );
+
+  // Tool button component with availability checking
+  const ToolButton = ({ toolName, icon: Icon, title }: { 
+    toolName: string; 
+    icon: any; 
+    title: string; 
+  }) => {
+    const availability = getToolAvailability(toolName);
+    const isDisabled = !availability.available;
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.toolMenuItem,
+          isDisabled && styles.toolMenuItemDisabled
+        ]}
+        onPress={() => handleToolSelect(toolName)}
+        disabled={isDisabled}
+      >
+        <View style={styles.toolMenuItemIcon}>
+          <Icon 
+            size={18} 
+            color={isDisabled ? colors.neutral[300] : colors.primary[500]} 
+          />
+        </View>
+        <View style={styles.toolMenuItemContent}>
+          <Text
+            variant="body"
+            color={isDisabled ? "tertiary" : "primary"}
+            style={styles.toolMenuItemTitle}
+          >
+            {title}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const insets = useSafeAreaInsets();
 
@@ -1153,17 +1017,11 @@ export default function Home() {
                   key={tide.id}
                   tide={tide}
                   onPress={() => {
-                    LoggingService.info(
-                      "Home",
-                      "Tide card pressed",
-                      { tideId: tide.id, tideName: tide.name },
-                      "HOME_TIDE_CARD_001"
-                    );
+                    loggingService.info("Home", "Tide card pressed", {
+                      tideId: tide.id,
+                      tideName: tide.name,
+                    });
                     // TODO: Navigate to tide detail screen
-                    NotificationService.info(
-                      `Selected tide: ${tide.name}`,
-                      "Info"
-                    );
                   }}
                 />
               ))}
@@ -1211,7 +1069,7 @@ export default function Home() {
                 • /agent [question] - Ask the agent
               </Text>
               <Text variant="bodySmall" color="tertiary">
-                • /tool [toolName] param=value - Execute a tool (supports partial names)
+                • /tool [toolName] param=value - Execute a tool
               </Text>
               <Text variant="bodySmall" color="tertiary">
                 • Use Quick Tools below for easy access
@@ -1312,6 +1170,43 @@ export default function Home() {
               showsVerticalScrollIndicator={true}
               style={styles.toolMenuScroll}
             >
+              {/* Core Tide Management */}
+              <View style={styles.menuSection}>
+                <Text
+                  variant="caption"
+                  color="secondary"
+                  style={styles.sectionHeader}
+                >
+                  TIDE MANAGEMENT
+                </Text>
+
+                <ToolButton toolName="createTide" icon={Plus} title="Create Tide" />
+                
+                <TouchableOpacity
+                  style={styles.toolMenuItem}
+                  onPress={() => {
+                    // List tides by refreshing the tides display
+                    refreshTides();
+                    toggleToolMenu();
+                  }}
+                >
+                  <View style={styles.toolMenuItemIcon}>
+                    <Waves size={18} color={colors.primary[500]} />
+                  </View>
+                  <View style={styles.toolMenuItemContent}>
+                    <Text
+                      variant="body"
+                      color="primary"
+                      style={styles.toolMenuItemTitle}
+                    >
+                      Refresh Tides
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <ToolButton toolName="startTideFlow" icon={CheckCircle} title="Start Flow" />
+              </View>
+
               {/* Agent Commands Section */}
               <View style={styles.menuSection}>
                 <Text
@@ -1377,130 +1272,37 @@ export default function Home() {
                 </TouchableOpacity>
               </View>
 
-              {/* Dynamic Tool Sections */}
-              {(() => {
-                const toolsByCategory = getToolsByCategory();
-                const categoryDisplayNames: Record<string, string> = {
-                  core: 'Core Tools',
-                  sessions: 'Energy & Sessions',
-                  tasks: 'Task Management',
-                  analytics: 'Analytics & Reports'
-                };
+              {/* Energy & Tasks Section */}
+              <View style={styles.menuSection}>
+                <Text
+                  variant="caption"
+                  color="secondary"
+                  style={styles.sectionHeader}
+                >
+                  ENERGY & TASKS
+                </Text>
 
-                return Object.entries(toolsByCategory).map(([category, tools]) => (
-                  <DynamicMenuSection
-                    key={category}
-                    title={categoryDisplayNames[category] || category}
-                    tools={tools}
-                    onToolSelect={handleToolSelect}
-                  />
-                ));
-              })()}
+                <ToolButton toolName="addEnergyToTide" icon={Zap} title="Add Energy" />
+                <ToolButton toolName="linkTaskToTide" icon={Link} title="Link Task" />
+                <ToolButton toolName="getTaskLinks" icon={FileText} title="View Task Links" />
+              </View>
+
+              {/* Analytics Section */}
+              <View style={styles.menuSection}>
+                <Text
+                  variant="caption"
+                  color="secondary"
+                  style={styles.sectionHeader}
+                >
+                  ANALYTICS
+                </Text>
+
+                <ToolButton toolName="getTideReport" icon={BarChart3} title="Get Report" />
+                <ToolButton toolName="getTideParticipants" icon={Users} title="View Participants" />
+              </View>
             </ScrollView>
           </Animated.View>
         )}
-
-        {/* Tool Parameter Input Modal */}
-        {showToolInput && selectedTool && (
-          <View style={styles.toolInputOverlay}>
-            <View style={styles.toolInputModal}>
-              {(() => {
-                const metadata = getToolMetadata(selectedTool);
-                if (!metadata) return null;
-
-                return (
-                  <>
-                    <Text variant="h3" color="primary" style={styles.toolInputTitle}>
-                      {metadata.displayName}
-                    </Text>
-                    <Text variant="body" color="secondary" style={styles.toolInputDescription}>
-                      {metadata.description}
-                    </Text>
-
-                    <ScrollView style={styles.toolInputForm}>
-                      {metadata.parameters.map((param) => (
-                        <View key={param.name} style={styles.toolInputField}>
-                          <Text variant="body" color="primary">
-                            {param.description}
-                            {param.required && <Text color="error"> *</Text>}
-                          </Text>
-                          
-                          {param.type === 'enum' && param.options ? (
-                            // Dropdown for enum types
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.enumOptions}>
-                              {param.options.map((option) => (
-                                <TouchableOpacity
-                                  key={option}
-                                  style={[
-                                    styles.enumOption,
-                                    toolParameters[param.name] === option && styles.enumOptionSelected
-                                  ]}
-                                  onPress={() => {
-                                    setToolParameters(prev => ({
-                                      ...prev,
-                                      [param.name]: option
-                                    }));
-                                  }}
-                                >
-                                  <Text 
-                                    variant="body" 
-                                    color={toolParameters[param.name] === option ? "white" : "primary"}
-                                  >
-                                    {option}
-                                  </Text>
-                                </TouchableOpacity>
-                              ))}
-                            </ScrollView>
-                          ) : (
-                            // Text input for other types
-                            <TextInput
-                              style={styles.toolInputTextInput}
-                              value={String(toolParameters[param.name] || '')}
-                              onChangeText={(text) => {
-                                let value: any = text;
-                                if (param.type === 'number') {
-                                  value = text ? parseFloat(text) : undefined;
-                                } else if (param.type === 'boolean') {
-                                  value = text.toLowerCase() === 'true';
-                                }
-                                
-                                setToolParameters(prev => ({
-                                  ...prev,
-                                  [param.name]: value
-                                }));
-                              }}
-                              placeholder={param.description}
-                              keyboardType={param.type === 'number' ? 'numeric' : 'default'}
-                              multiline={param.name === 'description'}
-                              numberOfLines={param.name === 'description' ? 3 : 1}
-                            />
-                          )}
-                        </View>
-                      ))}
-                    </ScrollView>
-
-                    <View style={styles.toolInputButtons}>
-                      <TouchableOpacity
-                        style={[styles.toolInputButton, styles.toolInputButtonCancel]}
-                        onPress={handleToolParameterCancel}
-                      >
-                        <Text variant="body" color="secondary">Cancel</Text>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity
-                        style={[styles.toolInputButton, styles.toolInputButtonSubmit]}
-                        onPress={handleToolParameterSubmit}
-                      >
-                        <Text variant="body" color="white">Execute Tool</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                );
-              })()}
-            </View>
-          </View>
-        )}
-
         <View style={styles.mainRow}>
           <TouchableOpacity style={styles.toolButton} onPress={toggleToolMenu}>
             <Animated.View
@@ -1515,7 +1317,12 @@ export default function Home() {
                 ],
               }}
             >
-              <Plus size={28} color={toolButtonActive ? colors.primary[500] : colors.neutral[400]} />
+              <Plus
+                size={28}
+                color={
+                  toolButtonActive ? colors.primary[500] : colors.neutral[400]
+                }
+              />
             </Animated.View>
           </TouchableOpacity>
           <View style={styles.inputRow}>
@@ -1755,7 +1562,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   inputContainer: {
-
     backgroundColor: colors.background.secondary,
     display: "flex",
     height: 100,
@@ -1772,16 +1578,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 10,
-        borderTopWidth: 0.5,
+    borderTopWidth: 0.5,
     borderTopColor: colors.neutral[200],
-        shadowColor: "#000",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: -.5,
+      height: -0.5,
     },
-    shadowRadius: .5,
+    shadowRadius: 0.5,
     shadowOpacity: 0.03,
-
   },
   inputRow: {
     flexDirection: "row",
@@ -1790,7 +1595,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: colors.neutral[300],
     borderRadius: 22.5,
-        flex: 1,
+    flex: 1,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -1883,6 +1688,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   toolMenuItemTitle: {},
+  toolMenuItemDisabled: {
+    opacity: 0.5,
+  },
   // Debug Panel Styles
   debugPanel: {
     margin: spacing[3],
@@ -1991,87 +1799,5 @@ const styles = StyleSheet.create({
   },
   tideCardStats: {
     alignItems: "flex-end",
-  },
-
-  // Tool Input Modal Styles
-  toolInputOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  toolInputModal: {
-    backgroundColor: colors.background.primary,
-    borderRadius: 12,
-    margin: spacing[4],
-    maxWidth: 400,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  toolInputTitle: {
-    padding: spacing[4],
-    paddingBottom: spacing[2],
-  },
-  toolInputDescription: {
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[3],
-  },
-  toolInputForm: {
-    maxHeight: 300,
-  },
-  toolInputField: {
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[2],
-  },
-  toolInputTextInput: {
-    borderWidth: 1,
-    borderColor: colors.neutral[300],
-    borderRadius: 8,
-    padding: spacing[3],
-    marginTop: spacing[2],
-    fontSize: 16,
-    color: colors.text.primary,
-    backgroundColor: colors.background.secondary,
-  },
-  enumOptions: {
-    marginTop: spacing[2],
-  },
-  enumOption: {
-    backgroundColor: colors.background.secondary,
-    borderWidth: 1,
-    borderColor: colors.neutral[300],
-    borderRadius: 20,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    marginRight: spacing[2],
-  },
-  enumOptionSelected: {
-    backgroundColor: colors.primary[500],
-    borderColor: colors.primary[500],
-  },
-  toolInputButtons: {
-    flexDirection: 'row',
-    padding: spacing[4],
-    paddingTop: spacing[3],
-    gap: spacing[3],
-  },
-  toolInputButton: {
-    flex: 1,
-    paddingVertical: spacing[3],
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  toolInputButtonCancel: {
-    backgroundColor: colors.background.secondary,
-    borderWidth: 1,
-    borderColor: colors.neutral[300],
-  },
-  toolInputButtonSubmit: {
-    backgroundColor: colors.primary[500],
   },
 });

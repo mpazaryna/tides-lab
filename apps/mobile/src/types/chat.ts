@@ -17,9 +17,6 @@ export interface ChatMessageMetadata {
   agentId?: string;
   responseType?: string;
   isAgentMessage?: boolean;
-  // Enhanced tool registry metadata
-  executionTime?: number;
-  displayName?: string;
 }
 
 export interface MCPToolCall {

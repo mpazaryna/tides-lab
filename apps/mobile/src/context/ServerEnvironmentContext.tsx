@@ -10,9 +10,8 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LoggingService } from "../services/LoggingService";
-import { NotificationService } from "../services/NotificationService";
-import { AuthService } from "../services/authService";
+import { loggingService } from "../services/loggingService";
+import { authService } from "../services/authService";
 import type {
   ServerEnvironmentState,
   ServerEnvironmentAction,
@@ -101,11 +100,10 @@ export function ServerEnvironmentProvider({
   useEffect(() => {
     const loadSavedEnvironment = async () => {
       try {
-        LoggingService.info(
+        loggingService.info(
           "ServerEnvironmentContext",
           "Loading saved environment preference",
-          undefined,
-          "ENV_001"
+          undefined
         );
 
         const savedEnvironmentId = await AsyncStorage.getItem(STORAGE_KEY);
@@ -116,32 +114,32 @@ export function ServerEnvironmentProvider({
 
           // Initialize AuthService with the saved environment URL
           const serverUrl = SERVER_ENVIRONMENTS[environmentId].url;
-          await AuthService.setWorkerUrl(serverUrl);
+          await authService.setWorkerUrl(serverUrl);
 
-          LoggingService.info(
+          loggingService.info(
             "ServerEnvironmentContext",
             "Loaded saved environment and initialized AuthService",
-            { environmentId, serverUrl },
-            "ENV_002"
+            { environmentId, serverUrl }
           );
         } else {
           // Initialize AuthService with default environment URL
           const defaultServerUrl = SERVER_ENVIRONMENTS[DEFAULT_ENVIRONMENT].url;
-          await AuthService.setWorkerUrl(defaultServerUrl);
+          await authService.setWorkerUrl(defaultServerUrl);
 
-          LoggingService.info(
+          loggingService.info(
             "ServerEnvironmentContext",
             "No saved environment found, using default and initialized AuthService",
-            { defaultEnvironment: DEFAULT_ENVIRONMENT, serverUrl: defaultServerUrl },
-            "ENV_003"
+            {
+              defaultEnvironment: DEFAULT_ENVIRONMENT,
+              serverUrl: defaultServerUrl,
+            }
           );
         }
       } catch (error) {
-        LoggingService.error(
+        loggingService.error(
           "ServerEnvironmentContext",
           "Failed to load saved environment",
-          { error },
-          "ENV_004"
+          { error }
         );
         // Continue with default environment
       }
@@ -155,22 +153,20 @@ export function ServerEnvironmentProvider({
     async (environmentId: ServerEnvironmentId): Promise<void> => {
       if (!(environmentId in SERVER_ENVIRONMENTS)) {
         const error = `Invalid environment ID: ${environmentId}`;
-        LoggingService.error(
+        loggingService.error(
           "ServerEnvironmentContext",
           "Invalid environment switch attempt",
-          { environmentId },
-          "ENV_005"
+          { environmentId }
         );
         dispatch({ type: "SET_ERROR", payload: error });
         throw new Error(error);
       }
 
       if (state.currentEnvironment === environmentId) {
-        LoggingService.info(
+        loggingService.info(
           "ServerEnvironmentContext",
           "Environment already active",
-          { environmentId },
-          "ENV_006"
+          { environmentId }
         );
         return;
       }
@@ -178,23 +174,22 @@ export function ServerEnvironmentProvider({
       dispatch({ type: "SET_LOADING", payload: true });
 
       try {
-        LoggingService.info(
+        loggingService.info(
           "ServerEnvironmentContext",
           "Switching environment",
           {
             from: state.currentEnvironment,
             to: environmentId,
             environment: SERVER_ENVIRONMENTS[environmentId],
-          },
-          "ENV_007"
+          }
         );
 
-        // Save to AsyncStorage
+        // Save to AsyncStor
         await AsyncStorage.setItem(STORAGE_KEY, environmentId);
 
         // Update AuthService with new URL
         const newServerUrl = SERVER_ENVIRONMENTS[environmentId].url;
-        await AuthService.setWorkerUrl(newServerUrl);
+        await authService.setWorkerUrl(newServerUrl);
 
         // Update state
         const timestamp = new Date().toISOString();
@@ -208,38 +203,26 @@ export function ServerEnvironmentProvider({
           onEnvironmentChange(SERVER_ENVIRONMENTS[environmentId]);
         }
 
-        LoggingService.info(
+        loggingService.info(
           "ServerEnvironmentContext",
           "Environment switched successfully",
           {
             environmentId,
             environment: SERVER_ENVIRONMENTS[environmentId].name,
             url: SERVER_ENVIRONMENTS[environmentId].url,
-          },
-          "ENV_008"
-        );
-
-        NotificationService.success(
-          `Switched to ${SERVER_ENVIRONMENTS[environmentId].name}`,
-          "Environment Changed"
+          }
         );
       } catch (error) {
-        LoggingService.error(
+        loggingService.error(
           "ServerEnvironmentContext",
           "Failed to switch environment",
-          { error, environmentId },
-          "ENV_009"
+          { error, environmentId }
         );
 
         dispatch({
           type: "SET_ERROR",
           payload: "Failed to switch environment",
         });
-
-        NotificationService.error(
-          "Failed to switch environment",
-          "Environment Error"
-        );
 
         throw error;
       }
@@ -267,29 +250,26 @@ export function ServerEnvironmentProvider({
 
   // Reset to default environment
   const resetToDefault = useCallback(async (): Promise<void> => {
-    LoggingService.info(
+    loggingService.info(
       "ServerEnvironmentContext",
       "Resetting to default environment",
-      { defaultEnvironment: DEFAULT_ENVIRONMENT },
-      "ENV_010"
+      { defaultEnvironment: DEFAULT_ENVIRONMENT }
     );
 
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
       await switchEnvironment(DEFAULT_ENVIRONMENT);
 
-      LoggingService.info(
+      loggingService.info(
         "ServerEnvironmentContext",
         "Reset to default environment completed",
-        { defaultEnvironment: DEFAULT_ENVIRONMENT },
-        "ENV_011"
+        { defaultEnvironment: DEFAULT_ENVIRONMENT }
       );
     } catch (error) {
-      LoggingService.error(
+      loggingService.error(
         "ServerEnvironmentContext",
         "Failed to reset to default environment",
-        { error },
-        "ENV_012"
+        { error }
       );
       throw error;
     }

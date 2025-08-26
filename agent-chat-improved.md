@@ -39,7 +39,7 @@ Mobile App ←→ Agent Service ←→ MCP Tools
 **Requirements:**
 
 - Extend existing BaseService pattern
-- Use singleton pattern with LoggingService integration
+- Use singleton pattern with loggingServiceintegration
 - Implement connection pooling and circuit breaker patterns
 - Support HTTP-based agent communication
 

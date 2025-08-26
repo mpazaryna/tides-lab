@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-import { NotificationService } from "../../services/NotificationService";
 import { useAuth } from "../../context/AuthContext";
 import { useMCP } from "../../context/MCPContext";
 import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
@@ -23,13 +22,8 @@ import { getRobotoMonoFont } from "../../utils/fonts";
 
 export default function Settings() {
   const { user, signOut, apiKey } = useAuth();
-  const {
-    isConnected,
-    loading,
-    error,
-    checkConnection,
-    getCurrentServerUrl,
-  } = useMCP();
+  const { isConnected, loading, error, checkConnection, getCurrentServerUrl } =
+    useMCP();
   const { getCurrentEnvironment } = useServerEnvironment();
 
   // Server environment configuration state
@@ -38,34 +32,20 @@ export default function Settings() {
   const handleSignOut = async () => {
     try {
       await signOut();
-    } catch (err) {
-      NotificationService.error(
-        err instanceof Error ? err.message : "Failed to sign out",
-        "Sign Out Error"
-      );
-    }
+    } catch (err) {}
   };
 
   const handleTestConnection = async () => {
     try {
       // Force a refresh to test the actual MCP connection
       await checkConnection();
-      NotificationService.success(
-        `Connected to: ${getCurrentServerUrl()}\n\nConnection test successful!`,
-        "Success"
-      );
-    } catch (err) {
-      NotificationService.error("Unable to reach MCP server", "Test Failed");
-    }
+    } catch (err) {}
   };
 
   const handleRefreshConnection = async () => {
     try {
       await checkConnection();
-      NotificationService.success("Connection refreshed", "Success");
-    } catch (err) {
-      NotificationService.error("Failed to refresh connection", "Error");
-    }
+    } catch (err) {}
   };
 
   const handleEnvironmentSelected = async () => {
@@ -90,11 +70,15 @@ export default function Settings() {
 
           {/* Account Information Section */}
           {user && (
-            <Card variant="elevated" padding={6} style={styles.sectionCardStyle}>
+            <Card
+              variant="elevated"
+              padding={6}
+              style={styles.sectionCardStyle}
+            >
               <Text variant="h3" style={styles.sectionTitleStyle}>
                 Account Information
               </Text>
-              
+
               <Text
                 variant="bodySmall"
                 color="secondary"
@@ -126,15 +110,11 @@ export default function Settings() {
           )}
 
           {/* Server Environment Configuration Section */}
-          <Card
-            variant="outlined"
-            padding={5}
-            style={styles.sectionCardStyle}
-          >
+          <Card variant="outlined" padding={5} style={styles.sectionCardStyle}>
             <Text variant="h3" style={styles.sectionTitleStyle}>
               Server Environment
             </Text>
-            
+
             <TouchableOpacity
               style={styles.serverConfigHeader}
               onPress={() => setShowServerConfig(!showServerConfig)}
@@ -145,8 +125,14 @@ export default function Settings() {
               <Text variant="bodySmall" color="secondary">
                 {getCurrentServerUrl()}
               </Text>
-              <Text variant="bodySmall" color="primary" style={styles.toggleTextStyle}>
-                {showServerConfig ? "▲ Hide Configuration" : "▼ Show Configuration"}
+              <Text
+                variant="bodySmall"
+                color="primary"
+                style={styles.toggleTextStyle}
+              >
+                {showServerConfig
+                  ? "▲ Hide Configuration"
+                  : "▼ Show Configuration"}
               </Text>
             </TouchableOpacity>
 
@@ -167,7 +153,7 @@ export default function Settings() {
             <Text variant="h3" style={styles.sectionTitleStyle}>
               MCP Connection
             </Text>
-            
+
             <View style={styles.statusRow}>
               <View
                 style={[
@@ -314,10 +300,10 @@ export default function Settings() {
           )}
 
           {/* Sign Out Section */}
-          <Button 
-            variant="danger" 
-            size="lg" 
-            onPress={handleSignOut} 
+          <Button
+            variant="danger"
+            size="lg"
+            onPress={handleSignOut}
             fullWidth
             style={styles.signOutButtonStyle}
           >
@@ -393,7 +379,7 @@ const styles = StyleSheet.create({
   },
   serverUrlTextStyle: {
     marginBottom: spacing[3],
-    fontFamily: getRobotoMonoFont('regular'),
+    fontFamily: getRobotoMonoFont("regular"),
   },
   errorTextStyle: {
     marginBottom: spacing[3],

@@ -7,7 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { LoggingService } from "../services/LoggingService";
+import { loggingService } from "../services/loggingService";
 import { agentService } from "../services/agentService";
 import { useAuth } from "./AuthContext";
 import { useMCP } from "./MCPContext";
@@ -131,7 +131,10 @@ interface ChatContextType extends ChatState {
   getAvailableTools: () => AvailableMCPTool[];
 
   // Agent interaction
-  sendAgentMessage: (message: string, context?: { tideId?: string }) => Promise<void>;
+  sendAgentMessage: (
+    message: string,
+    context?: { tideId?: string }
+  ) => Promise<void>;
 
   // Connection management
   checkConnections: () => Promise<void>;
@@ -147,9 +150,13 @@ export function ChatProvider({ children }: ChatProviderProps) {
   const { user } = useAuth();
   const {
     isConnected: mcpConnected,
-    // Tool Registry Methods
-    executeToolDirect,
-    getToolMetadata,
+    createTide,
+    startTideFlow,
+    addEnergyToTide,
+    getTideReport,
+    linkTaskToTide,
+    getTaskLinks,
+    getTideParticipants,
   } = useMCP();
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
 
@@ -174,12 +181,11 @@ export function ChatProvider({ children }: ChatProviderProps) {
         },
       });
 
-      LoggingService.info(
-        "ChatContext",
-        "Conversation context initialized",
-        { userId: user.id, sessionId, conversationId },
-        "CHAT_001"
-      );
+      loggingService.info("ChatContext", "Conversation context initialized", {
+        userId: user.id,
+        sessionId,
+        conversationId,
+      });
     }
   }, [user, generateId, mcpConnected]);
 
@@ -220,12 +226,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
       dispatch({ type: "ADD_MESSAGE", payload: userMessage });
       dispatch({ type: "SET_LOADING", payload: true });
 
-      LoggingService.info(
-        "ChatContext",
-        "User message sent",
-        { messageId, content: content.substring(0, 50) + "..." },
-        "CHAT_002"
-      );
+      loggingService.info("ChatContext", "User message sent", {
+        messageId,
+        content: content.substring(0, 50) + "...",
+      });
 
       try {
         // Here we would implement message processing logic
@@ -243,12 +247,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
         dispatch({ type: "ADD_MESSAGE", payload: responseMessage });
         dispatch({ type: "SET_LOADING", payload: false });
       } catch (error) {
-        LoggingService.error(
-          "ChatContext",
-          "Failed to process message",
-          { error, messageId },
-          "CHAT_003"
-        );
+        loggingService.error("ChatContext", "Failed to process message", {
+          error,
+          messageId,
+        });
         dispatch({ type: "SET_ERROR", payload: "Failed to process message" });
       }
     },
@@ -269,12 +271,11 @@ export function ChatProvider({ children }: ChatProviderProps) {
       dispatch({ type: "ADD_TOOL_CALL", payload: toolCall });
       dispatch({ type: "SET_LOADING", payload: true });
 
-      LoggingService.info(
-        "ChatContext",
-        "Executing MCP tool",
-        { toolName, toolCallId, parameters },
-        "CHAT_004"
-      );
+      loggingService.info("ChatContext", "Executing MCP tool", {
+        toolName,
+        toolCallId,
+        parameters,
+      });
 
       try {
         dispatch({
@@ -282,19 +283,57 @@ export function ChatProvider({ children }: ChatProviderProps) {
           payload: { id: toolCallId, updates: { status: "executing" } },
         });
 
-        // Use dynamic tool registry execution instead of hardcoded switch
-        LoggingService.info(
-          "ChatContext",
-          "Executing tool via dynamic registry",
-          { toolName, parameters },
-          "CHAT_REGISTRY_001"
-        );
+        let result: any;
 
-        const result = await executeToolDirect(toolName, parameters);
-
-        // Check if the execution was successful
-        if (!result.success) {
-          throw new Error(result.error || `Failed to execute tool: ${toolName}`);
+        // Route to appropriate MCP tool based on name
+        switch (toolName) {
+          case "createTide":
+            result = await createTide(
+              parameters.name,
+              parameters.description,
+              parameters.flowType
+            );
+            break;
+          case "startTideFlow":
+            result = await startTideFlow(
+              parameters.tideId,
+              parameters.intensity,
+              parameters.duration,
+              parameters.initialEnergy,
+              parameters.workContext
+            );
+            break;
+          case "addEnergyToTide":
+            result = await addEnergyToTide(
+              parameters.tideId,
+              parameters.energyLevel,
+              parameters.context
+            );
+            break;
+          case "getTideReport":
+            result = await getTideReport(parameters.tideId, parameters.format);
+            break;
+          case "linkTaskToTide":
+            result = await linkTaskToTide(
+              parameters.tideId,
+              parameters.taskUrl,
+              parameters.taskTitle,
+              parameters.taskType
+            );
+            break;
+          case "getTaskLinks":
+            result = await getTaskLinks(parameters.tideId);
+            break;
+          case "getTideParticipants":
+            result = await getTideParticipants(
+              parameters.statusFilter,
+              parameters.dateFrom,
+              parameters.dateTo,
+              parameters.limit
+            );
+            break;
+          default:
+            throw new Error(`Unknown tool: ${toolName}`);
         }
 
         dispatch({
@@ -303,23 +342,20 @@ export function ChatProvider({ children }: ChatProviderProps) {
             id: toolCallId,
             updates: {
               status: "completed",
-              result: result.data,
+              result,
             },
           },
         });
 
-        // Add tool result message with registry-enhanced information
-        const toolMetadata = getToolMetadata(toolName);
+        // Add tool result message
         const resultMessage: ChatMessage = {
           id: generateId(),
           type: "tool_result",
-          content: result.displayMessage || `Tool "${toolMetadata?.displayName || toolName}" executed successfully`,
+          content: `Tool "${toolName}" executed successfully`,
           timestamp: new Date(),
           metadata: {
             toolName,
-            toolResult: result.data,
-            executionTime: result.executionTime,
-            displayName: toolMetadata?.displayName,
+            toolResult: result,
             conversationId: state.conversationContext.activeConversationId,
           },
         };
@@ -327,12 +363,11 @@ export function ChatProvider({ children }: ChatProviderProps) {
         dispatch({ type: "ADD_MESSAGE", payload: resultMessage });
         dispatch({ type: "SET_LOADING", payload: false });
 
-        LoggingService.info(
-          "ChatContext",
-          "MCP tool executed successfully",
-          { toolName, toolCallId, result },
-          "CHAT_005"
-        );
+        loggingService.info("ChatContext", "MCP tool executed successfully", {
+          toolName,
+          toolCallId,
+          result,
+        });
       } catch (error) {
         dispatch({
           type: "UPDATE_TOOL_CALL",
@@ -366,19 +401,23 @@ export function ChatProvider({ children }: ChatProviderProps) {
         });
         dispatch({ type: "SET_LOADING", payload: false });
 
-        LoggingService.error(
-          "ChatContext",
-          "MCP tool execution failed",
-          { error, toolName, toolCallId },
-          "CHAT_006"
-        );
+        loggingService.error("ChatContext", "MCP tool execution failed", {
+          error,
+          toolName,
+          toolCallId,
+        });
       }
     },
     [
       state.conversationContext,
       generateId,
-      executeToolDirect,
-      getToolMetadata,
+      createTide,
+      startTideFlow,
+      addEnergyToTide,
+      getTideReport,
+      linkTaskToTide,
+      getTaskLinks,
+      getTideParticipants,
     ]
   );
 
@@ -418,12 +457,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
       dispatch({ type: "ADD_MESSAGE", payload: systemMessage });
 
-      LoggingService.info(
-        "ChatContext",
-        "System message added",
-        { content },
-        "CHAT_007"
-      );
+      loggingService.info("ChatContext", "System message added", { content });
     },
     [state.conversationContext, generateId]
   );
@@ -431,7 +465,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
   const clearMessages = useCallback((): void => {
     dispatch({ type: "CLEAR_MESSAGES" });
 
-    LoggingService.info("ChatContext", "Messages cleared", {}, "CHAT_008");
+    loggingService.info("ChatContext", "Messages cleared", {});
   }, []);
 
   const getAvailableTools = useCallback((): AvailableMCPTool[] => {
@@ -634,12 +668,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
       dispatch({ type: "SET_AGENT_STATUS", payload: "thinking" });
       dispatch({ type: "SET_LOADING", payload: true });
 
-      LoggingService.info(
-        "ChatContext",
-        "Sending message to agent",
-        { message: message.substring(0, 50) + "...", tideId: context?.tideId },
-        "CHAT_009"
-      );
+      loggingService.info("ChatContext", "Sending message to agent", {
+        message: message.substring(0, 50) + "...",
+        tideId: context?.tideId,
+      });
 
       try {
         // Send message to agent service with tide context
@@ -662,12 +694,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
         dispatch({ type: "ADD_MESSAGE", payload: assistantMessage });
         dispatch({ type: "SET_AGENT_STATUS", payload: "idle" });
       } catch (error) {
-        LoggingService.error(
-          "ChatContext",
-          "Failed to send message to agent",
-          { error, message: message.substring(0, 50) },
-          "CHAT_009_ERROR"
-        );
+        loggingService.error("ChatContext", "Failed to send message to agent", {
+          error,
+          message: message.substring(0, 50),
+        });
 
         const errorMessage: ChatMessage = {
           id: generateId(),
@@ -696,7 +726,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
   );
 
   const checkConnections = useCallback(async (): Promise<void> => {
-    LoggingService.info("ChatContext", "Checking connections", {}, "CHAT_010");
+    loggingService.info("ChatContext", "Checking connections", {});
 
     try {
       // MCP connection is already handled by MCPContext
@@ -710,12 +740,9 @@ export function ChatProvider({ children }: ChatProviderProps) {
         },
       });
     } catch (error) {
-      LoggingService.error(
-        "ChatContext",
-        "Failed to check connections",
-        { error },
-        "CHAT_011"
-      );
+      loggingService.error("ChatContext", "Failed to check connections", {
+        error,
+      });
       dispatch({ type: "SET_ERROR", payload: "Failed to check connections" });
     }
   }, [mcpConnected]);

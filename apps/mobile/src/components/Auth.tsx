@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { Button, StyleSheet, TextInput, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
-import { NotificationService } from "../services/NotificationService";
 
 export default function Auth() {
   const { signIn, signUp, loading } = useAuth();
@@ -13,23 +12,13 @@ export default function Auth() {
   async function handleSignIn() {
     try {
       await signIn(email, password);
-    } catch (error) {
-      NotificationService.error(
-        error instanceof Error ? error.message : "An error occurred",
-        "Sign In Error"
-      );
-    }
+    } catch (error) {}
   }
 
   async function handleSignUp() {
     try {
       await signUp(email, password);
-    } catch (error) {
-      NotificationService.error(
-        error instanceof Error ? error.message : "An error occurred",
-        "Sign Up Error"
-      );
-    }
+    } catch (error) {}
   }
 
   return (

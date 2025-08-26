@@ -1,71 +1,32 @@
-// BLUE
-
 import * as Keychain from "react-native-keychain";
 
-interface SecureStorageOptions {
-  service?: string;
-}
+class SecureStorage {
+  private service = "com.tidesmobile.keychain";
 
-class SecureStorageService {
-  private defaultService = "com.tidesmobile.keychain";
-
-  async setItem(
-    key: string,
-    value: string,
-    options?: SecureStorageOptions
-  ): Promise<void> {
+  async setItem(key: string, value: string) {
     try {
-      await Keychain.setInternetCredentials(
-        options?.service || this.defaultService,
-        key,
-        value
-      );
+      await Keychain.setInternetCredentials(this.service, key, value);
     } catch (error) {
-      console.error("SecureStorage setItem error:", error);
       throw new Error(`Failed to store ${key} securely`);
     }
   }
 
-  async getItem(
-    key: string,
-    options?: SecureStorageOptions
-  ): Promise<string | null> {
+  async getItem(key: string) {
     try {
-      const credentials = await Keychain.getInternetCredentials(
-        options?.service || this.defaultService
-      );
-
-      if (credentials && credentials.username === key) {
-        return credentials.password;
-      }
-      return null;
-    } catch (error) {
-      console.error("SecureStorage getItem error:", error);
+      const credentials = await Keychain.getInternetCredentials(this.service);
+      return credentials && credentials.username === key ? credentials.password : null;
+    } catch {
       return null;
     }
   }
 
-  async removeItem(key: string, options?: SecureStorageOptions): Promise<void> {
+  async removeItem(key: string) {
     try {
-      await Keychain.resetInternetCredentials({
-        server: options?.service || this.defaultService
-      });
+      await Keychain.resetInternetCredentials({ server: this.service });
     } catch (error) {
-      console.error("SecureStorage removeItem error:", error);
       throw new Error(`Failed to remove ${key} from secure storage`);
-    }
-  }
-
-  async clear(): Promise<void> {
-    try {
-      await Keychain.resetInternetCredentials({
-        server: this.defaultService
-      });
-    } catch (error) {
-      console.error("SecureStorage clear error:", error);
-      throw new Error("Failed to clear secure storage");
     }
   }
 }
 
-export const SecureStorage = new SecureStorageService();
+export const secureStorage = new SecureStorage();

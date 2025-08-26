@@ -8,7 +8,6 @@ import { supabase } from "../../config/supabase.ts";
 import { AuthNavigationParams } from "../../navigation/AuthNavigator";
 import { colors, spacing } from "../../design-system/tokens.ts";
 import { Button, Input, Text } from "../../design-system/index.ts";
-import { NotificationService } from "../../services/NotificationService";
 
 interface InitialScreenProps {}
 
@@ -75,7 +74,6 @@ export default function Initial({}: InitialScreenProps) {
     });
 
     if (error) {
-      NotificationService.error(error.message, "Sign In Error");
     } else {
     }
     setLoading(false);
@@ -85,7 +83,6 @@ export default function Initial({}: InitialScreenProps) {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({ provider });
     if (error) {
-      NotificationService.error(error.message, "Sign In Error");
     } else {
     }
     setLoading(false);

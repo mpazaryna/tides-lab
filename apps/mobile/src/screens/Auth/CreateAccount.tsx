@@ -1,13 +1,7 @@
 // BLUE
 
 import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-} from "react-native";
-import { NotificationService } from "../../services/NotificationService";
+import { View, TouchableOpacity, TextInput, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { supabase } from "../../config/supabase";
@@ -161,20 +155,7 @@ export default function CreateAccount({}: CreateAccountScreenProps) {
     });
 
     if (error) {
-      NotificationService.error(error.message, "Sign Up Error");
     } else {
-      NotificationService.success(
-        "Please check your inbox for email verification!",
-        "Check Your Email",
-        {
-          action: {
-            label: "OK",
-            onPress: () => {
-              navigation.navigate("Initial");
-            },
-          },
-        }
-      );
     }
 
     setLoading(false);
