@@ -1,0 +1,11 @@
+name = "binding-test"
+main = "index.js"
+compatibility_date = "2025-06-17"
+
+[vars]
+TEST_VAR = "Hello from vars"
+
+[[d1_databases]]
+binding = "TEST_DB"
+database_name = "tides-db"
+database_id = "110ab000-86e3-4525-9876-ca7e80f3617c"
