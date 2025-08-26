@@ -7,17 +7,20 @@ import {
   StyleSheet,
 } from "react-native";
 import {
-  Plus,
   Waves,
   CheckCircle,
-  Brain,
-  Eye,
-  Target,
   Zap,
   Link,
   FileText,
   BarChart3,
   Users,
+  ArrowUpDown,
+  Calendar,
+  TrendingUp,
+  Lightbulb,
+  Activity,
+  Settings,
+  Sparkles,
 } from "lucide-react-native";
 import { Text } from "../Text";
 import { colors, spacing } from "../../design-system/tokens";
@@ -32,6 +35,7 @@ interface ToolMenuProps {
   handleAgentCommand: (command: string) => Promise<void>;
   refreshTides: () => Promise<void>;
   toggleToolMenu: () => void;
+  scrollable?: boolean;
   getToolAvailability: (toolName: string) => {
     available: boolean;
     reason: string;
@@ -88,9 +92,9 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
   showToolMenu,
   menuHeightAnim,
   handleToolSelect,
-  handleAgentCommand,
   refreshTides,
   toggleToolMenu,
+  scrollable = true,
   getToolAvailability,
 }) => {
   if (!showToolMenu) {
@@ -112,21 +116,24 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
       <ScrollView
         showsVerticalScrollIndicator={true}
         style={styles.toolMenuScroll}
+        scrollEnabled={scrollable}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="none"
       >
-        {/* Core Tide Management */}
+        {/* Flow Sessions */}
         <View style={styles.menuSection}>
           <Text
             variant="caption"
             color="secondary"
             style={styles.sectionHeader}
           >
-            TIDE MANAGEMENT
+            FLOW SESSIONS
           </Text>
 
           <ToolButton
-            toolName="createTide"
-            icon={Plus}
-            title="Create Tide"
+            toolName="tide_smart_flow"
+            icon={CheckCircle}
+            title="Start Smart Flow"
             handleToolSelect={handleToolSelect}
             getToolAvailability={getToolAvailability}
           />
@@ -134,7 +141,6 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
           <TouchableOpacity
             style={styles.toolMenuItem}
             onPress={() => {
-              // List tides by refreshing the tides display
               refreshTides();
               toggleToolMenu();
             }}
@@ -152,82 +158,87 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
               </Text>
             </View>
           </TouchableOpacity>
-
-          <ToolButton
-            toolName="startTideFlow"
-            icon={CheckCircle}
-            title="Start Flow"
-            handleToolSelect={handleToolSelect}
-            getToolAvailability={getToolAvailability}
-          />
         </View>
 
-        {/* Agent Commands Section */}
+        {/* Context Management */}
         <View style={styles.menuSection}>
           <Text
             variant="caption"
             color="secondary"
             style={styles.sectionHeader}
           >
-            AGENT COMMANDS
+            CONTEXT MANAGEMENT
           </Text>
 
-          <TouchableOpacity
-            style={styles.toolMenuItem}
-            onPress={() => handleAgentCommand("get insights")}
-          >
-            <View style={styles.toolMenuItemIcon}>
-              <Brain size={18} color={colors.primary[500]} />
-            </View>
-            <View style={styles.toolMenuItemContent}>
-              <Text
-                variant="body"
-                color="primary"
-                style={styles.toolMenuItemTitle}
-              >
-                Get Insights
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <ToolButton
+            toolName="tide_switch_context"
+            icon={ArrowUpDown}
+            title="Switch Context"
+            handleToolSelect={handleToolSelect}
+            getToolAvailability={getToolAvailability}
+          />
 
-          <TouchableOpacity
-            style={styles.toolMenuItem}
-            onPress={() => handleAgentCommand("analyze my tides")}
-          >
-            <View style={styles.toolMenuItemIcon}>
-              <Eye size={18} color={colors.primary[500]} />
-            </View>
-            <View style={styles.toolMenuItemContent}>
-              <Text
-                variant="body"
-                color="primary"
-                style={styles.toolMenuItemTitle}
-              >
-                Analyze Tides
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.toolMenuItem}
-            onPress={() => handleAgentCommand("recommend actions")}
-          >
-            <View style={styles.toolMenuItemIcon}>
-              <Target size={18} color={colors.primary[500]} />
-            </View>
-            <View style={styles.toolMenuItemContent}>
-              <Text
-                variant="body"
-                color="primary"
-                style={styles.toolMenuItemTitle}
-              >
-                Get Recommendations
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <ToolButton
+            toolName="tide_get_todays_summary"
+            icon={Calendar}
+            title="Today's Summary"
+            handleToolSelect={handleToolSelect}
+            getToolAvailability={getToolAvailability}
+          />
         </View>
 
-        {/* Energy & Tasks Section */}
+        {/* AI Analysis */}
+        <View style={styles.menuSection}>
+          <Text
+            variant="caption"
+            color="secondary"
+            style={styles.sectionHeader}
+          >
+            AI ANALYSIS
+          </Text>
+
+          <ToolButton
+            toolName="ai_analyze_productivity"
+            icon={TrendingUp}
+            title="Analyze Productivity"
+            handleToolSelect={handleToolSelect}
+            getToolAvailability={getToolAvailability}
+          />
+
+          <ToolButton
+            toolName="ai_suggest_flow_session"
+            icon={Lightbulb}
+            title="Suggest Flow Session"
+            handleToolSelect={handleToolSelect}
+            getToolAvailability={getToolAvailability}
+          />
+
+          <ToolButton
+            toolName="ai_predict_energy"
+            icon={Activity}
+            title="Predict Energy"
+            handleToolSelect={handleToolSelect}
+            getToolAvailability={getToolAvailability}
+          />
+
+          <ToolButton
+            toolName="ai_optimize_schedule"
+            icon={Settings}
+            title="Optimize Schedule"
+            handleToolSelect={handleToolSelect}
+            getToolAvailability={getToolAvailability}
+          />
+
+          <ToolButton
+            toolName="ai_session_insights"
+            icon={Sparkles}
+            title="Session Insights"
+            handleToolSelect={handleToolSelect}
+            getToolAvailability={getToolAvailability}
+          />
+        </View>
+
+        {/* Energy & Tasks */}
         <View style={styles.menuSection}>
           <Text
             variant="caption"
@@ -238,21 +249,23 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
           </Text>
 
           <ToolButton
-            toolName="addEnergyToTide"
+            toolName="tide_add_energy"
             icon={Zap}
             title="Add Energy"
             handleToolSelect={handleToolSelect}
             getToolAvailability={getToolAvailability}
           />
+
           <ToolButton
-            toolName="linkTaskToTide"
+            toolName="tide_link_task"
             icon={Link}
             title="Link Task"
             handleToolSelect={handleToolSelect}
             getToolAvailability={getToolAvailability}
           />
+
           <ToolButton
-            toolName="getTaskLinks"
+            toolName="tide_list_task_links"
             icon={FileText}
             title="View Task Links"
             handleToolSelect={handleToolSelect}
@@ -260,25 +273,34 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
           />
         </View>
 
-        {/* Analytics Section */}
+        {/* Analytics & Data */}
         <View style={styles.menuSection}>
           <Text
             variant="caption"
             color="secondary"
             style={styles.sectionHeader}
           >
-            ANALYTICS
+            ANALYTICS & DATA
           </Text>
 
           <ToolButton
-            toolName="getTideReport"
+            toolName="tide_get_report"
             icon={BarChart3}
             title="Get Report"
             handleToolSelect={handleToolSelect}
             getToolAvailability={getToolAvailability}
           />
+
           <ToolButton
-            toolName="getTideParticipants"
+            toolName="tide_get_raw_json"
+            icon={FileText}
+            title="Get Raw Data"
+            handleToolSelect={handleToolSelect}
+            getToolAvailability={getToolAvailability}
+          />
+
+          <ToolButton
+            toolName="tides_get_participants"
             icon={Users}
             title="View Participants"
             handleToolSelect={handleToolSelect}
@@ -309,8 +331,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    /* TODO: make sure paddingBottom matchign the ChatInput*/
-    paddingBottom: 56,
+    paddingBottom: 58.5,
   },
   toolMenuScroll: {
     flex: 1,
@@ -319,7 +340,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing[4],
-    height: 44,
+    height: 56,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral[200],
   },
   toolMenuItemIcon: {
     width: 24,

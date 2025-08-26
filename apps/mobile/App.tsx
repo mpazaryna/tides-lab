@@ -30,19 +30,19 @@ const AppContent: React.FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <TimeContextProvider>
-          <ServerEnvironmentProvider>
-            <AuthProvider>
-              <MCPProvider>
+        <ServerEnvironmentProvider>
+          <AuthProvider>
+            <MCPProvider>
+              <TimeContextProvider>
                 <ChatProvider>
                   <NavigationContainer>
                     <RootNavigator />
                   </NavigationContainer>
                 </ChatProvider>
-              </MCPProvider>
-            </AuthProvider>
-          </ServerEnvironmentProvider>
-        </TimeContextProvider>
+              </TimeContextProvider>
+            </MCPProvider>
+          </AuthProvider>
+        </ServerEnvironmentProvider>
       </KeyboardAvoidingView>
       <View
         style={{

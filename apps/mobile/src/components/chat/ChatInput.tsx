@@ -6,11 +6,14 @@ import {
   Animated,
   StyleSheet,
   LayoutChangeEvent,
+  Clipboard,
+  Alert,
 } from "react-native";
 // import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowUp, Plus } from "lucide-react-native";
+import { ArrowUp, Plus, Copy } from "lucide-react-native";
 import { colors, spacing, typography } from "../../design-system/tokens";
 import { ToolSuggestion } from "./ToolSuggestion";
+import { useChat } from "../../context/ChatContext";
 import type { DetectedTool } from "../../config/toolPhrases";
 
 interface ChatInputProps {
@@ -26,6 +29,7 @@ interface ChatInputProps {
   onAcceptSuggestion?: () => void;
   onDismissSuggestion?: () => void;
   onHeightChange?: (height: number) => void;
+  onFocusChange?: (focused: boolean) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -41,9 +45,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onAcceptSuggestion,
   onDismissSuggestion,
   onHeightChange,
+  onFocusChange,
 }) => {
   const inputRef = useRef<TextInput>(null);
   const [currentHeight, setCurrentHeight] = useState<number>(0);
+  const { messages } = useChat();
   // const insets = useSafeAreaInsets();
 
   const handleLayout = (event: LayoutChangeEvent) => {
@@ -52,6 +58,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setCurrentHeight(height);
       onHeightChange?.(height);
     }
+  };
+
+  const handleCopyConversation = () => {
+    if (messages.length === 0) {
+      Alert.alert("No Messages", "There are no messages to copy.");
+      return;
+    }
+
+    const conversationText = messages
+      .map((message) => {
+        const timestamp = new Date(message.timestamp).toLocaleString();
+        const type = message.type === "user" ? "You" : 
+                    message.type === "assistant" ? "Assistant" : 
+                    "System";
+        return `[${timestamp}] ${type}: ${message.content}`;
+      })
+      .join("\n\n");
+
+    Clipboard.setString(conversationText);
+    Alert.alert("Copied!", "Conversation copied to clipboard.");
   };
 
   return (
@@ -94,6 +120,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </Animated.View>
         </TouchableOpacity>
 
+        <TouchableOpacity 
+          style={styles.copyButton} 
+          onPress={handleCopyConversation}
+          disabled={messages.length === 0}
+        >
+          <Copy
+            size={20}
+            color={messages.length === 0 ? colors.neutral[300] : colors.neutral[500]}
+          />
+        </TouchableOpacity>
+
         <View style={styles.inputRow}>
           <TextInput
             ref={inputRef}
@@ -103,6 +140,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             value={inputMessage}
             onChangeText={setInputMessage}
             onSubmitEditing={handleSendMessage}
+            onFocus={() => onFocusChange?.(true)}
+            onBlur={() => onFocusChange?.(false)}
             returnKeyType="send"
             multiline
             maxLength={500}
@@ -200,6 +239,15 @@ const styles = StyleSheet.create({
     height: 34,
     width: 34,
     backgroundColor: colors.neutral[200],
+    borderRadius: 100,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  copyButton: {
+    height: 34,
+    width: 34,
+    backgroundColor: colors.neutral[100],
     borderRadius: 100,
     display: "flex",
     alignItems: "center",

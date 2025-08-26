@@ -20,17 +20,17 @@ interface UseToolMenuReturn {
 }
 
 interface UseToolMenuProps {
-  activeTides: Tide[];
-  tideId?: string;
   executeMCPTool: (toolName: string, params: Record<string, any>) => Promise<void>;
   sendMessage: (message: string) => Promise<void>;
+  getCurrentContextTideId?: () => string | null;
+  setToolExecuting?: (executing: boolean) => void;
 }
 
 export const useToolMenu = ({
-  activeTides,
-  tideId,
   executeMCPTool,
   sendMessage,
+  getCurrentContextTideId,
+  setToolExecuting,
 }: UseToolMenuProps): UseToolMenuReturn => {
   // State management
   const [showToolMenu, setShowToolMenu] = useState(false);
@@ -82,7 +82,7 @@ export const useToolMenu = ({
     }
   }, [showToolMenu, rotationAnim, menuHeightAnim]);
 
-  // Smart parameter generation
+  // Context-aware parameter generation
   const generateDefaultParams = useCallback(
     (toolName: string) => {
       const now = new Date();
@@ -91,6 +91,14 @@ export const useToolMenu = ({
         hour: "2-digit",
         minute: "2-digit",
       });
+      const currentHour = now.getHours();
+      const timeBasedContext = 
+        currentHour < 12 ? 'morning focus' :
+        currentHour < 17 ? 'afternoon productivity' : 
+        'evening deep work';
+
+      // Get current context tide ID for all tools
+      const contextTideId = getCurrentContextTideId?.();
 
       switch (toolName) {
         case "createTide":
@@ -100,125 +108,159 @@ export const useToolMenu = ({
             flowType: "daily",
           };
         case "startTideFlow":
-          return activeTides.length > 0
-            ? {
-                tideId: activeTides[0].id,
-                intensity: "moderate",
-                duration: 25,
-                initialEnergy: "moderate",
-                workContext: "Quick flow session",
-              }
-            : null;
+        case "tide_smart_flow":
+          return {
+            tideId: contextTideId,
+            intensity: "moderate",
+            duration: 25,
+            initialEnergy: "moderate",
+            workContext: timeBasedContext,
+            timestamp: now.toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          };
         case "addEnergyToTide":
-          return activeTides.length > 0
-            ? {
-                tideId: activeTides[0].id,
-                energyLevel: "moderate",
-                context: `Energy added at ${timeString}`,
-              }
-            : null;
+        case "tide_add_energy":
+          return {
+            tideId: contextTideId,
+            energyLevel: "moderate",
+            context: `${timeBasedContext} - energy logged at ${timeString}`,
+            timestamp: now.toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          };
         case "linkTaskToTide":
-          return activeTides.length > 0
-            ? {
-                tideId: activeTides[0].id,
-                taskUrl: `https://example.com/task-${Date.now()}`,
-                taskTitle: `Task created ${timeString}`,
-                taskType: "general",
-              }
-            : null;
+        case "tide_link_task":
+          return {
+            tideId: contextTideId,
+            taskUrl: `https://example.com/task-${Date.now()}`,
+            taskTitle: `${timeBasedContext} - task created ${timeString}`,
+            taskType: "context_task",
+            timestamp: now.toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          };
         case "getTaskLinks":
-          return activeTides.length > 0
-            ? {
-                tideId: activeTides[0].id,
-              }
-            : null;
+        case "tide_list_task_links":
+          return {
+            tideId: contextTideId,
+            timestamp: now.toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          };
         case "getTideReport":
-          return activeTides.length > 0
-            ? {
-                tideId: activeTides[0].id,
-                format: "summary",
-              }
-            : null;
+        case "tide_get_report":
+          return {
+            tideId: contextTideId,
+            format: "summary",
+            include_energy_analysis: true,
+            include_time_patterns: true,
+            timestamp: now.toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          };
         case "getTideParticipants":
+        case "tides_get_participants":
           return {
             statusFilter: "active",
             limit: 10,
+            timestamp: now.toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          };
+        case "ai_session_insights":
+          // Generate mock session data for AI analysis
+          return {
+            session_data: {
+              duration: 25,
+              planned_duration: 25,
+              energy_start: 7,
+              energy_end: 6,
+              productivity_score: 8,
+              interruptions: 1,
+              work_context: timeBasedContext,
+              completion_status: "completed"
+            },
+            recent_sessions: [
+              { duration: 30, energy_start: 6, productivity_score: 7 },
+              { duration: 20, energy_start: 8, productivity_score: 9 }
+            ]
           };
         default:
-          return {};
+          return {
+            contextTideId,
+            timestamp: now.toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          };
       }
     },
-    [activeTides]
+    [getCurrentContextTideId]
   );
 
-  // Tool availability checking
+  // Tool availability checking - All tools always available since hierarchical context tides always exist
   const getToolAvailability = useCallback(
     (toolName: string) => {
-      switch (toolName) {
-        case "createTide":
-        case "getTideParticipants":
-          return { available: true, reason: "" };
-        case "startTideFlow":
-        case "addEnergyToTide":
-        case "linkTaskToTide":
-        case "getTaskLinks":
-        case "getTideReport":
-          return activeTides.length > 0
-            ? { available: true, reason: "" }
-            : {
-                available: false,
-                reason: "No active tides available. Create a tide first.",
-              };
-        default:
-          return { available: false, reason: "Unknown tool" };
-      }
+      // All tools available since hierarchical tides (daily/weekly/monthly) always exist
+      return { available: true, reason: "" };
     },
-    [activeTides]
+    [] // No dependencies - tools always available
   );
 
-  // Handle tool selection with smart availability checking
+  // Handle tool selection with context-aware execution
   const handleToolSelect = useCallback(
     async (toolName: string, customParameters?: Record<string, any>) => {
-      // Check if tool is available
-      const availability = getToolAvailability(toolName);
-
-      if (!availability.available) {
-        // Show helpful message about what's missing
-        sendMessage(availability.reason);
-        toggleToolMenu();
-        return;
-      }
-
+      // All tools always available - no availability checking needed
       toggleToolMenu(); // Close menu first
+      
+      // Set tool execution state (disables context switching)
+      setToolExecuting?.(true);
 
       try {
-        // Use custom parameters, or generate smart defaults, or fall back to tide context
-        const params =
-          customParameters ||
-          generateDefaultParams(toolName) ||
-          (tideId ? { tideId } : {});
+        // Handle special case for tide_smart_flow
+        if (toolName === 'tide_smart_flow') {
+          const contextTideId = getCurrentContextTideId?.();
+          if (!contextTideId) {
+            throw new Error('No context tide available');
+          }
+          
+          // Import mcpService for smart flow
+          const { mcpService } = await import('../services/mcpService');
+          await mcpService.startSmartFlow();
+          
+          loggingService.info("ToolMenu", "Context-aware smart flow executed", {
+            toolName,
+            contextTideId,
+            timeOfDay: new Date().toLocaleTimeString(),
+          });
+          
+          sendMessage("🌊 Smart flow session started! Using current context tide with intelligent parameters.");
+          return;
+        }
+
+        // Generate context-aware parameters for all tools
+        const contextTideId = getCurrentContextTideId?.();
+        
+        // Use custom parameters or generate intelligent context-aware defaults
+        const params = customParameters || generateDefaultParams(toolName);
 
         await executeMCPTool(toolName, params);
 
-        loggingService.info("ToolMenu", "MCP tool executed from menu", {
+        loggingService.info("ToolMenu", "Context-aware MCP tool executed", {
           toolName,
-          tideId,
+          contextTideId,
           parameters: params,
           usedDefaults: !customParameters,
         });
       } catch (error) {
         loggingService.error(
           "ToolMenu",
-          "Failed to execute MCP tool from menu",
-          { error, toolName, tideId, parameters: customParameters }
+          "Failed to execute context-aware tool",
+          { error, toolName, parameters: customParameters }
         );
+      } finally {
+        // Re-enable context switching
+        setToolExecuting?.(false);
       }
     },
     [
       toggleToolMenu,
+      setToolExecuting,
+      getCurrentContextTideId,
       executeMCPTool,
-      tideId,
-      getToolAvailability,
       generateDefaultParams,
       sendMessage,
     ]

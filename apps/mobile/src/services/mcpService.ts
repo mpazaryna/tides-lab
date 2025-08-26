@@ -297,6 +297,81 @@ class MCPService {
   }
 
   /**
+   * Smart Flow - Always uses hierarchical flow since hierarchical tides always exist
+   * Combines the best of tide_flow and tide_start_hierarchical_flow
+   * Now supports context-aware execution with optional contextTideId
+   */
+  async startSmartFlow(intensity?: string, duration?: number, workContext?: string, contextTideId?: string) {
+    // Get time of day for smart defaults
+    const hour = new Date().getHours();
+    const timeBasedContext = 
+      hour < 12 ? 'morning planning' :
+      hour < 17 ? 'afternoon focus' : 
+      'evening deep work';
+
+    const params: any = {
+      intensity: intensity || 'moderate',
+      duration_minutes: duration || 25,
+      work_context: workContext || timeBasedContext,
+    };
+
+    // Add context tide if provided
+    if (contextTideId) {
+      params.context_tide_id = contextTideId;
+    }
+
+    return this.tool('tide_start_hierarchical_flow', params);
+  }
+
+  /**
+   * Hierarchical Context Management Methods
+   * These methods align with the hierarchical tide system
+   */
+
+  async getOrCreateDailyTide(timezone?: string) {
+    return this.tool('tide_get_or_create_daily', { 
+      timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone 
+    });
+  }
+
+  async switchContext(contextType: 'daily' | 'weekly' | 'monthly' | 'project', date?: string) {
+    return this.tool('tide_switch_context', {
+      context_type: contextType,
+      date: date || new Date().toISOString().split('T')[0],
+    });
+  }
+
+  async listContexts(date?: string, includeEmpty = true) {
+    return this.tool('tide_list_contexts', {
+      date: date || new Date().toISOString().split('T')[0],
+      include_empty: includeEmpty,
+    });
+  }
+
+  async getTodaysSummary(date?: string) {
+    return this.tool('tide_get_todays_summary', {
+      date: date || new Date().toISOString().split('T')[0],
+    });
+  }
+
+  async getRawTideJson(tideId: string) {
+    return this.tool('tide_get_raw_json', { tide_id: tideId });
+  }
+
+
+  /**
+   * Context-aware energy addition
+   */
+  async addEnergyToContext(contextTideId: string, energyLevel: string, context?: string) {
+    return this.tool('tide_add_energy', {
+      tide_id: contextTideId, // Use context tide
+      energy_level: energyLevel,
+      context: context || `Energy added at ${new Date().toLocaleTimeString()}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+  }
+
+  /**
    * Call any MCP tool by name with arguments
    * This is a generic method for calling AI tools and other MCP tools
    */

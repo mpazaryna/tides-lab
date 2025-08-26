@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { useContextTide } from "../hooks/useContextTide";
 
 export type TimeContextType = "daily" | "weekly" | "monthly" | "project";
 
@@ -11,6 +12,9 @@ interface TimeContextValue {
   navigateForward: () => void;
   resetToPresent: () => void;
   isAtPresent: boolean;
+  // Context-aware tide integration
+  contextSwitchingDisabled: boolean;
+  getCurrentContextTideId: () => string | null;
 }
 
 const TimeContext = createContext<TimeContextValue | undefined>(undefined);
@@ -24,6 +28,13 @@ export const TimeContextProvider: React.FC<TimeContextProviderProps> = ({
 }) => {
   const [currentContext, setCurrentContext] = useState<TimeContextType>("daily");
   const [dateOffset, setDateOffsetState] = useState<number>(0);
+  
+  // Integration with context tide system
+  const {
+    switchContext,
+    contextSwitchingDisabled,
+    getCurrentContextTideId,
+  } = useContextTide();
 
   // Navigation functions
   const navigateBackward = useCallback(() => {
@@ -43,11 +54,26 @@ export const TimeContextProvider: React.FC<TimeContextProviderProps> = ({
     setDateOffsetState(Math.max(0, offset));
   }, []);
 
-  // Reset offset when context changes
+  // Enhanced context switching with tide system integration
   const setCurrentContextWithReset = useCallback((context: TimeContextType) => {
+    // Handle project type separately (existing functionality)
+    if (context === 'project') {
+      setCurrentContext(context);
+      setDateOffsetState(0);
+      return;
+    }
+
+    // For daily/weekly/monthly: Switch UI immediately, sync in background
     setCurrentContext(context);
     setDateOffsetState(0);
-  }, []);
+    
+    // Background sync with tide system (non-blocking)
+    switchContext(context as 'daily' | 'weekly' | 'monthly').catch(error => {
+      console.error('Failed to switch tide context:', error);
+      // UI is already switched, so this is just logging for now
+      // Could add error recovery here if needed
+    });
+  }, [switchContext]);
 
   const isAtPresent = dateOffset === 0;
 
@@ -60,6 +86,9 @@ export const TimeContextProvider: React.FC<TimeContextProviderProps> = ({
     navigateForward,
     resetToPresent,
     isAtPresent,
+    // Context-aware tide integration
+    contextSwitchingDisabled,
+    getCurrentContextTideId,
   };
 
   return (

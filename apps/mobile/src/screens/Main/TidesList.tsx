@@ -8,6 +8,7 @@ import { ContextSummary } from "../../components/tides/ContextSummary";
 import { HierarchicalTidesList } from "../../components/tides/HierarchicalTidesList";
 import { DateNavigator } from "../../components/tides/DateNavigator";
 import { useMCP } from "../../context/MCPContext";
+import { useTimeContext } from "../../context/TimeContext";
 import { useTidesManagement } from "../../hooks/useTidesManagement";
 import { colors, spacing } from "../../design-system/tokens";
 import { loggingService } from "../../services/loggingService";
@@ -19,11 +20,9 @@ export default function TidesList({ navigation }: TidesListProps) {
   const { isConnected } = useMCP();
   const { activeTides, refreshTides } = useTidesManagement(isConnected);
   const [refreshing, setRefreshing] = useState(false);
-
-  // Local context state - no MCP calls needed
-  const [currentContext, setCurrentContext] = useState<
-    "daily" | "weekly" | "monthly" | "project"
-  >("daily");
+  
+  // Use global TimeContext instead of local state
+  const { currentContext } = useTimeContext();
   const [currentDate, setCurrentDate] = useState(
     () => new Date().toISOString().split("T")[0]
   );
@@ -50,16 +49,6 @@ export default function TidesList({ navigation }: TidesListProps) {
     [navigation]
   );
 
-  const handleContextChange = useCallback(
-    (newContext: "daily" | "weekly" | "monthly" | "project") => {
-      setCurrentContext(newContext);
-      loggingService.info("TidesList", "Context switched locally", {
-        from: currentContext,
-        to: newContext,
-      });
-    },
-    [currentContext]
-  );
 
   const handleDateChange = useCallback(
     (newDate: string) => {
@@ -83,11 +72,7 @@ export default function TidesList({ navigation }: TidesListProps) {
 
         {/* Context Switcher */}
         <View style={styles.contextSection}>
-          <ContextSwitcher
-            currentContext={currentContext}
-            onContextChange={handleContextChange}
-            compact={true}
-          />
+          <ContextSwitcher compact={true} />
         </View>
 
         {/* Date Navigator */}

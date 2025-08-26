@@ -17,7 +17,7 @@ export const ChatMessages = forwardRef<ScrollView, ChatMessagesProps>(
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
-        keyboardDismissMode="on-drag"
+        keyboardDismissMode="interactive"
       >
         <Stack spacing={2}>
           {messages.map((message) => (
@@ -37,11 +37,12 @@ ChatMessages.displayName = "ChatMessages";
 
 const styles = StyleSheet.create({
   messagesContainer: {
-    flex: 1,
+
     paddingHorizontal: spacing[5],
     paddingRight: 11,
     // borderWidth: 1,
     // borderColor: "blue",
+    height: 50,
   },
   messagesContent: {
     paddingBottom: spacing[4],

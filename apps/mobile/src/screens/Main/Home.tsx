@@ -1,12 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { StyleSheet, ScrollView, View, TouchableOpacity } from "react-native";
-import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
 import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
-import { useTimeContext } from "../../context/TimeContext";
 import { MainStackParamList } from "../../navigation/types";
 import { loggingService } from "../../services/loggingService";
 import { colors, spacing } from "../../design-system/tokens";
@@ -14,6 +13,8 @@ import { useTidesManagement } from "../../hooks/useTidesManagement";
 import { useToolMenu } from "../../hooks/useToolMenu";
 import { useDebugPanel } from "../../hooks/useDebugPanel";
 import { useChatInput } from "../../hooks/useChatInput";
+import { useDailyTide } from "../../hooks/useDailyTide";
+import { useContextTide } from "../../hooks/useContextTide";
 import { ChatMessages } from "../../components/chat/ChatMessages";
 import { ChatInput } from "../../components/chat/ChatInput";
 import { ToolMenu } from "../../components/tools/ToolMenu";
@@ -24,18 +25,14 @@ import {
   executeAgentCommand,
 } from "../../utils/agentCommandUtils";
 
-type HomeScreenRouteProp = RouteProp<MainStackParamList, "Home">;
 type NavigationProp = NativeStackNavigationProp<MainStackParamList, "Home">;
 
 export default function Home() {
-  const route = useRoute<HomeScreenRouteProp>();
   const navigation = useNavigation<NavigationProp>();
-  const { tideId } = route.params || {};
 
   const { getCurrentServerUrl, updateServerUrl, isConnected } = useMCP();
   const { currentEnvironment, switchEnvironment, environments } =
     useServerEnvironment();
-  const { currentContext } = useTimeContext();
   const {
     messages,
     isLoading,
@@ -46,6 +43,27 @@ export default function Home() {
   } = useChat();
 
   const [_agentInitialized, setAgentInitialized] = useState(false);
+  const [isChatInputFocused, setIsChatInputFocused] = useState(false);
+
+  // Daily tide management - ensures hierarchical tides always exist
+  const {
+    dailyTide,
+    isReady: dailyTideReady,
+    loading: dailyTideLoading,
+    error: dailyTideError,
+    refreshDailyTide,
+  } = useDailyTide();
+
+  // Context tide management - handles daily/weekly/monthly switching
+  const {
+    currentContext,
+    currentContextTide,
+    isToolExecuting,
+    contextSwitchingDisabled,
+    switchContext,
+    getCurrentContextTideId,
+    setToolExecuting,
+  } = useContextTide();
 
   // Tides state management
   const {
@@ -55,7 +73,7 @@ export default function Home() {
     refreshTides,
   } = useTidesManagement(isConnected);
 
-  // Tool menu state management
+  // Tool menu state management - context-aware
   const {
     showToolMenu,
     toolButtonActive,
@@ -65,10 +83,10 @@ export default function Home() {
     getToolAvailability,
     handleToolSelect,
   } = useToolMenu({
-    activeTides,
-    tideId,
     executeMCPTool,
     sendMessage,
+    getCurrentContextTideId,
+    setToolExecuting,
   });
 
   // Debug panel state management
@@ -88,7 +106,7 @@ export default function Home() {
     updateServerUrl,
   });
 
-  // Chat input state management
+  // Chat input state management - context-aware
   const {
     inputMessage,
     setInputMessage,
@@ -98,8 +116,7 @@ export default function Home() {
     acceptSuggestion,
     dismissSuggestion,
   } = useChatInput({
-    activeTides,
-    tideId,
+    getCurrentContextTideId, // ✅ Context-aware tide ID
     isConnected,
     getCurrentServerUrl,
     sendMessage,
@@ -151,12 +168,13 @@ export default function Home() {
     }
   }, [messages]);
 
-  // Handle agent commands
+  // Handle agent commands - context-aware
   const handleAgentCommand = useCallback(
     async (command: string) => {
+      const contextTideId = getCurrentContextTideId();
       const context = createAgentContext({
-        tideId,
-        activeTides,
+        tideId: contextTideId, // ✅ Use context tide instead of route param
+        activeTides,           // Keep for backward compatibility with agent system
         isConnected,
         getCurrentServerUrl,
       });
@@ -169,8 +187,8 @@ export default function Home() {
       });
     },
     [
-      tideId,
-      activeTides,
+      getCurrentContextTideId,
+      activeTides,  // Keep for agent context compatibility
       isConnected,
       getCurrentServerUrl,
       sendAgentMessage,
@@ -249,9 +267,10 @@ export default function Home() {
       <ScrollView
         ref={scrollViewRef}
         keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        // scrollEnabled={isChatInputFocused}
         scrollEnabled={false}
       >
         {/* Tide Info Header */}
@@ -282,6 +301,15 @@ export default function Home() {
       </View> */}
       </ScrollView>
 
+      {/* Tool Menu Overlay */}
+      {showToolMenu && (
+        <TouchableOpacity
+          style={styles.toolMenuOverlay}
+          activeOpacity={1}
+          onPress={toggleToolMenu}
+        />
+      )}
+
       {/* Tool Menu */}
       <ToolMenu
         showToolMenu={showToolMenu}
@@ -290,6 +318,7 @@ export default function Home() {
         handleAgentCommand={handleAgentCommand}
         refreshTides={refreshTides}
         toggleToolMenu={toggleToolMenu}
+        scrollable={true}
         getToolAvailability={getToolAvailability}
       />
       {/* Chat Input with Hierarchical Toggle */}
@@ -306,6 +335,7 @@ export default function Home() {
         showSuggestion={showSuggestion}
         onAcceptSuggestion={acceptSuggestion}
         onDismissSuggestion={dismissSuggestion}
+        onFocusChange={setIsChatInputFocused}
       />
     </View>
   );
@@ -387,5 +417,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     paddingBottom: spacing[3],
     backgroundColor: colors.background.primary,
+  },
+  toolMenuOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "transparent",
   },
 });

@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { Tide } from "../types";
 import { loggingService } from "../services/loggingService";
 import { phraseDetectionService } from "../services/phraseDetectionService";
 import type { DetectedTool } from "../config/toolPhrases";
@@ -18,8 +17,7 @@ interface UseChatInputReturn {
 }
 
 interface UseChatInputProps {
-  activeTides: Tide[];
-  tideId?: string;
+  getCurrentContextTideId?: () => string | null; // Context-aware tide ID
   isConnected: boolean;
   getCurrentServerUrl: () => string;
   sendMessage: (message: string) => Promise<void>;
@@ -31,8 +29,7 @@ interface UseChatInputProps {
 }
 
 export const useChatInput = ({
-  activeTides,
-  tideId,
+  getCurrentContextTideId,
   isConnected,
   getCurrentServerUrl,
   sendMessage,
@@ -109,26 +106,18 @@ export const useChatInput = ({
       return;
     }
 
-    // For all other messages, automatically query the agent with full context
+    // For all other messages, automatically query the agent with context-aware tide information
+    const contextTideId = getCurrentContextTideId?.();
     const context = {
-      // Current tide context (if navigated from a specific tide)
-      ...(tideId && { tideId }),
-
-      // User's active tides for insights and analysis
-      activeTides: activeTides.map((tide) => ({
-        id: tide.id,
-        name: tide.name,
-        flow_type: tide.flow_type,
-        status: tide.status,
-        created_at: tide.created_at,
-        description: tide.description,
-        flow_count: tide.flow_count,
-        last_flow: tide.last_flow,
-      })),
+      // Current context tide (daily/weekly/monthly)
+      ...(contextTideId && { 
+        contextTideId,
+        contextType: "hierarchical", // Indicate this is from context system
+      }),
 
       // Current app state
-      totalActiveTides: activeTides.length,
       currentScreen: "Home",
+      contextBasedSystem: true, // Flag to indicate new context-based architecture
 
       // Connection state
       isConnected,
@@ -138,10 +127,11 @@ export const useChatInput = ({
       requestedAt: new Date().toISOString(),
     };
 
-    loggingService.info("Chat", "Sending message to agent with context", {
+    loggingService.info("Chat", "Sending message to agent with context-aware information", {
       messageLength: message.length,
       contextKeys: Object.keys(context),
-      activeTidesCount: activeTides.length,
+      contextTideId,
+      hasContextTide: !!contextTideId,
     });
 
     await sendMessage(message);
@@ -152,8 +142,7 @@ export const useChatInput = ({
     testEdgeCases,
     setShowDebugPanel,
     setDebugTestResults,
-    tideId,
-    activeTides,
+    getCurrentContextTideId,
     isConnected,
     getCurrentServerUrl,
   ]);
@@ -193,8 +182,9 @@ export const useChatInput = ({
         };
         break;
       case "startTideFlow":
-        if (activeTides.length > 0 && !params.tideId) {
-          params.tideId = tideId || activeTides[0].id;
+        // Use current context tide
+        if (!params.tideId) {
+          params.tideId = getCurrentContextTideId?.();
         }
         params = {
           intensity: params.intensity || "moderate",
@@ -205,8 +195,9 @@ export const useChatInput = ({
         };
         break;
       case "addEnergyToTide":
-        if (activeTides.length > 0 && !params.tideId) {
-          params.tideId = tideId || activeTides[0].id;
+        // Use current context tide
+        if (!params.tideId) {
+          params.tideId = getCurrentContextTideId?.();
         }
         params = {
           energyLevel: params.energyLevel || "moderate",
@@ -215,8 +206,9 @@ export const useChatInput = ({
         };
         break;
       case "linkTaskToTide":
-        if (activeTides.length > 0 && !params.tideId) {
-          params.tideId = tideId || activeTides[0].id;
+        // Use current context tide
+        if (!params.tideId) {
+          params.tideId = getCurrentContextTideId?.();
         }
         params = {
           taskUrl: params.taskUrl || `https://example.com/task-${Date.now()}`,
@@ -227,8 +219,9 @@ export const useChatInput = ({
         break;
       case "getTaskLinks":
       case "getTideReport":
-        if (activeTides.length > 0 && !params.tideId) {
-          params.tideId = tideId || activeTides[0].id;
+        // Use current context tide
+        if (!params.tideId) {
+          params.tideId = getCurrentContextTideId?.();
         }
         break;
       case "getTideParticipants":
@@ -257,7 +250,7 @@ export const useChatInput = ({
       // Execute MCP tool
       executeMCPTool(toolSuggestion.toolId, params);
     }
-  }, [toolSuggestion, executeMCPTool, sendMessage, activeTides, tideId]);
+  }, [toolSuggestion, executeMCPTool, sendMessage, getCurrentContextTideId]);
 
   // Dismiss the suggestion
   const dismissSuggestion = useCallback(() => {

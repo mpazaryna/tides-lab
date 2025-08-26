@@ -59,6 +59,7 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
     dateOffset,
     isAtPresent,
     resetToPresent,
+    contextSwitchingDisabled, // New: check if tool execution is disabling context switching
   } = useTimeContext();
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -76,16 +77,19 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
 
   const handleTitlePress = () => {
     if (route.params?.tideId) return; // Don't show context switcher when viewing specific tide
+    if (contextSwitchingDisabled) return; // Don't show when tool is executing
     setShowTooltip(!showTooltip);
   };
 
-  const handleContextSelect = (value: TimeContextType) => {
+  const handleContextSelect = async (value: TimeContextType) => {
+    if (contextSwitchingDisabled) return; // Prevent context switching during tool execution
+    
     if (currentContext === value && !isAtPresent) {
       // If clicking the same context and not at present, jump to present
       resetToPresent();
     } else {
-      // Otherwise, just switch context
-      setCurrentContext(value);
+      // Otherwise, switch context (now integrates with tide system)
+      await setCurrentContext(value);
     }
     setShowTooltip(false);
   };
@@ -99,7 +103,9 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
           paddingHorizontal: 12,
           marginVertical: -8,
           marginHorizontal: -12,
+          opacity: contextSwitchingDisabled ? 0.6 : 1.0, // Visual feedback when disabled
         }}
+        disabled={contextSwitchingDisabled}
       >
         <View style={{ flexDirection: "column", alignItems: "center", marginTop: 2 }}>
           <Text color={colors.text.primary} variant="header">
@@ -206,11 +212,13 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
                 {contextOptions.map((option) => {
                   const IconComponent = option.icon;
                   const isSelected = currentContext === option.value;
+                  const isDisabled = contextSwitchingDisabled;
 
                   return (
                     <TouchableOpacity
                       key={option.value}
                       onPress={() => handleContextSelect(option.value)}
+                      disabled={isDisabled}
                       style={{
                         paddingVertical: 10,
                         paddingBottom: 7.5,
@@ -220,13 +228,17 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
                           : "transparent",
                         alignItems: "center",
                         width: 64,
-
+                        opacity: isDisabled ? 0.5 : 1.0, // Visual feedback when disabled
                       }}
                     >
                       <IconComponent
                         size={20}
                         color={
-                          isSelected ? colors.text.primary : colors.text.tertiary
+                          isDisabled 
+                            ? colors.neutral[300]
+                            : isSelected 
+                            ? colors.text.primary 
+                            : colors.text.tertiary
                         }
                         strokeWidth={2}
                         style={{ marginBottom: 2.5 }}
@@ -235,7 +247,9 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
                         style={{
                           fontSize: 12,
                           fontWeight: isSelected ? "500" : "400",
-                          color: isSelected
+                          color: isDisabled 
+                            ? colors.neutral[300]
+                            : isSelected
                             ? colors.text.primary
                             : colors.text.tertiary,
                           textAlign: "center",

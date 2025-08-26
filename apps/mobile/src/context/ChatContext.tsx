@@ -275,6 +275,15 @@ export function ChatProvider({ children }: ChatProviderProps) {
               parameters.workContext
             );
             break;
+          case "tide_smart_flow":
+            // Import mcpService for smart flow
+            const { mcpService } = await import('../services/mcpService');
+            result = await mcpService.startSmartFlow(
+              parameters.intensity,
+              parameters.duration,
+              parameters.workContext
+            );
+            break;
           case "tide_add_energy":
           case "addEnergyToTide":
             result = await addEnergyToTide(
@@ -449,7 +458,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
             mappedTool = 'tide_get_report';
             break;
           case 'flow':
-            mappedTool = 'tide_flow';
+            mappedTool = 'tide_smart_flow';
             break;
           default:
             // If no valid subcommand, show error
