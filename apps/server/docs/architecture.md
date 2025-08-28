@@ -68,8 +68,8 @@ Data exposed to AI models:
 - Tide templates
 - Analytics data
 
-#### Prompts (5 Analysis Prompts)
-Specialized analysis prompts for productivity insights:
+#### Prompts (5 AI Analysis Prompts)
+Specialized AI analysis prompts for productivity insights:
 - `analyze_tide` - Comprehensive tide performance analysis
 - `productivity_insights` - Pattern recognition and optimization
 - `optimize_energy` - Energy-based scheduling recommendations  

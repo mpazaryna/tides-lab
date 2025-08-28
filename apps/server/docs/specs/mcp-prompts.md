@@ -27,7 +27,7 @@ Model Context Protocol (MCP) prompts are a standardized way to provide AI models
          │                                      ▼
          ▼                              ┌──────────────────┐
 ┌─────────────────┐                    │  Tide Tools      │
-│  Analysis       │                    │ (tide_get_raw_   │
+│  AI Analysis    │                    │ (tide_get_raw_   │
 │   Results       │                    │  tide_get_report)│
 └─────────────────┘                    └──────────────────┘
                                                │
