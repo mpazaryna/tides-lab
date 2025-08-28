@@ -21,7 +21,7 @@ React Native MCP client for workflow tracking.
 ## Server
 
 **Location:** `/tides-server` (reference only)
-**URL:** `https://supabase-tides-demo-1.mason-c32.workers.dev`
+**URL:** `https://tides-001.mpazbot.workers.dev`
 **Protocol:** JSON-RPC 2.0 over HTTP
 **Auth:** Bearer token
 **Tools:** 8 tide management functions

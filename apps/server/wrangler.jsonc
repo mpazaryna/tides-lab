@@ -100,7 +100,7 @@
       "vars": {
         "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
         "R2_BUCKET_NAME": "tides-001-storage",
-        "ENVIRONMENT": "development",
+        "ENVIRONMENT": "production",
       },
     },
 
@@ -209,7 +209,7 @@
       "vars": {
         "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
         "R2_BUCKET_NAME": "tides-003-storage",
-        "ENVIRONMENT": "production",
+        "ENVIRONMENT": "development",
       },
     },
 

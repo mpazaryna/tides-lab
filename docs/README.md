@@ -44,7 +44,7 @@ Historical/deprecated documentation
 ## For Different Roles
 
 **New Developer:** [What is Tides?](core/what-is-tides.md) → [Development](core/development.md)
-**Mobile Dev:** [Mobile Docs](mobile/) → [Auth Flow](auth/mobile-mcp-auth-flow.md)  
+**Mobile Dev:** [Mobile Docs](mobile/) → [Auth Flow](archive/mobile-mcp-auth-flow.md)  
 **Backend Dev:** [API Reference](core/api-reference.md) → [Auth System](auth/hybrid-auth-system.md)
 
 ## Contributing

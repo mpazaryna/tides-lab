@@ -92,9 +92,9 @@ npm run build:mobile:ios
 **Mobile**: Bundle ID `com.tidesmobile`
 **Workers Envs**:
 
-- env.001 → `tides-001.mpazbot.workers.dev` (dev)
+- env.001 → `tides-001.mpazbot.workers.dev` (prod)
 - env.002 → `tides-002.mpazbot.workers.dev` (staging)
-- env.003 → `tides-003.mpazbot.workers.dev` (prod)
+- env.003 → `tides-003.mpazbot.workers.dev` (dev)
 
 ### Guidelines
 
@@ -300,7 +300,7 @@ src/
 
 ### MCP Server Integration
 
-**Primary:** `https://supabase-tides-demo-1.mason-c32.workers.dev`
+**Primary:** `https://tides-001.mpazbot.workers.dev`
 **Protocol:** JSON-RPC 2.0 over HTTP
 **Auth:** Bearer tokens (mobile: `tides_{userId}_{randomId}`, desktop: `{uuid}`)
 **Tools:** 8 tide management functions
