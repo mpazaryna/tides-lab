@@ -271,7 +271,7 @@ add_task_links() {
 # Test the productivity agent with real data
 test_agent_with_real_data() {
     local tide_id=$1
-    print_header "Testing TideProductivityAgent with Real Data"
+    print_header "🤖 Testing TideProductivityAgent with Real Data"
     
     print_info "Tide ID: ${MAGENTA}$tide_id${NC}"
     print_info "This tide contains:"

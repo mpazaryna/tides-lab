@@ -69,7 +69,7 @@ npm run deploy # Deploy to Cloudflare Workers with Durable Objects
 | `get_participants`  | Get user participants     |
 | `auth_validate_key` | Validate API keys         |
 
-### MCP Analysis Prompts (5 Available)
+### MCP AI Analysis Prompts (5 Available)
 
 | Prompt                  | Purpose                                   |
 | ----------------------- | ----------------------------------------- |
