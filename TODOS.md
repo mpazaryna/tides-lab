@@ -14,7 +14,7 @@
 - [MOBILE] Calendar days show conversation markers for active days
 - [MOBILE] Projects are locked for beta (paying customers only)
 
-- [SERVER] Hardcoded fallbacks need uniformity - 003 should be production fallback. See issue below:  
+- [BACKEND] Hardcoded fallbacks need uniformity - 003 should be production fallback. See issue below:  
 ```
     Mobile ↔ Server Authentication Divergence
   // Mobile hardcoded fallback:
@@ -34,7 +34,7 @@
   - Production traffic could hit development databases
   ```
 
-- [SERVER] Make Agent use the user APIkey to continue to be used. issue detailed below:
+- [BACKEND] Make Agent use the user APIkey to continue to be used. issue detailed below:
 
 ```
 Durable Object Instantiation Mismatch
@@ -52,7 +52,7 @@ Durable Object Instantiation Mismatch
   - Agent services (MCPClient, TideFetcher) will fail without proper user context
   ```
 
-- [SERVER] Environment mismatch: 001=dev, 002=staging, 003=production. Remove deprecated mason-c32. 006 is special dev case for this branch. Fix apps/server/wrangler.jsonc:
+- [BACKEND] Environment mismatch: 001=dev, 002=staging, 003=production. Remove deprecated mason-c32. 006 is special dev case for this branch. Fix apps/server/wrangler.jsonc:
 
 ```
   URL Routing Inconsistencies:
@@ -72,7 +72,7 @@ Durable Object Instantiation Mismatch
    causing authentication failures and data isolation breaches.
   ```
 
-- [SERVER] Critical: Add error boundaries and proper error handling. Details below: 
+- [BACKEND] Critical: Add error boundaries and proper error handling. Details below: 
 ```
   Service Initialization Failures:
   // Agent services depend on external connectivity:
@@ -88,7 +88,7 @@ Durable Object Instantiation Mismatch
   - User context is invalid/expired
   ```
 
-- [SERVER] Security issue: API key exposed in debug logs. Fix details below:
+- [BACKEND] Security issue: API key exposed in debug logs. Fix details below:
 ```
   API Key Exposure:
   // Debug logging in production code:
@@ -102,7 +102,40 @@ Durable Object Instantiation Mismatch
   - No proper API key scoping or environment isolation
 ```
 
-- [SERVER] Seems to be creating multiple daily tides when a user signs in multiple times
+- [BACKEND] Seems to be creating multiple daily tides when a user signs in multiple times, evidence in _006 d1 table_
+
+- [BACKEND] Big security issue with exposing an eamil address, dont really understand, here is the problem from CLaude:
+```
+  Authentication Security Gap 
+  (src/auth/index.ts:48)
+
+  console.warn("[AUTH-FALLBACK] Using fallback auth 
+  validation without database lookup - real email not
+   available");
+  email: `${userId}@mobile.tides.app`, // Fallback - 
+  real email should come from database
+  Issue: Production auth bypasses database validation
+   - security vulnerability.
+   ```
+
+- [BACKEND] Big security issue with exposing an eamil address, dont really understand, here is the problem from CLaude:
+```
+Database Transaction Safety 
+  (src/storage/d1-r2.ts:76-136)
+
+  // Current: "Transaction-like pattern" but NOT 
+  atomic
+  await d1Statement.run();        // D1 insert
+  await this.r2.putObject();      // R2 insert - can 
+  fail independently
+  await analyticsStatement.run(); // Analytics insert
+   - can fail independently
+  Issue: Data can be left in inconsistent state if R2
+   or analytics fail.
+```
+
+
+
 
 ## P1 - High Priority
 
@@ -110,6 +143,30 @@ Durable Object Instantiation Mismatch
 
 - [MOBILE] Save all tides/agent conversations for persistence across days
 - [MOBILE] Daily view: Show saved reports or "create report"/"view conversation" buttons. Chat window matches selected date
+- [BACKEND] Test Coverage fell apart for the new files, details below:
+```
+  - tide-context.ts: 3.17% coverage (should be 90%+)
+  - tide-hierarchical-flow.ts: 2.27% coverage (should
+   be 90%+)
+  - 22 failing tests in the suite
+
+  Impact: Core hierarchical features are untested in
+  production scenarios.
+```
+- [BACKEND]  AI Service Resource Management 
+  (src/services/aiService.ts)
+
+  // 847 lines of AI logic in single file
+  await
+  this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+    messages: [...],
+    max_tokens: 400,  // No rate limiting or quotas
+  });
+  Issues:
+  - No rate limiting on Workers AI calls
+  - Memory cache without TTL management
+  - Single monolithic service file
+
 
 ## P2 - Performance Polish
 
@@ -241,3 +298,66 @@ Durable Object Instantiation Mismatch
       headers: { "Content-Type": "application/json", ...CORS_HEADERS }
     });
   }
+
+
+  Fix 1: Implement Atomic Transactions
+
+  // In src/storage/d1-r2.ts - replace current 
+  createTide method
+  async createTide(input: CreateTideInput):
+  Promise<Tide> {
+    const batch = this.db.batch([
+      d1Statement,
+      analyticsStatement
+    ]);
+
+    try {
+      await batch; // Atomic D1 operations
+      await this.r2.putObject(); // Only after D1 
+  success
+    } catch (error) {
+      // Proper rollback logic
+    }
+  }
+
+  Fix 2: Replace Auth Fallback with Database 
+  Validation
+
+  // In src/auth/index.ts - remove fallback, require 
+  database lookup
+  export async function validateApiKey(apiKey: 
+  string, storage: TideStorage) {
+    const authResult = await
+  storage.validateApiKey(apiKey);
+    if (!authResult) return null;
+    return authResult; // Real email from database
+  }
+
+  Fix 3: Add Rate Limiting to AI Service
+
+  // In src/services/aiService.ts
+  private rateLimiter = new Map(); // userId -> { 
+  count, resetTime }
+
+  async analyzeProductivity(request: 
+  ProductivityAnalysisRequest) {
+    if (!this.checkRateLimit(request.userId)) {
+      throw new Error("Rate limit exceeded");
+    }
+    // ... existing logic
+  }
+
+  Fix 4: Remove Debug Logging
+
+  // Replace all console.log with conditional logging
+  if (this.env.ENVIRONMENT === 'development') {
+    console.log(...);
+  }
+
+  Fix 5: Add Missing Tests
+
+  Need comprehensive test coverage for:
+  - tide-context.ts - Context switching scenarios
+  - tide-hierarchical-flow.ts - Auto-creation logic
+  - AI service error handling
+  - Database transaction rollbacks
