@@ -21,7 +21,6 @@
  * | `tides_get_participants` | Lists all users              | Multi-user support                |
  * | `auth_validate_key`      | Validates API keys           | Multi-user auth testing           |
  * 
- * 
  * ## MCP Prompts for Analysis
  * 
  * | Prompt Name             | Purpose                             | Use Case                         |
@@ -135,7 +134,7 @@ export function createServer(env: Env, authContext?: AuthContext | null) {
   registerAuthHandlers(server, storage);
   registerPromptHandlers(server, storage, authContext);
   registerExampleHandlers(server);
-  
+
 
   return server;
 }
