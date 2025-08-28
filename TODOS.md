@@ -1,65 +1,20 @@
-# TIDES MOBILE AI AGENT TASK SPECIFICATIONS
+# Tides TODOS
 
-## P0 - CRITICAL PRIORITY
+## P0 - Critical
 
-### FRONTEND
-
-### ⚡ IMMEDIATE: Fix Environment URL Mappings
-**Priority:** P0 - Production Breaking
-**Time Estimate:** 15 minutes
-**Files:** `apps/server/wrangler.jsonc`, `apps/mobile/src/services/authService.ts`, `apps/mobile/src/services/mcpService.ts`
-
-**Commands for AI Agent:**
-```bash
-# 1. Update wrangler.jsonc environment variables
-EDIT apps/server/wrangler.jsonc:
-  FIND: "001": { "vars": { "ENVIRONMENT": "development" } }
-  REPLACE: "001": { "vars": { "ENVIRONMENT": "production" } }
-  
-  FIND: "003": { "vars": { "ENVIRONMENT": "production" } }  
-  REPLACE: "003": { "vars": { "ENVIRONMENT": "development" } }
-
-# 2. Standardize mobile service URLs
-EDIT apps/mobile/src/services/authService.ts:
-  FIND: private currentUrl = "https://tides-006.mpazbot.workers.dev"
-  REPLACE: private currentUrl = "https://tides-001.mpazbot.workers.dev"
-
-EDIT apps/mobile/src/services/mcpService.ts:
-  FIND: return this.baseUrl || 'https://tides-001.mpazbot.workers.dev'
-  REPLACE: return this.baseUrl || 'https://tides-001.mpazbot.workers.dev'
-
-# 3. Update CLAUDE.md documentation  
-EDIT CLAUDE.md:
-  FIND: "env.001 → tides-001.mpazbot.workers.dev (dev)"
-  REPLACE: "env.001 → tides-001.mpazbot.workers.dev (prod)"
-  
-  FIND: "env.003 → tides-003.mpazbot.workers.dev (prod)" 
-  REPLACE: "env.003 → tides-003.mpazbot.workers.dev (dev)"
-```
-
-**Validation Command:**
-```bash
-# Test environment consistency
-curl https://tides-001.mpazbot.workers.dev/health
-curl https://tides-002.mpazbot.workers.dev/health  
-curl https://tides-003.mpazbot.workers.dev/health
-# Verify ENVIRONMENT values match intended mapping
-```
-
-### 🎯 Agent Proactivity Improvement
-**Priority:** P0 - User Experience Critical
-**Time Estimate:** 4 hours
+### 1. [FRONTEND] Agent Proactivity
+**Priority:** P0 - User Experience Critical  
+**Time Estimate:** 4 hours  
 **Files:** `apps/mobile/src/context/ChatContext.tsx`, `apps/mobile/src/services/agentService.ts`
 
-**Problem:** Agent passive, requires explicit user commands for tide tools
-**Solution:** Context-aware tool suggestion system
+**Problem:** Agent requires explicit commands for tide tool access  
+**Solution:** Implement context-aware tool suggestion system
 
-**Commands for AI Agent:**
+**Implementation:**
+
 ```typescript
-// 1. Create proactive agent hook
+// 1. Create proactive suggestion hook
 CREATE apps/mobile/src/hooks/useProactiveAgent.ts:
-CONTENT: 
-```typescript
 import { useCallback, useEffect, useRef } from 'react';
 import { useMCP } from '../context/MCPContext';
 import { useChat } from '../context/ChatContext';
@@ -89,13 +44,12 @@ export const useProactiveAgent = () => {
   }, [messages, connectionStatus, addMessage]);
 
   useEffect(() => {
-    const interval = setInterval(analyzeContext, 60000); // Check every minute
+    const interval = setInterval(analyzeContext, 60000);
     return () => clearInterval(interval);
   }, [analyzeContext]);
 
   return { analyzeContext };
 };
-```
 
 // 2. Integrate into ChatContext
 EDIT apps/mobile/src/context/ChatContext.tsx:
@@ -103,17 +57,18 @@ EDIT apps/mobile/src/context/ChatContext.tsx:
   ADD_IN_PROVIDER: const { analyzeContext } = useProactiveAgent();
 ```
 
-### 🛠️ IDE-Style Tool Intellisense  
-**Priority:** P0 - Developer Experience Critical
-**Time Estimate:** 6 hours
-**Files:** `apps/mobile/src/components/chat/ChatInput.tsx`, `apps/mobile/src/components/tools/ToolSuggestion.tsx`
+### 2. [FRONTEND] IDE-Style Tool Autocomplete
+**Priority:** P0 - Developer Experience Critical  
+**Time Estimate:** 6 hours  
+**Files:** `apps/mobile/src/components/chat/ChatInput.tsx`, `apps/mobile/src/components/tools/ToolAutocomplete.tsx`
 
-**Commands for AI Agent:**
+**Problem:** No IDE-like autocomplete for MCP tools  
+**Solution:** Implement tool parameter completion with documentation
+
+**Implementation:**
 ```typescript
-// 1. Create tool parameter completion system
+// 1. Create tool autocomplete component
 CREATE apps/mobile/src/components/chat/ToolAutocomplete.tsx:
-CONTENT:
-```typescript
 import React, { memo, useMemo } from 'react';
 import { FlatList, TouchableOpacity, View } from 'react-native';
 import { Text } from '../../design-system';
@@ -175,21 +130,17 @@ export const ToolAutocomplete = memo<ToolAutocompleteProps>(({
     </View>
   );
 });
-```
 
 // 2. Integrate autocomplete into ChatInput
 EDIT apps/mobile/src/components/chat/ChatInput.tsx:
   ADD_IMPORT: import { ToolAutocomplete } from './ToolAutocomplete';
-  ADD_STATE: const [showAutocomplete, setShowAutocomplete] = useState(false);
+  ADD_STATE: const showAutocomplete, setShowAutocomplete = useState(false);
   ADD_EFFECT: 
-```typescript
 useEffect(() => {
   const shouldShow = inputText.includes('/') && inputText.length > 1;
   setShowAutocomplete(shouldShow);
 }, [inputText]);
-```
   ADD_BEFORE_RETURN: 
-```typescript
 <ToolAutocomplete
   inputText={inputText}
   onToolSelect={(tool, params) => {
@@ -199,18 +150,19 @@ useEffect(() => {
   visible={showAutocomplete}
 />
 ```
-```
 
-### 📅 Tide Context Calendar Navigation
+### 3. [FRONTEND] Tide Context Calendar Navigation
 **Priority:** P0 - Core Workflow Feature  
 **Time Estimate:** 8 hours
 **Files:** `apps/mobile/src/components/tides/TideContextCalendar.tsx`, `apps/mobile/src/screens/Main/Home.tsx`
 
-**Commands for AI Agent:**
+**Problem:** No visual navigation between conversation contexts  
+**Solution:** Calendar interface with conversation history markers
+
+**Implementation:**
 ```typescript
-// 1. Create calendar component with conversation markers
+// 1. Create context calendar component
 CREATE apps/mobile/src/components/tides/TideContextCalendar.tsx:
-CONTENT:
 ```typescript
 import React, { memo, useCallback, useMemo } from 'react';
 import { View, TouchableOpacity, FlatList } from 'react-native';
@@ -322,12 +274,12 @@ export const TideContextCalendar = memo<TideContextCalendarProps>(({
     </Card>
   );
 });
-```
+
 
 // 2. Integrate calendar into Home screen  
 EDIT apps/mobile/src/screens/Main/Home.tsx:
   ADD_IMPORT: import { TideContextCalendar } from '../../components/tides/TideContextCalendar';
-  ADD_STATE: const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  ADD_STATE: const selectedDate, setSelectedDate = useState(new Date().toISOString().split('T')[0]);
   ADD_BEFORE_CHAT_SECTION:
 ```typescript
 <TideContextCalendar
@@ -340,15 +292,15 @@ EDIT apps/mobile/src/screens/Main/Home.tsx:
   viewMode="weekly"
 />
 ```
-```
 
-### BACKEND
+### 4. [BACKEND] Security Hardening
+**Priority:** P0 - Security Critical  
+**Files:** `apps/mobile/src/services/authService.ts`, `apps/server/src/index.ts`
 
-### 🔒 Security Issue Resolution
-**Priority:** P0 - Security Critical
-**Backend Engineer Decision Required:** ACID compliance vs eventual consistency
+**Problem:** API key exposure in logs, missing request tracing  
+**Solution:** Remove sensitive logging, add request IDs, health endpoints
 
-**Commands for AI Agent (Security Only - Safe to Implement):**
+**Implementation:**
 ```typescript
 // 1. Remove API key exposure (SAFE - Security improvement)
 EDIT apps/mobile/src/services/authService.ts:
@@ -387,59 +339,58 @@ if (url.pathname === "/health" && request.method === "GET") {
   });
 }
 ```
-```
 
-### 🏗️ Agent Context Architecture (Backend Engineer Input Needed)
-**Priority:** P0 - Architecture Decision Required
-**Question for Backend Engineer:** User-scoped vs shared agent pattern?
+### 5. [BACKEND] Agent Architecture Decision
+**Priority:** P0 - Backend Engineering Decision Required  
+**Files:** `apps/agents/tide-productivity-agent/agent.ts`
 
-**Option A: User-Scoped Agents (Current Pattern - Recommended)**
+**Problem:** Agent initialization pattern undefined  
+**Decision Required:** User-scoped vs shared agent architecture
+
+**Options:**
+
+**Option A: User-Scoped Agents (Recommended)**
+
+- ✅ Isolated state, better security, easier debugging
+- ❌ Higher memory usage, potential cold starts
+- Implementation: Fix agent initialization to receive user context
+
+**Option B: Shared Agents with Context Passing**
+
+- ✅ Lower memory usage, faster responses
+- ❌ Complex context management, potential state leaks
+- Implementation: Pass user context per request
+
+**Implementation (pending decision):**
+
 ```typescript
-// Pros: Isolated state, better security, easier debugging
-// Cons: More memory usage, potential cold starts
-// Implementation: Fix agent initialization to receive user context
-```
-
-**Option B: Shared Agents with Context Passing**  
-```typescript
-// Pros: Lower memory usage, faster responses
-// Cons: Complex context management, potential state leaks
-// Implementation: Pass user context per request
-```
-
-**Commands for AI Agent (Once Backend Engineer Decides):**
-```typescript
-// If Option A (User-Scoped):
+// Option A: User-scoped
 EDIT apps/agents/tide-productivity-agent/agent.ts:
-  FIND: userId: 'system', // Default, overridden per request
-  REPLACE: userId: userContext.userId, // Received during instantiation
+  userId: userContext.userId, // Received during instantiation
 
-// If Option B (Shared):  
-EDIT apps/agents/tide-productivity-agent/agent.ts:
-  ADD_METHOD: 
-```typescript
+// Option B: Shared
 setUserContext(userContext: UserContext) {
   this.userId = userContext.userId;
   this.userScope = userContext;
-  // Reinitialize services with user context
 }
-```
 ```
 
 ---
 
-## P1 - HIGH PRIORITY
+## P1 - High Priority
 
-### FRONTEND
 
-### ⚡ React Native Performance Fixes
+### 6. [FRONTEND] React Native Performance Fixes
 **Priority:** P1 - Performance Enhancement
 **Time Estimate:** 2 hours
 **Files:** `apps/mobile/src/context/ChatContext.tsx`, `apps/mobile/src/context/MCPContext.tsx`
 
-**Commands for AI Agent:**
+**Problem:** Unnecessary service re-instantiation causing performance issues  
+**Solution:** Memoize service instances and optimize rendering
+
+**Implementation:**
 ```typescript
-// 1. Fix AgentService re-configs with useMemo
+// 1. Memoize AgentService instances
 EDIT apps/mobile/src/context/ChatContext.tsx:
   FIND: const agentService = new AgentService({
   REPLACE: const agentService = useMemo(() => new AgentService({
@@ -463,39 +414,42 @@ const renderTool = useCallback(({ item }) => (
   <ToolButton tool={item} onPress={handleToolPress} />
 ), [handleToolPress]);
 ```
-```
 
-### BACKEND
-
-### 🧪 Critical Test Coverage Recovery
-**Priority:** P1 - Code Quality Critical
+### 7. [BACKEND] Critical Test Coverage Recovery
+**Priority:** P1 - Code Quality Critical  
 **Files:** `apps/server/tests/tide-context.test.ts`, `apps/server/tests/tide-hierarchical-flow.test.ts`
 
-**Backend Engineer Task:**
-- **Current Coverage:** tide-context.ts (3.17%), tide-hierarchical-flow.ts (2.27%)
-- **Target Coverage:** 90%+ for production readiness
-- **Failed Tests:** 22 failing in suite
+**Status:** Critical test failures affecting production readiness
 
-**Test Scenarios Needed:**
+- Current coverage: tide-context.ts (3.17%), tide-hierarchical-flow.ts (2.27%)
+- Target: 90%+ coverage
+- 22 failing tests in suite
+
+**Required Test Scenarios:**
+
 1. Context switching between daily/weekly/monthly tides
-2. Auto-creation of hierarchical context tides  
+2. Auto-creation of hierarchical context tides
 3. Agent service error handling and degradation modes
 4. Database transaction rollback scenarios
 
-### 🏗️ Database Transaction Strategy (Backend Engineer Decision)
-**Priority:** P1 - Data Integrity Critical
+### 8. [BACKEND] Database Transaction Strategy
+**Priority:** P1 - Data Integrity Critical  
+**Files:** `apps/server/src/services/databaseService.ts`
 
-**Current Pattern Analysis:**
+**Problem:** Non-atomic operations create data inconsistency risk  
+**Decision Required:** ACID compliance vs eventual consistency
+
+**Current Pattern (Eventual Consistency):**
+
 ```javascript
-// Non-atomic pattern (eventual consistency):
 await d1Statement.run();        // D1 insert
-await this.r2.putObject();     // R2 insert - can fail independently  
+await this.r2.putObject();     // R2 insert - can fail independently
 await analyticsStatement.run(); // Analytics insert - can fail independently
 ```
 
-**Context7 Research Shows D1 Supports Atomic Batches:**
+**Proposed Pattern (ACID Compliant):**
+
 ```javascript
-// Atomic pattern (ACID compliant):
 const batch = this.db.batch([
   d1Statement,
   analyticsStatement
@@ -504,24 +458,23 @@ await batch; // Atomic D1 operations
 await this.r2.putObject(); // Only after D1 success
 ```
 
-**Backend Engineer Decision Required:**
-- Use atomic D1 batch operations for critical data integrity?
-- Keep current pattern for better error granularity?
+**Decision Required:** Atomic batches for critical data integrity vs current pattern for error granularity
 
 ---
 
 ## P2 - MEDIUM PRIORITY
 
-### FRONTEND
-
-### 🎨 Tool Action Buttons Enhancement
+### 9. [FRONTEND] Tool Action Buttons Enhancement
 **Priority:** P2 - UX Polish  
 **Time Estimate:** 3 hours
 **Files:** `apps/mobile/src/components/chat/MessageBubble.tsx`
 
-**Commands for AI Agent:**
+**Problem:** No quick actions for suggested tools in chat  
+**Solution:** Add interactive tool buttons below agent responses
+
+**Implementation:**
 ```typescript
-// 1. Add tool action buttons below agent responses
+// 1. Add tool action buttons
 EDIT apps/mobile/src/components/chat/MessageBubble.tsx:
   ADD_AFTER_MESSAGE_CONTENT:
 ```typescript
@@ -547,7 +500,6 @@ EDIT apps/mobile/src/components/chat/MessageBubble.tsx:
     ))}
   </View>
 )}
-```
 
 // 2. Create tool action interface
 ADD_TO apps/mobile/src/types/chat.ts:
@@ -563,18 +515,19 @@ export interface ChatMessage {
   suggestedTools?: ToolAction[];
 }
 ```
-```
 
-### 🔄 Network Resilience Enhancement
+### 10. [FRONTEND] Network Resilience Enhancement
 **Priority:** P2 - Reliability Improvement
 **Time Estimate:** 2 hours  
 **Files:** `apps/mobile/src/hooks/useNetworkResilience.ts`
 
-**Commands for AI Agent:**
+**Problem:** No network state detection or auto-reconnection  
+**Solution:** Network monitoring with automatic MCP reconnection
+
+**Implementation:**
 ```typescript
-// 1. Create network detection hook
+// 1. Create network resilience hook
 CREATE apps/mobile/src/hooks/useNetworkResilience.ts:
-CONTENT:
 ```typescript
 import { useEffect, useState } from 'react';
 import NetInfo from '@react-native-netinfo/netinfo';
@@ -613,7 +566,7 @@ export const useNetworkResilience = () => {
     canRetry: !isOnline || connectionStatus === 'error'
   };
 };
-```
+
 
 // 2. Add to Home screen
 EDIT apps/mobile/src/screens/Main/Home.tsx:
@@ -629,16 +582,19 @@ EDIT apps/mobile/src/screens/Main/Home.tsx:
   </View>
 )}
 ```
-```
 
-### 🚀 Enhanced Loading States
+
+### 11. [FRONTEND] Enhanced Loading States
 **Priority:** P2 - UX Polish
 **Time Estimate:** 1 hour
 **Files:** `apps/mobile/src/components/Loading.tsx`, `apps/mobile/src/context/MCPContext.tsx`
 
-**Commands for AI Agent:**
+**Problem:** Generic loading states provide no context  
+**Solution:** Context-aware loading messages for better UX
+
+**Implementation:**
 ```typescript
-// 1. Create contextual loading component
+// 1. Enhance Loading component with context
 EDIT apps/mobile/src/design-system/components/Loading.tsx:
   ADD_PROPS: 
 ```typescript
@@ -648,9 +604,7 @@ interface LoadingProps {
   text?: string;
   context?: 'health-check' | 'tool-execution' | 'agent-thinking';
 }
-```
   ADD_CONTEXT_MESSAGES:
-```typescript
 const getContextMessage = (context?: string): string => {
   switch (context) {
     case 'health-check': return 'Connecting to server...';
@@ -659,7 +613,6 @@ const getContextMessage = (context?: string): string => {
     default: return 'Loading...';
   }
 };
-```
 
 // 2. Integrate contextual loading in MCP operations
 EDIT apps/mobile/src/context/MCPContext.tsx:
@@ -671,63 +624,4 @@ const [loadingStates, setLoadingStates] = useState({
   connecting: false
 });
 ```
-```
 
----
-
-## P3 - LOW PRIORITY
-
-### 🧪 Mobile Testing Protocol
-**Commands for AI Agent:**
-```bash
-# 1. Performance validation
-npm run test:mobile
-npm run build:mobile:android
-npm run build:mobile:ios
-
-# 2. Environment connectivity tests  
-# Run health checks against all environments
-curl https://tides-001.mpazbot.workers.dev/health # prod
-curl https://tides-002.mpazbot.workers.dev/health # staging
-curl https://tides-003.mpazbot.workers.dev/health # dev
-
-# 3. Mobile performance profiling
-# NOTE: Manual testing required - ask user to run emulator
-# Test React Native Performance Monitor with:
-# - Tool autocomplete responsiveness
-# - Calendar navigation smoothness
-# - Agent proactivity delay (should be < 100ms)
-```
-
-### 📊 Success Metrics
-**Measurable Outcomes:**
-- **Agent Proactivity:** User trigger reduction >30% through context suggestions
-- **Tool Discovery:** IDE-style autocomplete reduces tool lookup time >50%  
-- **Navigation Speed:** Calendar date switching <100ms response time
-- **Network Resilience:** Auto-reconnect success rate >95%
-
-### 🎯 Mobile-First Implementation Priority
-**Phase 1 (Immediate):** Environment fixes, security cleanup
-**Phase 2 (This Sprint):** Agent proactivity, tool intellisense  
-**Phase 3 (Next Sprint):** Calendar navigation, performance optimization
-
----
-
-## AI Agent Execution Guidelines
-
-**Context7 Research Requirements:**
-- Query Cloudflare Workers SDK documentation before modifying server files
-- Query React Native documentation before mobile optimizations
-- Use MCP server patterns from Context7 `/cloudflare/mcp-server-cloudflare`
-
-**Testing Protocol:**
-1. All mobile changes: Test in development mode first
-2. Backend changes: Coordinate with backend engineer
-3. Environment changes: Test all URL endpoints before deployment
-
-**Error Handling Philosophy:**
-- **Mobile:** Graceful degradation with user-friendly messages
-- **Backend:** Fail-fast for development, graceful for production
-- **Security:** Never log sensitive data, always validate API keys server-side
-
-This specification provides clear, actionable commands while respecting backend engineer decisions and prioritizing mobile UX improvements that support rather than override backend architecture.
