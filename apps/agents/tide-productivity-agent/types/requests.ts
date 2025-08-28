@@ -2,11 +2,9 @@
  * Request and response interfaces for TideProductivityAgent API
  */
 
-import type { UserPreferences, Optimization } from "./preferences";
-
 export interface InsightsRequest {
   userId: string;
-  timeframe?: "24h" | "7d" | "30d";
+  timeframe?: '24h' | '7d' | '30d';
   tideIds?: string[];
 }
 
@@ -59,9 +57,26 @@ export interface PreferencesResponse {
 }
 
 export interface StatusResponse {
-  status: "healthy" | "degraded" | "error";
+  status: 'healthy' | 'degraded' | 'error';
   agentId: string;
   connectedClients: number;
   timestamp: string;
   uptime?: number;
+}
+
+export interface UserPreferences {
+  preferredTimeBlocks?: string;
+  energyGoals?: string[];
+  notificationFrequency?: 'hourly' | 'daily' | 'weekly';
+  analysisDepth?: 'basic' | 'detailed' | 'comprehensive';
+  autoImplement?: boolean;
+  confidenceThreshold?: number;
+}
+
+export interface Optimization {
+  tideId: string;
+  recommendations: string;
+  confidence: number;
+  autoImplemented?: boolean;
+  error?: string;
 }

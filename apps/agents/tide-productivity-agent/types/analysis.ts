@@ -61,5 +61,5 @@ export interface MCPPromptArgs {
   energy_goals?: string;
 }
 
-// Import UserPreferences from dedicated preferences file
-import type { UserPreferences } from './preferences';
+// Import UserPreferences from requests to avoid circular dependency
+import type { UserPreferences } from './requests';
