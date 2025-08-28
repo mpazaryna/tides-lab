@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS tide_index (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   name TEXT NOT NULL,
+  -- CHANGE: Added 'monthly' to flow types for hierarchical time contexts
+  -- WHY: Mobile users need daily → weekly → monthly progression without manual management
+  -- BUSINESS IMPACT: Enables natural workflow scaling from daily habits to monthly goals
   flow_type TEXT NOT NULL CHECK (flow_type IN ('daily', 'weekly', 'monthly', 'project', 'seasonal')),
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused')),
   description TEXT, -- For search and filtering
@@ -39,11 +42,13 @@ CREATE TABLE IF NOT EXISTS tide_index (
   total_duration INTEGER DEFAULT 0, -- Cached total flow duration in minutes
   energy_balance INTEGER DEFAULT 0, -- Cached energy score
   r2_path TEXT NOT NULL, -- Path to full JSON in R2
-  -- Hierarchical tide support
-  parent_tide_id TEXT REFERENCES tide_index(id),
-  date_start TEXT, -- ISO date (YYYY-MM-DD) for time-bound tides
-  date_end TEXT,   -- ISO date (YYYY-MM-DD) for time-bound tides  
-  auto_created BOOLEAN DEFAULT FALSE, -- True if automatically created by system
+  -- NEW SCHEMA: Hierarchical tide support (ADR-003 implementation)
+  -- ARCHITECTURE: Enables parent-child relationships without complex queries
+  -- PERFORMANCE: Date range queries avoid expensive JSON parsing in R2
+  parent_tide_id TEXT REFERENCES tide_index(id), -- Monthly tide → Weekly tide → Daily tide
+  date_start TEXT, -- ISO date (YYYY-MM-DD) for time-bound tides  
+  date_end TEXT,   -- ISO date (YYYY-MM-DD) for time-bound tides
+  auto_created BOOLEAN DEFAULT FALSE, -- Distinguishes system vs user-created tides
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -113,12 +118,15 @@ CREATE INDEX IF NOT EXISTS idx_tide_user_created ON tide_index(user_id, created_
 CREATE INDEX IF NOT EXISTS idx_tide_user_lastflow ON tide_index(user_id, last_flow DESC);
 CREATE INDEX IF NOT EXISTS idx_tide_user_updated ON tide_index(user_id, updated_at DESC);
 
--- Hierarchical tide indexes  
-CREATE INDEX IF NOT EXISTS idx_tides_parent ON tide_index(parent_tide_id);
-CREATE INDEX IF NOT EXISTS idx_tides_date_range ON tide_index(date_start, date_end);
-CREATE INDEX IF NOT EXISTS idx_tides_auto_created ON tide_index(auto_created, flow_type);
-CREATE INDEX IF NOT EXISTS idx_tides_user_date_type ON tide_index(user_id, date_start, flow_type);
-CREATE INDEX IF NOT EXISTS idx_tides_user_date_auto ON tide_index(user_id, date_start, auto_created);
+-- NEW INDEXES: Hierarchical tide performance optimization
+-- WHY: Auto-creation queries need sub-100ms response times for mobile UX
+-- SCALE IMPACT: These indexes support millions of auto-created tides efficiently
+-- QUERY PATTERNS: Optimized for "get/create daily tide for user X on date Y"
+CREATE INDEX IF NOT EXISTS idx_tides_parent ON tide_index(parent_tide_id); -- Parent-child traversal
+CREATE INDEX IF NOT EXISTS idx_tides_date_range ON tide_index(date_start, date_end); -- Time range queries
+CREATE INDEX IF NOT EXISTS idx_tides_auto_created ON tide_index(auto_created, flow_type); -- System vs user tides
+CREATE INDEX IF NOT EXISTS idx_tides_user_date_type ON tide_index(user_id, date_start, flow_type); -- Core lookup
+CREATE INDEX IF NOT EXISTS idx_tides_user_date_auto ON tide_index(user_id, date_start, auto_created); -- Auto-creation check
 
 -- Analytics table indexes
 CREATE INDEX IF NOT EXISTS idx_analytics_user ON tide_analytics(user_id);

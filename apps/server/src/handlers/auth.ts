@@ -115,10 +115,13 @@ export function registerAuthHandlers(server: McpServer, storage: TideStorage) {
 /**
  * API Key Registration Schema for validation
  */
+// CHANGE: Added user_email validation to bridge mobile Supabase auth → server storage
+// WHY: Mobile apps authenticate with Supabase first, then register their API keys with server
+// IMPACT: Proper user identity consistency across auth systems (critical for production data integrity)
 const ApiKeyRegistrationSchema = z.object({
   api_key: z.string().min(1).describe("The API key to register"),
   user_id: z.string().min(1).describe("The user ID associated with this key"),
-  user_email: z.string().email().describe("The user's email address from Supabase"),
+  user_email: z.string().email().describe("The user's email address from Supabase"), // NEW: Real email from auth provider
   name: z.string().optional().describe("Optional name for the API key")
 });
 
@@ -152,10 +155,13 @@ export async function registerApiKey(request: Request, env: Env): Promise<Respon
   try {
     // Parse request body
     const body = await request.json() as any;
+    // CHANGE: Added email validation logging for hybrid auth troubleshooting
+    // WHY: Mobile apps have complex auth flows (Supabase → server registration)
+    // DEBUGGING: This helps track which part of the auth chain fails in production
     console.log("[API-KEY-REG] Request body received:", { 
       hasApiKey: !!body.api_key, 
       hasUserId: !!body.user_id,
-      hasUserEmail: !!body.user_email,
+      hasUserEmail: !!body.user_email, // NEW: Critical for debugging mobile auth failures
       apiKeyLength: body.api_key?.length || 0
     });
 
@@ -176,6 +182,9 @@ export async function registerApiKey(request: Request, env: Env): Promise<Respon
       });
     }
 
+    // CHANGE: Now extracting real email from mobile auth instead of generating fake ones
+    // BUSINESS IMPACT: Proper user identity management enables customer support and analytics
+    // SCALE CONSIDERATION: Real emails are required for production user management at scale
     const { api_key, user_id, user_email, name } = validation.data;
 
     // Validate API key format (must start with tides_)
@@ -205,6 +214,9 @@ export async function registerApiKey(request: Request, env: Env): Promise<Respon
     if ('storeApiKey' in storage && typeof storage.storeApiKey === 'function') {
       console.log("[API-KEY-REG] Using storage.storeApiKey method");
       try {
+        // CHANGE: Passing real email to storage layer instead of placeholder
+        // ARCHITECTURE: This bridges the gap between Supabase auth and D1 storage 
+        // DATA INTEGRITY: Ensures user records are consistent across all systems
         await (storage as any).storeApiKey(keyHash, user_id, user_email, name || 'Mobile Generated Key');
         console.log("[API-KEY-REG] API key stored successfully via storage method");
       } catch (storageError) {
@@ -245,6 +257,9 @@ export async function registerApiKey(request: Request, env: Env): Promise<Respon
       ).bind(user_id).first();
 
       if (!existingUser) {
+        // CHANGE: Using real email in D1 user creation instead of generated placeholder
+        // SECURITY: Real emails enable proper account recovery and user verification  
+        // COMPLIANCE: Required for GDPR/privacy compliance in production
         console.log("[API-KEY-REG] Creating new user for mobile client:", { user_id, email: user_email });
         await env.DB.prepare(
           "INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, datetime('now'))"

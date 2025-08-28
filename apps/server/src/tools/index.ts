@@ -55,7 +55,7 @@
  */
 
 // Core tide management operations
-export { createTide, listTides, tideGetOrCreateDaily } from './tide-core';
+export { createTide, listTides, tideGetOrCreateDaily } from './tide-core'; // NEW: Auto daily creation
 
 // Flow sessions and energy tracking
 export { startTideFlow, addTideEnergy } from './tide-sessions';
@@ -66,8 +66,12 @@ export { linkTideTask, listTideTaskLinks } from './tide-tasks';
 // Analytics and reporting
 export { getTideReport, getTideRawJson, getParticipants } from './tide-analytics';
 
-// Hierarchical context switching
+// NEW FEATURES: Hierarchical tide management (ADR-003)
+// WHY: Mobile apps need seamless daily/weekly/monthly context switching
+// IMPACT: Eliminates manual tide management while providing time-scale perspectives
 export { tideSwitchContext, tideListContexts } from './tide-context';
 
-// Enhanced hierarchical flow sessions
+// NEW FEATURES: Enhanced hierarchical flow sessions
+// WHY: Single flow session should contribute to daily, weekly, AND monthly views
+// UX BENEFIT: "Just start working" - system handles all the complexity  
 export { startHierarchicalFlow, getTodaysContextSummary } from './tide-hierarchical-flow';

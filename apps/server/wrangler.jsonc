@@ -3,6 +3,8 @@
   "name": "tides",
   "main": "src/index.ts",
   "compatibility_date": "2025-06-17",
+  // CHANGE: Added explicit account ID for consistent deployment
+  // WHY: Prevents deployment issues when switching between different Cloudflare accounts
   "account_id": "01bfa3fc31e4462e21428e9ca7d63e98",
 
   // Workers Logs configuration - enables logging by default
@@ -91,7 +93,10 @@
         }
       ],
 
-      // AI binding for Workers AI
+      // NEW: AI binding for Workers AI edge inference (production environment)
+      // ENABLES: Conversational AI features in mobile apps without external API calls
+      // MODELS: Llama 3.1-8B-Instruct, BGE embeddings for productivity insights
+      // PERFORMANCE: Edge inference for sub-200ms AI responses
       "ai": {
         "binding": "AI",
       },

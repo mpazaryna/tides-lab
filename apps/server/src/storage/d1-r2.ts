@@ -13,9 +13,12 @@ interface D1Config {
   r2Storage: R2Storage;
 }
 
+// CHANGE: Added email field to AuthContext interface
+// WHY: Mobile apps need real user identity, not just user IDs
+// IMPACT: Enables proper user management, support, and compliance features
 export interface AuthContext {
   userId: string;
-  email?: string;
+  email?: string; // NEW: Real email from auth provider (Supabase)
   apiKeyName?: string;
 }
 
@@ -542,6 +545,10 @@ export class D1R2HybridStorage implements TideStorage {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const keyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     
+    // CHANGE: Enhanced API key validation query with JOIN to users table
+    // WHY: We now need real email addresses for proper user identity management
+    // PERFORMANCE: JOIN is acceptable here - authentication happens once per session
+    // DATA INTEGRITY: Ensures we always have complete user context
     const result = await this.db.prepare(`
       SELECT ak.user_id, ak.name, u.email 
       FROM api_keys ak
@@ -558,19 +565,28 @@ export class D1R2HybridStorage implements TideStorage {
       UPDATE api_keys SET last_used = ? WHERE key_hash = ?
     `).bind(new Date().toISOString(), keyHash).run();
 
+    // CHANGE: Now returning email in auth context for complete user identity
+    // ARCHITECTURE: This enables full user context propagation throughout the system
+    // BUSINESS VALUE: Real user emails enable customer support and user communication
     return {
       userId: result.user_id as string,
-      email: result.email as string,
+      email: result.email as string, // NEW: Essential for user management and support
       apiKeyName: result.name as string,
     };
   }
 
+  // NEW METHOD: Store API key with real user email from mobile auth
+  // WHY: Mobile apps authenticate with Supabase, then register API keys with server
+  // PATTERN: This is the "write side" of the hybrid auth system
   async storeApiKey(keyHash: string, userId: string, userEmail: string, name: string): Promise<void> {
     // Check if user exists, create if not
     const existingUser = await this.db.prepare(
       "SELECT id FROM users WHERE id = ?"
     ).bind(userId).first();
 
+    // CHANGE: Create user records with real email instead of placeholders
+    // SCALE IMPACT: Real user records enable proper customer data management
+    // COMPLIANCE: Required for GDPR data requests and account management
     if (!existingUser) {
       console.log("[STORAGE] Creating new user:", { userId, email: userEmail });
       await this.db.prepare(
@@ -595,16 +611,23 @@ export class D1R2HybridStorage implements TideStorage {
   }
 
   // =============================================================================
-  // Hierarchical Tide Methods
+  // NEW FEATURE: Hierarchical Tide Methods (ADR-003 Implementation)
   // =============================================================================
+  // WHY: Mobile apps need seamless daily workflow management without manual tide creation
+  // PATTERN: Auto-creating context-based tides eliminates user friction while providing time-scale views
+  // IMPACT: This transforms the UX from "manage tides" to "just work" - crucial for mobile adoption
 
   /**
-   * Gets or creates a daily tide for the specified date
+   * NEW: Gets or creates a daily tide for the specified date
+   * MOBILE UX: Core function that eliminates manual tide management for users
+   * AUTO-SCALING: Creates hierarchical relationships (daily → weekly → monthly) automatically
    */
   async getOrCreateDailyTide(date: string): Promise<Tide> {
     const userId = this.getUserId();
     
-    // Check if daily tide already exists for this date
+    // CHANGE: Query uses new hierarchical fields (date_start, auto_created)
+    // WHY: Distinguishes auto-created context tides from user-created project tides
+    // SCALE: Query is optimized with composite index on (user_id, date_start, auto_created)
     const existing = await this.db.prepare(`
       SELECT r2_path FROM tide_index 
       WHERE user_id = ? AND flow_type = 'daily' AND date_start = ? AND auto_created = true

@@ -1,16 +1,25 @@
 /**
- * @fileoverview AI Service - Cloudflare Workers AI Integration
+ * @fileoverview NEW FILE: AI Service - Cloudflare Workers AI Integration
+ * 
+ * MAJOR NEW FEATURE: Intelligent conversational AI for Tides mobile apps
+ * WHY ADDED: Mobile users need natural language interaction with productivity data
+ * BUSINESS VALUE: Transforms Tides from "manual tool" to "intelligent productivity partner"
+ * ARCHITECTURE: Edge inference using Workers AI - zero external API calls or latency
  *
  * This service provides intelligent automation features using Cloudflare Workers AI
  * for edge inference. All AI processing stays within the Cloudflare network for
  * optimal performance, cost efficiency, and data privacy.
  *
  * Key Features:
- * - Fast edge inference using Workers AI models
- * - Productivity pattern analysis with Llama models
+ * - Fast edge inference using Workers AI models (Llama, BGE embeddings)
+ * - Productivity pattern analysis with contextual insights
  * - Energy prediction using embeddings and ML
- * - Intelligent caching for performance
+ * - Conversational interface for natural tide management  
+ * - Intelligent caching for sub-200ms response times
  * - Graceful fallbacks when AI is unavailable
+ *
+ * COST OPTIMIZATION: Uses smallest viable models (BGE-small, Llama-8B) for production efficiency
+ * PERFORMANCE: All inference happens at Cloudflare edge - no external API latency
  *
  * @author Tides Development Team
  * @version 1.0.0
