@@ -164,24 +164,6 @@ export const useToolMenu = ({
             timestamp: now.toISOString(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           };
-        case "ai_session_insights":
-          // Generate mock session data for AI analysis
-          return {
-            session_data: {
-              duration: 25,
-              planned_duration: 25,
-              energy_start: 7,
-              energy_end: 6,
-              productivity_score: 8,
-              interruptions: 1,
-              work_context: timeBasedContext,
-              completion_status: "completed"
-            },
-            recent_sessions: [
-              { duration: 30, energy_start: 6, productivity_score: 7 },
-              { duration: 20, energy_start: 8, productivity_score: 9 }
-            ]
-          };
         default:
           return {
             contextTideId,

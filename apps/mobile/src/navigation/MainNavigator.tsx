@@ -110,7 +110,7 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
           style={{
             flexDirection: "column",
             alignItems: "center",
-            marginTop: 2,
+            marginTop: 0,
           }}
         >
           <Text color={colors.text.primary} variant="header">

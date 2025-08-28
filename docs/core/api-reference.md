@@ -22,7 +22,7 @@
 Tides provides a comprehensive API ecosystem with AI-powered agents and MCP (Model Context Protocol) tools for productivity and workflow management. The system consists of:
 
 - **2 Durable Object Agents** for real-time AI interactions
-- **16 MCP Tools** for workflow management and AI analysis
+- **11 MCP Tools** for workflow management
 - **13 MCP Prompts** for customizable analysis
 - **1 MCP Resource** for configuration access
 
@@ -319,111 +319,10 @@ Authorization: Bearer <api_key>
 
 **Returns**: Complete tide data including all nested arrays.
 
-### AI-Powered Tools
-
-#### 9. `ai_analyze_productivity`
-**Purpose**: Analyze productivity patterns using Workers AI.
-
-**Arguments**:
-```json
-{
-  "sessions": [
-    {
-      "duration": "number",
-      "energy_level": "number (1-10)",
-      "completed_at": "ISO string",
-      "productivity_score": "number (1-10)",
-      "intensity": "string (optional)",
-      "work_context": "string (optional)"
-    }
-  ],
-  "analysis_depth": "quick|detailed (optional, default: quick)"
-}
-```
-
-**Returns**: AI insights with patterns, recommendations, and energy trends.
-
-#### 10. `ai_suggest_flow_session`
-**Purpose**: Generate intelligent flow session suggestions based on patterns.
-
-**Arguments**:
-```json
-{
-  "user_context": {
-    "energy_level": "number (1-10)",
-    "recent_sessions": "array",
-    "preferences": "object"
-  }
-}
-```
-
-**Returns**: Optimal timing suggestions and confidence scores.
-
-#### 11. `ai_predict_energy`
-**Purpose**: Predict energy levels at future times using ML.
-
-**Arguments**:
-```json
-{
-  "historical_data": [
-    {
-      "timestamp": "ISO string",
-      "energy": "number (1-10)",
-      "activity": "string"
-    }
-  ],
-  "future_timestamp": "ISO string"
-}
-```
-
-**Returns**: Predicted energy level and confidence.
-
-#### 12. `ai_optimize_schedule`
-**Purpose**: Generate AI schedule optimization recommendations.
-
-**Arguments**:
-```json
-{
-  "current_schedule": [
-    {
-      "time": "string",
-      "activity": "string",
-      "priority": "low|medium|high",
-      "estimated_energy_required": "number (1-10)"
-    }
-  ],
-  "energy_patterns": "array",
-  "constraints": "object (optional)"
-}
-```
-
-**Returns**: Optimized schedule recommendations.
-
-#### 13. `ai_session_insights`
-**Purpose**: Get AI-powered insights from completed flow sessions.
-
-**Arguments**:
-```json
-{
-  "session_data": {
-    "duration": "number",
-    "planned_duration": "number",
-    "energy_start": "number (1-10)",
-    "energy_end": "number (1-10)",
-    "productivity_score": "number (1-10)",
-    "interruptions": "number",
-    "work_context": "string",
-    "completion_status": "completed|partial|extended"
-  },
-  "recent_sessions": "array (optional)"
-}
-```
-
-**Returns**: Performance analysis and improvement suggestions.
 
 ### System Tools
 
-#### 14. `tides_get_participants`
+#### 9. `tides_get_participants`
 **Purpose**: Get participants from database for multi-user support.
 
 **Arguments**:
@@ -438,7 +337,7 @@ Authorization: Bearer <api_key>
 
 **Returns**: Participant list for team collaboration.
 
-#### 15. `auth_validate_key`
+#### 10. `auth_validate_key`
 **Purpose**: Validate an API key and return user information.
 
 **Arguments**:
@@ -450,7 +349,7 @@ Authorization: Bearer <api_key>
 
 **Returns**: User details or error information.
 
-#### 16. `roll_dice`
+#### 11. `roll_dice`
 **Purpose**: Test tool - rolls an N-sided dice.
 
 **Arguments**:
@@ -567,17 +466,17 @@ const session = await mcpService.callTool('tide_flow', {
 });
 ```
 
-### Example 2: Get AI Productivity Analysis
+### Example 2: Generate Tide Report
 
 ```javascript
-// Analyze recent sessions
-const analysis = await mcpService.callTool('ai_analyze_productivity', {
-  sessions: recentSessions,
-  analysis_depth: 'detailed'
+// Generate a report
+const report = await mcpService.callTool('tide_get_report', {
+  tideId: currentTideId,
+  format: 'summary'
 });
 
-console.log(analysis.insights.patterns);
-console.log(analysis.insights.recommendations);
+console.log(report.summary);
+console.log(report.energy_analysis);
 ```
 
 ### Example 3: Chat with AI Assistant
