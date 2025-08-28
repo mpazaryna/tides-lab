@@ -279,8 +279,6 @@ export class HelloAgent implements DurableObject {
    * @returns Promise that resolves when initialization is complete
    */
   async initialize() {
-    // TODO: Add state migration handling for schema changes
-    // TODO: Implement data validation for loaded state
     // Load visit counter from storage
     const storedVisits = await this.state.storage.get<number>('visits');
     if (storedVisits !== undefined) {
@@ -352,8 +350,6 @@ export class HelloAgent implements DurableObject {
       });
     } catch (error) {
       // Handle unexpected errors gracefully
-      // TODO: Add error reporting and logging for production debugging
-      // TODO: Implement error rate limiting to prevent spam
       return new Response(JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Internal server error' 
       }), {
@@ -446,8 +442,6 @@ export class HelloAgent implements DurableObject {
       };
 
       // Store message persistently
-      // TODO: Add message size validation and limits
-      // TODO: Implement message retention policy (e.g., max 1000 messages)
       this.messages.push(message);
       await this.state.storage.put('messages', this.messages);
 
