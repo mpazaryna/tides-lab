@@ -26,5 +26,5 @@ export interface UserMetrics {
 }
 
 // Re-export commonly used types
-export type { UserPreferences } from './preferences';
+export type { UserPreferences } from './requests';
 export type { UserSession } from './analysis';

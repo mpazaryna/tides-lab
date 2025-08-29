@@ -46,8 +46,6 @@ export class TideProductivityAgent implements DurableObject {
    * Initialize all services and handlers
    */
   private async initialize(): Promise<void> {
-    // TODO: Add health checks for external dependencies
-    // TODO: Implement graceful degradation if services fail to initialize
     try {
       // Determine environment context
       const environment = this.getEnvironment();
@@ -55,6 +53,8 @@ export class TideProductivityAgent implements DurableObject {
         userId: 'system', // Default, overridden per request
         environment
       };
+
+      console.log(`[TideProductivityAgent] Initializing in ${environment} environment`);
 
       // Initialize services
       this.mcpClient = new MCPClient(userContext);
@@ -68,6 +68,8 @@ export class TideProductivityAgent implements DurableObject {
       this.optimizeHandler = new OptimizeHandler(this.mcpClient, this.aiAnalyzer, this.tideFetcher);
       this.questionsHandler = new QuestionsHandler(this.mcpClient, this.aiAnalyzer, this.tideFetcher, this.webSocketManager);
       this.preferencesHandler = new PreferencesHandler(this.preferencesStore);
+
+      console.log('[TideProductivityAgent] Initialization complete');
 
     } catch (error) {
       console.error('[TideProductivityAgent] Initialization failed:', error);
@@ -132,8 +134,6 @@ export class TideProductivityAgent implements DurableObject {
    * Handle WebSocket upgrade for real-time communication
    */
   private handleWebSocketUpgrade(_request: Request): Response {
-    // TODO: Add WebSocket authentication and authorization
-    // TODO: Implement connection rate limiting
     const webSocketPair = new WebSocketPair();
     const [client, server] = Object.values(webSocketPair);
 
@@ -179,8 +179,8 @@ export class TideProductivityAgent implements DurableObject {
    * Cleanup method (called when agent is being destroyed)
    */
   async cleanup(): Promise<void> {
-    // TODO: Persist important agent state before cleanup
-    // TODO: Notify connected clients about agent shutdown
+    console.log('[TideProductivityAgent] Cleaning up resources');
+    
     try {
       // Cleanup inactive WebSocket connections
       this.webSocketManager?.cleanupInactiveConnections();

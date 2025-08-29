@@ -21,16 +21,6 @@
  * | `tides_get_participants` | Lists all users              | Multi-user support                |
  * | `auth_validate_key`      | Validates API keys           | Multi-user auth testing           |
  * 
- * ## AI-Powered MCP Tools (Requires AI Binding)
- * 
- * | MCP Tool Name              | Function                       | Purpose |
- * |----------------------------|--------------------------------|-----------------------------------|
- * | `ai_analyze_productivity`  | AI productivity pattern analysis | Smart insights and recommendations |
- * | `ai_suggest_flow_session`  | AI-powered session suggestions   | Optimal timing based on patterns  |
- * | `ai_predict_energy`        | ML energy level prediction       | Forecast optimal work periods     |
- * | `ai_optimize_schedule`     | AI schedule optimization          | Energy-task matching               |
- * | `ai_session_insights`      | AI session performance analysis  | Improvement suggestions            |
- * 
  * ## MCP Prompts for Analysis
  * 
  * | Prompt Name             | Purpose                             | Use Case                         |
@@ -93,7 +83,6 @@ import { registerTideTools } from "./handlers/tools";
 import { registerAuthHandlers } from "./handlers/auth";
 import { registerPromptHandlers } from "./handlers/prompts";
 import { registerExampleHandlers } from "./handlers/examples";
-import { registerAITools } from "./handlers/ai-tools";
 
 // Package info - in production this comes from package.json via build process
 const packageJson = { name: "tides", version: "0.0.1" };
@@ -145,11 +134,6 @@ export function createServer(env: Env, authContext?: AuthContext | null) {
   registerAuthHandlers(server, storage);
   registerPromptHandlers(server, storage, authContext);
   registerExampleHandlers(server);
-  
-  // Register AI-powered tools (requires Workers AI binding)
-  if (env.AI) {
-    registerAITools(server, storage, env);
-  }
 
 
   return server;

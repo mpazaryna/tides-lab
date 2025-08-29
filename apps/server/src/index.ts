@@ -9,11 +9,16 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key",
 };
 
-// Export Durable Object classes
+// CHANGE: Fixed import paths from @agents to relative paths
+// WHY: Resolves module resolution issues in Cloudflare Workers environment
+// IMPACT: Ensures proper Durable Object deployment across all environments
 export { HelloAgent } from "../../agents/hello/index";
 export { TideProductivityAgent } from "../../agents/tide-productivity-agent/index";
 
-// AI request handler for conversational features
+// NEW FEATURE: AI request handler for conversational features
+// MAJOR ADDITION: Enables mobile apps to have natural language AI conversations
+// ENDPOINTS: /ai/conversation, /ai/classify-intent, /ai/productivity-analysis, /ai/flow-suggestions
+// ARCHITECTURE: Uses Workers AI for edge inference - no external API dependencies
 async function handleAIRequest(
   request: Request,
   env: Env,

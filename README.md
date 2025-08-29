@@ -18,7 +18,6 @@ graph TB
     Server -->|MCP Protocol| Agents
     Server -->|Tool Execution| Storage
     Agents -->|Data Access| Storage
-    Agents -->|AI Analysis| AI[Cloudflare AI<br/>Workers AI]
 
     style Mobile fill:#e1f5fe
     style Server fill:#f3e5f5
@@ -150,14 +149,12 @@ sequenceDiagram
     participant M as Mobile App
     participant Router as Server Router
     participant Agent as TideProductivityAgent
-    participant AI as Cloudflare AI
 
-    M->>Router: POST /agents/tide-productivity/analyze
+    M->>Router: POST /agents/tide-productivity/question
     Router->>Agent: Route with Auth Context
     Agent->>Agent: Fetch User Tides
-    Agent->>AI: AI Analysis Request
-    AI->>Agent: Productivity Insights
-    Agent->>M: Analysis Response
+    Agent->>Agent: Process Question
+    Agent->>M: Conversational Response
 ```
 
 #### 3. **Agent → Server (Data Access)**

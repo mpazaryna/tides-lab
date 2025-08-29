@@ -5,7 +5,6 @@ export type ServerEnvironmentId =
   | "env002"
   | "env003"
   | "env006"
-  | "mason-c32";
 
 export interface ServerEnvironment {
   id: ServerEnvironmentId;
@@ -44,8 +43,9 @@ export const SERVER_ENVIRONMENTS: Record<
     name: "Production",
     description: "Production environment with full D1 and AI capabilities",
     url: "https://tides-001.mpazbot.workers.dev",
-    environment: "development", // As per wrangler.jsonc vars.ENVIRONMENT
+    environment: "production", // As per wrangler.jsonc vars.ENVIRONMENT
     features: ["D1 Database", "Durable Objects", "AI Binding", "R2 Storage"],
+    isDefault: true,
   },
   env002: {
     id: "env002",
@@ -66,7 +66,7 @@ export const SERVER_ENVIRONMENTS: Record<
     name: "Development",
     description: "Development environment for testing new features",
     url: "https://tides-003.mpazbot.workers.dev",
-    environment: "production", // As per wrangler.jsonc vars.ENVIRONMENT
+    environment: "development", // As per wrangler.jsonc vars.ENVIRONMENT
     features: ["D1 Database", "Durable Objects", "AI Binding"],
   },
   env006: {
@@ -76,16 +76,7 @@ export const SERVER_ENVIRONMENTS: Record<
     url: "https://tides-006.mpazbot.workers.dev",
     environment: "mason-development",
     features: ["D1 Database", "API Key Authentication", "Supabase Auth", "Durable Objects", "Working MCP Flow"],
-    isDefault: true,
-  },
-  "mason-c32": {
-    id: "mason-c32",
-    name: "Mason C32 (Legacy)",
-    description: "Previous working implementation on Mason C32 infrastructure",
-    url: "https://supabase-tides-demo-1.mason-c32.workers.dev",
-    environment: "custom",
-    features: ["MCP Tools", "Supabase Integration", "Legacy Environment"],
   },
 };
 
-export const DEFAULT_ENVIRONMENT: ServerEnvironmentId = "env006";
+export const DEFAULT_ENVIRONMENT: ServerEnvironmentId = "env001";

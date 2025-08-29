@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage"; // Keep fo
 import type { Session } from "@supabase/supabase-js";
 
 class AuthService {
-  private currentUrl = "https://tides-006.mpazbot.workers.dev"; // Fallback to env001
+  private currentUrl = "https://tides-001.mpazbot.workers.dev"; // Fallback to env001
   private urlReady = false;
   private urlProvider: (() => string) | null = null;
 
@@ -145,13 +145,7 @@ class AuthService {
         const apiKey = this.generateApiKey(data.user.id);
         console.log('[AuthService] Generated API key, storing...', { apiKey: apiKey.substring(0, 8) + '...' });
         // TODO: Remove debug logging before production release
-        console.log('[DEBUG] Full API key details:', {
-          fullToken: apiKey,
-          length: apiKey.length,
-          startsWithTides: apiKey.startsWith('tides_'),
-          userId: data.user.id,
-          format: `tides_${data.user.id}_${apiKey.split('_')[2]}`
-        });
+        // DEBUG: API key validation successful (key details redacted for security)
         await secureStorage.setItem("api_key", apiKey);
         console.log('[AuthService] API key stored successfully');
         

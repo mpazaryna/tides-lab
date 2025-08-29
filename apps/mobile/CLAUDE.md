@@ -159,7 +159,7 @@ src/
 
 ## MCP Server Integration
 
-**Primary:** `https://supabase-tides-demo-1.mason-c32.workers.dev`
+**Primary:** `https://tides-001.mpazbot.workers.dev`
 **Protocol:** JSON-RPC 2.0 over HTTP
 **Auth:** Bearer tokens (mobile: `tides_{userId}_{randomId}`, desktop: `{uuid}`)
 **Tools:** 8 tide management functions

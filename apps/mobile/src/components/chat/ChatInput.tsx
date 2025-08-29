@@ -21,7 +21,6 @@ import {
   Zap,
   CheckCircle,
   Calendar,
-  TrendingUp,
   Link,
   BarChart3,
 } from "lucide-react-native";
@@ -102,8 +101,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         return CheckCircle;
       case "Context Management":
         return Calendar;
-      case "AI Analysis":
-        return TrendingUp;
       case "Energy & Tasks":
         return Zap;
       case "Analytics & Data":
@@ -547,7 +544,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               styles.messageInput,
               highlightedTool && styles.messageInputWithHighlight,
             ]}
-            placeholder="Ask anything"
+            placeholder="Share your energy"
             placeholderTextColor={colors.text.tertiary}
             value={inputMessage}
             onChangeText={handleInputChange}

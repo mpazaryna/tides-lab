@@ -15,11 +15,6 @@ import {
   Users,
   ArrowUpDown,
   Calendar,
-  TrendingUp,
-  Lightbulb,
-  Activity,
-  Settings,
-  Sparkles,
 } from "lucide-react-native";
 import { Text } from "../Text";
 import { colors, spacing } from "../../design-system/tokens";
@@ -165,56 +160,6 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
           />
         </View>
 
-        {/* AI Analysis */}
-        <View style={styles.menuSection}>
-          <Text
-            variant="caption"
-            color="secondary"
-            style={styles.sectionHeader}
-          >
-            AI ANALYSIS
-          </Text>
-
-          <ToolButton
-            toolName="ai_analyze_productivity"
-            icon={TrendingUp}
-            title="Analyze Productivity"
-            handleToolSelect={handleToolSelect}
-            getToolAvailability={getToolAvailability}
-          />
-
-          <ToolButton
-            toolName="ai_suggest_flow_session"
-            icon={Lightbulb}
-            title="Suggest Flow Session"
-            handleToolSelect={handleToolSelect}
-            getToolAvailability={getToolAvailability}
-          />
-
-          <ToolButton
-            toolName="ai_predict_energy"
-            icon={Activity}
-            title="Predict Energy"
-            handleToolSelect={handleToolSelect}
-            getToolAvailability={getToolAvailability}
-          />
-
-          <ToolButton
-            toolName="ai_optimize_schedule"
-            icon={Settings}
-            title="Optimize Schedule"
-            handleToolSelect={handleToolSelect}
-            getToolAvailability={getToolAvailability}
-          />
-
-          <ToolButton
-            toolName="ai_session_insights"
-            icon={Sparkles}
-            title="Session Insights"
-            handleToolSelect={handleToolSelect}
-            getToolAvailability={getToolAvailability}
-          />
-        </View>
 
         {/* Energy & Tasks */}
         <View style={styles.menuSection}>

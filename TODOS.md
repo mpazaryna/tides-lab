@@ -2,41 +2,204 @@
 
 ## P0 - Critical
 
--Agent needs to be ebtter at proactvely calliing tides tools
+- **[MOBILE]** Agent needs to be better at proactively calling tides tools
 
-- If i summona. tides tool it gets plopped into the input (colorful and bold) and then like IDE intellisense its followed by a few parameters that should be entered.
-  -If the essential paraeters arent entered, the agent will ask the user for them, if nonessentail parameters arent entered then its fine, the agent will execute the tides tool
-  - if a user starts typing and then the suggester gies thema. tool, the tool will repalce the string of words that suggest they want to use that tool
+- **[MOBILE]** When a tides tool is summoned, it appears in the input (colorful and bold) with IDE-style intellisense parameters
+  - **[MOBILE]** Essential parameters trigger user prompts if missing; non-essential parameters are optional
+  - **[MOBILE]** Tool suggestions replace relevant text when user starts typing
 
-- make sure ALL tides tools and AI agent commands are available from the tides tool bar
+- **[MOBILE]** Make sure ALL tides tools and AI agent commands are available from the tides tool bar
 
-- when you click the tide info a calendar pops up - you switch your context and then select a day ont eh calendar, a week on the calendar, or a month ofnt eh calendar dependign ont he date. if it's project its a list of projects
-- the calendar day shoudl have a amrk on it if it had any ocnversation doen that day (checked in)
-  - i think proejcts should be locked for paying customers, locked for beta
+- **[MOBILE]** Tide info click opens calendar for context switching (daily/weekly/monthly view, or project list for projects)
+- **[MOBILE]** Calendar days show conversation markers for active days
+- **[MOBILE]** Projects are locked for beta (paying customers only)
+
+- **[BACKEND]** Hardcoded fallbacks need uniformity - 003 should be production fallback. See issue below:
+
+```javascript
+Mobile ↔ Server Authentication Divergence
+// Mobile hardcoded fallback:
+private currentUrl = "https://tides-006.mpazbot.workers.dev"  // env.006
+
+// Mobile MCP fallback:
+return this.baseUrl || 'https://tides-001.mpazbot.workers.dev'; // env.001
+
+// But wrangler.jsonc shows environment inconsistencies:
+"001": { "ENVIRONMENT": "development" }    // 🚨 Should be production
+"003": { "ENVIRONMENT": "production" }     // 🚨 Should be development
+
+Why This Breaks Everything:
+- Mobile clients authenticate against one environment but make MCP calls to another
+- Environment variable mismatches will cause auth context failures
+- Production traffic could hit development databases
+```
+
+- **[BACKEND]** Make Agent use the user API key to continue to be used. Issue detailed below:
+
+```javascript
+Durable Object Instantiation Mismatch
+// Server expects user-scoped agents:
+const productivityId = env.TIDE_PRODUCTIVITY_AGENT.idFromName(`user-${userId}`);
+
+// But agent assumes system-wide context:
+userId: 'system', // Default, overridden per request
+
+The Problem:
+- Server creates per-user agent instances but agents initialize with system context
+- No authentication context passing to agents during instantiation
+- Agent services (MCPClient, TideFetcher) will fail without proper user context
+```
+
+- **[BACKEND]** Critical: Add error boundaries and proper error handling. Details below:
+
+```javascript
+Service Initialization Failures:
+// Agent services depend on external connectivity:
+this.mcpClient = new MCPClient(userContext);      // No error handling if MCP server unavailable
+this.aiAnalyzer = new AIAnalyzer(this.env.AI);    // Will fail if AI binding unavailable
+
+No Error Boundaries: Agent failures will cascade to server failures. Missing
+graceful degradation when:
+- AI binding is unavailable (common in development)
+- MCP server connectivity fails
+- User context is invalid/expired
+```
+
+- **[BACKEND]** Security issue: API key exposed in debug logs. Fix details below:
+
+```javascript
+API Key Exposure:
+// Debug logging in production code:
+console.log('[DEBUG] Full API key details:', {
+  fullToken: apiKey,  // 🚨 SECURITY VIOLATION
+});
+
+Cross-Environment Data Leakage:
+- Environment 002 has both primary DB and SUPABASE_DB bindings
+- Test keys work across environments
+- No proper API key scoping or environment isolation
+```
+
+- **[BACKEND]** Creating multiple daily tides when a user signs in multiple times (evidence in env.006 D1 table)
+
+- **[BACKEND]** Authentication security gap - fallback auth bypasses database validation:
+
+```javascript
+Authentication Security Gap (src/auth/index.ts:48)
+
+console.warn("[AUTH-FALLBACK] Using fallback auth validation without database lookup - real email not available");
+email: `${userId}@mobile.tides.app`, // Fallback - real email should come from database
+
+Issue: Production auth bypasses database validation - security vulnerability.
+```
+
+- **[BACKEND]** Database transaction safety - operations are not atomic:
+
+```javascript
+Database Transaction Safety (src/storage/d1-r2.ts:76-136)
+
+// Current: "Transaction-like pattern" but NOT atomic
+await d1Statement.run();        // D1 insert
+await this.r2.putObject();      // R2 insert - can fail independently
+await analyticsStatement.run(); // Analytics insert - can fail independently
+
+Issue: Data can be left in inconsistent state if R2 or analytics fail.
+```
+
+- **[BACKEND]** Add request tracing for debugging:
+
+```typescript
+// apps/server/src/index.ts:331 - Add request ID for debugging:
+export default {
+  fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
+    const requestId = crypto.randomUUID(); // ✅ ADD
+    console.log(`[${requestId}] ${request.method} ${url.pathname}`); // ✅ ADD
+
+    // Pass requestId through to all handlers for correlation
+  }
+}
+```
 
 ## P1 - High Priority
 
-- also, all flows are inherotedly heirarchal
-│   and occur in daily tides then are passed
-│   upawrds, idk what startHierarchicalFlow is    
-│   for 
+- **[MOBILE]** All flows are hierarchical (daily → upward). Clarify startHierarchicalFlow purpose
 
-- any ocnversation you have with tides and the agent responses, all of those get saved so when you go to another day;s covnersation, it loads up
-  - when you go to each day, if there is a report generated that report has been saved and will be shown, otherwise there is a button to "create a report" and a button to "view converstaion", i guess it woudnt really be 'expensive' to pull the converstaion though, make the chat window match whatvever date is up above
+- **[MOBILE]** Save all tides/agent conversations for persistence across days
+- **[MOBILE]** Daily view: Show saved reports or "create report"/"view conversation" buttons. Chat window matches selected date
+
+- **[BACKEND]** Test coverage fell apart for new files, details below:
+
+```javascript
+- tide-context.ts: 3.17% coverage (should be 90%+)
+- tide-hierarchical-flow.ts: 2.27% coverage (should be 90%+)
+- 22 failing tests in the suite
+
+Impact: Core hierarchical features are untested in production scenarios.
+```
+
+- **[BACKEND]** AI Service Resource Management (src/services/aiService.ts)
+
+```javascript
+// 847 lines of AI logic in single file
+await this.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+  messages: [...],
+  max_tokens: 400,  // No rate limiting or quotas
+});
+
+Issues:
+- No rate limiting on Workers AI calls
+- Memory cache without TTL management
+- Single monolithic service file
+```
+
+- **[BACKEND]** Create shared types file for MCP contracts:
+
+```typescript
+// Create: shared/types/mcp-contracts.ts
+export interface MCPTideCreateRequest {
+  name: string;
+  description?: string;
+  flow_type?: string;
+}
+
+export interface MCPTideCreateResponse {
+  success: boolean;
+  tide_id?: string;
+  error?: string;
+}
+
+// Then import in both mobile/src/services/mcpService.ts and server/src/handlers/tools.ts
+```
 
 ## P2 - Performance Polish
 
-- [ ] **Fix AgentService re-configs** - Add `useMemo` dependency array in `ChatContext.tsx:XX`
-- [ ] **Memoize URL provider** - Add `useCallback` in `MCPContext.tsx:XX`
+- **[MOBILE]** Fix AgentService re-configs - Add `useMemo` dependency array in `ChatContext.tsx`
+- **[MOBILE]** Memoize URL provider - Add `useCallback` in `MCPContext.tsx`
+- **[MOBILE]** Add tool action buttons below agent responses - pre-fill parameters in input when clicked
 
+- **[BACKEND]** Remove TODO comments that block production:
 
-**the big three are energy update, generate analysisi, create flow (can be timed, shoudl have a goal)
+```javascript
+// apps/mobile/src/services/mcpService.ts:59-67
+// DELETE these TODO comments - they're just noise:
+// TODO: Remove debug logging before production release
+// TODO: Replace debug logging with proper error analytics  
+// TODO: Implement proper health check fallback strategy
+```
 
-- shoudl have little buttons ont eh bottom of the agent repsonse when there is a tool its calling, that button would jsut toss it in the inptu with any paramters filled out already
+- **[BACKEND]** Reduce observability noise:
+
+```javascript
+// apps/server/wrangler.jsonc:11
+"observability": {
+  "enabled": true,
+  "head_sampling_rate": 0.1,  // ✅ Change from 1 (100%) to 0.1 (10%)
+}
+```
 
 ## P3 - Nice to Haves
 
-- [ ] **Better network detection** - Add NetInfo listener for online/offline states
-- [ ] **Enhanced retry logging** - Add attempt counts and delays to MCP retry logs
-- [ ] **Loading states** - Show spinners during health checks
-- [ ] **Friendly error messages** - Replace technical errors with user-friendly text
+- **[MOBILE]** Better network detection - Add NetInfo listener for online/offline states
+- **[MOBILE]** Enhanced retry logging - Add attempt counts and delays to MCP retry logs
+- **[MOBILE]** Loading states - Show spinners during health checks
+- **[MOBILE]** Friendly error messages - Replace technical errors with user-friendly text

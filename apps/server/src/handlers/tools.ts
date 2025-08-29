@@ -49,6 +49,8 @@ export function registerTideTools(server: McpServer, storage: TideStorage) {
       description: "Create a new tidal workflow for rhythmic productivity. Use when users want to start a new workflow, project, or productivity cycle. Accepts name, flow type (daily/weekly/project/seasonal), and optional description. Returns tide ID and scheduling info for follow-up actions.",
       inputSchema: {
         name: z.string().describe("Human-readable name for the tide"),
+        // CHANGE: Added "monthly" to flow types for hierarchical contexts
+        // MOBILE IMPACT: Enables daily → weekly → monthly progression in mobile UX
         flow_type: z.enum(["daily", "weekly", "monthly", "project", "seasonal"]).describe("Type of tide rhythm"),
         description: z.string().optional().describe("Detailed description of the tide's purpose"),
       },
@@ -318,14 +320,18 @@ export function registerTideTools(server: McpServer, storage: TideStorage) {
   );
 
   // =============================================================================
-  // Hierarchical Tide Tools (ADR-003 Implementation)
+  // NEW SECTION: Hierarchical Tide Tools (ADR-003 Implementation)
   // =============================================================================
+  // BUSINESS IMPACT: These tools transform Tides from "manual tide management" to "just work"
+  // MOBILE CRITICAL: Without these tools, mobile apps require users to manually create daily tides
+  // ARCHITECTURE: Implements context-based tides that always exist vs user-created project tides
 
   /**
-   * MCP Tool: tide_get_or_create_daily
+   * NEW TOOL: tide_get_or_create_daily
    * 
-   * CRITICAL: This tool fixes the mobile app production errors. Mobile apps
-   * depend on this tool for automatic daily tide management and seamless UX.
+   * MOBILE CRITICAL: This tool eliminates the #1 UX friction point in mobile apps
+   * WHY CRITICAL: Mobile users expect to "just start working" without setup tasks
+   * PRODUCTION FIX: Solves mobile app crashes when no tides exist
    * 
    * Following service_noun_verb pattern: tide_get_or_create_daily
    */

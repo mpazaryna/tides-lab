@@ -28,6 +28,7 @@
 		3200D14A9C8A474AA6E42319 /* Inter_24pt-ExtraBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CD931D6A6A0540FF9510BA56 /* Inter_24pt-ExtraBoldItalic.ttf */; };
 		3715CB2031974126B9ECDECA /* RobotoMono-Italic-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 89BCC507BF904DCEA7321A3F /* RobotoMono-Italic-VariableFont_wght.ttf */; };
 		37F01E22BDF746F6B407D423 /* Inter_24pt-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 258A6C092A1B4DF0A24A2F21 /* Inter_24pt-Black.ttf */; };
+		390538E18BCDE9DCE19B9712 /* libPods-TidesMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7D0FD5CA0394AF6C4329E93A /* libPods-TidesMobile.a */; };
 		3A9EC4F274114818B6EEC878 /* RobotoMono-MediumItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 99C13FBE517444709383004D /* RobotoMono-MediumItalic.ttf */; };
 		3B1D76A935144DF4A4B27438 /* Inter_24pt-ThinItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4D4FD6C2FE6042118A51B71F /* Inter_24pt-ThinItalic.ttf */; };
 		400815146C22400593DB7F90 /* Inter_24pt-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 21DC63C15BFF41D5BDA35D19 /* Inter_24pt-Medium.ttf */; };
@@ -48,7 +49,6 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		85F433DED70B43EC9EBE3A13 /* RobotoMono-ThinItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 607D1341E68042D59A12BCCC /* RobotoMono-ThinItalic.ttf */; };
-		8AB5ED7CF4DA7370DA98DF7F /* libPods-TidesMobile.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 264353F9B01065D72D572125 /* libPods-TidesMobile.a */; };
 		8BFB64250B144D27A334FCCB /* Inter_24pt-LightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4ABC49F8AFDE4B94B419BA9C /* Inter_24pt-LightItalic.ttf */; };
 		8E3C33490C0B44658FB2D9E8 /* Inter_28pt-BlackItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B4A94364E1E04199B7D84D23 /* Inter_28pt-BlackItalic.ttf */; };
 		9313B123298A488B956AD1DE /* Inter_28pt-Italic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 026FB4C23F18429AA5DA3A20 /* Inter_28pt-Italic.ttf */; };
@@ -109,7 +109,6 @@
 		23BE0131D7F041828FC043FC /* Inter_28pt-LightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_28pt-LightItalic.ttf"; path = "../assets/fonts/Inter/static/Inter_28pt-LightItalic.ttf"; sourceTree = "<group>"; };
 		258A6C092A1B4DF0A24A2F21 /* Inter_24pt-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_24pt-Black.ttf"; path = "../assets/fonts/Inter/static/Inter_24pt-Black.ttf"; sourceTree = "<group>"; };
 		262959EB15784D36B218A86A /* Inter_28pt-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_28pt-SemiBold.ttf"; path = "../assets/fonts/Inter/static/Inter_28pt-SemiBold.ttf"; sourceTree = "<group>"; };
-		264353F9B01065D72D572125 /* libPods-TidesMobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-TidesMobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2E10F6FC44074591A2F3D98E /* Inter_28pt-SemiBoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_28pt-SemiBoldItalic.ttf"; path = "../assets/fonts/Inter/static/Inter_28pt-SemiBoldItalic.ttf"; sourceTree = "<group>"; };
 		2FA23CD559C940A0A8869C47 /* Inter-VariableFont_opsz,wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-VariableFont_opsz,wght.ttf"; path = "../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf"; sourceTree = "<group>"; };
 		31523AE8C15048CAA8947268 /* Inter_18pt-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-Bold.ttf"; path = "../assets/fonts/Inter/static/Inter_18pt-Bold.ttf"; sourceTree = "<group>"; };
@@ -132,6 +131,7 @@
 		6FD2342172DA46B7ABA14146 /* Inter_24pt-ExtraLightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_24pt-ExtraLightItalic.ttf"; path = "../assets/fonts/Inter/static/Inter_24pt-ExtraLightItalic.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = TidesMobile/AppDelegate.swift; sourceTree = "<group>"; };
 		7C88F176E9664D4EA2A5414A /* OFL.txt */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = OFL.txt; path = ../assets/fonts/Inter/OFL.txt; sourceTree = "<group>"; };
+		7D0FD5CA0394AF6C4329E93A /* libPods-TidesMobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-TidesMobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7DFDF0E68CE1488DAB24FFA3 /* Inter_18pt-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-Light.ttf"; path = "../assets/fonts/Inter/static/Inter_18pt-Light.ttf"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = TidesMobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		82B984F45B5746828AE7E0EC /* RobotoMono-BoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "RobotoMono-BoldItalic.ttf"; path = "../assets/fonts/Roboto_Mono/static/RobotoMono-BoldItalic.ttf"; sourceTree = "<group>"; };
@@ -140,7 +140,9 @@
 		89BCC507BF904DCEA7321A3F /* RobotoMono-Italic-VariableFont_wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "RobotoMono-Italic-VariableFont_wght.ttf"; path = "../assets/fonts/Roboto_Mono/RobotoMono-Italic-VariableFont_wght.ttf"; sourceTree = "<group>"; };
 		8A9EF7EB922846DC9D9F046A /* RobotoMono-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "RobotoMono-Italic.ttf"; path = "../assets/fonts/Roboto_Mono/static/RobotoMono-Italic.ttf"; sourceTree = "<group>"; };
 		8FD5A1F91D5142EBBCB9C8ED /* Inter_18pt-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-Black.ttf"; path = "../assets/fonts/Inter/static/Inter_18pt-Black.ttf"; sourceTree = "<group>"; };
+		94629D13815EABF85652ABB9 /* Pods-TidesMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TidesMobile.debug.xcconfig"; path = "Target Support Files/Pods-TidesMobile/Pods-TidesMobile.debug.xcconfig"; sourceTree = "<group>"; };
 		948347F6715043F68E9F0D7D /* Inter_28pt-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_28pt-Thin.ttf"; path = "../assets/fonts/Inter/static/Inter_28pt-Thin.ttf"; sourceTree = "<group>"; };
+		961404B291434510E215C109 /* Pods-TidesMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TidesMobile.release.xcconfig"; path = "Target Support Files/Pods-TidesMobile/Pods-TidesMobile.release.xcconfig"; sourceTree = "<group>"; };
 		99C13FBE517444709383004D /* RobotoMono-MediumItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "RobotoMono-MediumItalic.ttf"; path = "../assets/fonts/Roboto_Mono/static/RobotoMono-MediumItalic.ttf"; sourceTree = "<group>"; };
 		9F2F53512B4F42B4A31E9661 /* Inter_18pt-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-Regular.ttf"; path = "../assets/fonts/Inter/static/Inter_18pt-Regular.ttf"; sourceTree = "<group>"; };
 		A1FFFD9044714217803B3DD9 /* Inter_18pt-Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-Italic.ttf"; path = "../assets/fonts/Inter/static/Inter_18pt-Italic.ttf"; sourceTree = "<group>"; };
@@ -159,9 +161,7 @@
 		CD4FC1B4AE1D42F09B5AEC6F /* Inter_24pt-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_24pt-Light.ttf"; path = "../assets/fonts/Inter/static/Inter_24pt-Light.ttf"; sourceTree = "<group>"; };
 		CD931D6A6A0540FF9510BA56 /* Inter_24pt-ExtraBoldItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_24pt-ExtraBoldItalic.ttf"; path = "../assets/fonts/Inter/static/Inter_24pt-ExtraBoldItalic.ttf"; sourceTree = "<group>"; };
 		CEEBF01F4BD047B0B4D05F2C /* Inter_24pt-MediumItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_24pt-MediumItalic.ttf"; path = "../assets/fonts/Inter/static/Inter_24pt-MediumItalic.ttf"; sourceTree = "<group>"; };
-		CF971C9472A086A047E50AC6 /* Pods-TidesMobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TidesMobile.debug.xcconfig"; path = "Target Support Files/Pods-TidesMobile/Pods-TidesMobile.debug.xcconfig"; sourceTree = "<group>"; };
 		D361106AC85B4E70858BC18F /* Inter_18pt-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_18pt-ExtraBold.ttf"; path = "../assets/fonts/Inter/static/Inter_18pt-ExtraBold.ttf"; sourceTree = "<group>"; };
-		D69D9DB36F47206011128A79 /* Pods-TidesMobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TidesMobile.release.xcconfig"; path = "Target Support Files/Pods-TidesMobile/Pods-TidesMobile.release.xcconfig"; sourceTree = "<group>"; };
 		DB60950C65634E46AD5EBD26 /* Inter_28pt-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_28pt-Bold.ttf"; path = "../assets/fonts/Inter/static/Inter_28pt-Bold.ttf"; sourceTree = "<group>"; };
 		DE817F1BE4454C43B4C94240 /* RobotoMono-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "RobotoMono-SemiBold.ttf"; path = "../assets/fonts/Roboto_Mono/static/RobotoMono-SemiBold.ttf"; sourceTree = "<group>"; };
 		DED38D2731BC420B9D5847D7 /* Inter_28pt-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter_28pt-ExtraLight.ttf"; path = "../assets/fonts/Inter/static/Inter_28pt-ExtraLight.ttf"; sourceTree = "<group>"; };
@@ -180,7 +180,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8AB5ED7CF4DA7370DA98DF7F /* libPods-TidesMobile.a in Frameworks */,
+				390538E18BCDE9DCE19B9712 /* libPods-TidesMobile.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,7 +203,7 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				264353F9B01065D72D572125 /* libPods-TidesMobile.a */,
+				7D0FD5CA0394AF6C4329E93A /* libPods-TidesMobile.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -322,8 +322,8 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				CF971C9472A086A047E50AC6 /* Pods-TidesMobile.debug.xcconfig */,
-				D69D9DB36F47206011128A79 /* Pods-TidesMobile.release.xcconfig */,
+				94629D13815EABF85652ABB9 /* Pods-TidesMobile.debug.xcconfig */,
+				961404B291434510E215C109 /* Pods-TidesMobile.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -335,13 +335,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "TidesMobile" */;
 			buildPhases = (
-				948937731AE563EED5659DCC /* [CP] Check Pods Manifest.lock */,
+				58552C9AFB6787299F474977 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				15C529E8BD5F1FA1DF268DD4 /* [CP] Embed Pods Frameworks */,
-				A37012F596FD2F8A289C8442 /* [CP] Copy Pods Resources */,
+				554A6D5A37FF5A01825F0D2A /* [CP] Embed Pods Frameworks */,
+				90D60A26AFA43239126E8220 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -487,7 +487,7 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		15C529E8BD5F1FA1DF268DD4 /* [CP] Embed Pods Frameworks */ = {
+		554A6D5A37FF5A01825F0D2A /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -504,7 +504,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-TidesMobile/Pods-TidesMobile-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		948937731AE563EED5659DCC /* [CP] Check Pods Manifest.lock */ = {
+		58552C9AFB6787299F474977 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -526,7 +526,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A37012F596FD2F8A289C8442 /* [CP] Copy Pods Resources */ = {
+		90D60A26AFA43239126E8220 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -559,7 +559,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = CF971C9472A086A047E50AC6 /* Pods-TidesMobile.debug.xcconfig */;
+			baseConfigurationReference = 94629D13815EABF85652ABB9 /* Pods-TidesMobile.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -590,7 +590,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D69D9DB36F47206011128A79 /* Pods-TidesMobile.release.xcconfig */;
+			baseConfigurationReference = 961404B291434510E215C109 /* Pods-TidesMobile.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

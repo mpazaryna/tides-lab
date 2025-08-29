@@ -70,11 +70,8 @@ export class QuestionsHandler {
         const relevantTideId = await this.tideFetcher.getMostRelevantTide(question);
         
         if (!relevantTideId) {
-          await this.sendErrorToUser(userId, question, 'No relevant tides found');
-          return { 
-            error: true, 
-            message: 'No relevant tides found for this question' 
-          };
+          console.log(`[QuestionsHandler] No relevant tide found, using general conversation`);
+          return await this.handleGeneralConversation(userId, question, context);
         }
         
         tideId = relevantTideId;
@@ -167,7 +164,7 @@ export class QuestionsHandler {
   /**
    * Handle general conversation when no specific tides are found
    */
-  async handleGeneralConversation(userId: string, question: string, context?: string): Promise<any> {
+  async handleGeneralConversation(userId: string, question: string, _context?: string): Promise<any> {
     try {
       // Create a general productivity conversation prompt for Workers AI
       const conversationPrompt = [
