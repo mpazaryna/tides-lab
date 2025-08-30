@@ -23,6 +23,7 @@ import {
   executeAgentCommand,
 } from "../../utils/agentCommandUtils";
 import EnergyChart from "../../components/EnergyChart";
+import { getChartData } from "../../components/data/data";
 
 export default function Home() {
   const { getCurrentServerUrl, isConnected } = useMCP();
@@ -156,7 +157,12 @@ export default function Home() {
           <EnergyChart onPress={() => ""} />
         </View> */}
 
-        <EnergyChart data={data} />
+        <EnergyChart
+          data={getChartData()}
+          chartHeight={CHART_HEIGHT}
+          chartMargin={CHART_MARGIN}
+          chartWidth={CHART_WIDTH}
+        />
         {/* Messages */}
         <ChatMessages messages={messages} />
       </ScrollView>
