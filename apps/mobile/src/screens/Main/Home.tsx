@@ -1,5 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { StyleSheet, ScrollView, View, TouchableOpacity } from "react-native";
+import {
+  StyleSheet,
+  ScrollView,
+  View,
+  TouchableOpacity,
+  useWindowDimensions,
+} from "react-native";
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
 import { loggingService } from "../../services/loggingService";
@@ -16,6 +22,7 @@ import {
   createAgentContext,
   executeAgentCommand,
 } from "../../utils/agentCommandUtils";
+import EnergyChart from "../../components/EnergyChart";
 
 export default function Home() {
   const { getCurrentServerUrl, isConnected } = useMCP();
@@ -28,14 +35,17 @@ export default function Home() {
     sendAgentMessage,
   } = useChat();
 
+  const CHART_HEIGHT = 400;
+  const CHART_MARGIN = 20;
+  const { width: CHART_WIDTH } = useWindowDimensions();
+
   const [_agentInitialized, setAgentInitialized] = useState(false);
   const [_isChatInputFocused, setIsChatInputFocused] = useState(false);
-  const [templateToInject, setTemplateToInject] = useState<string>('');
+  const [templateToInject, setTemplateToInject] = useState<string>("");
 
   // Context tide management - handles daily/weekly/monthly switching
-  const { getCurrentContextTideId, setToolExecuting, currentContextTide } = useContextTide();
-
-
+  const { getCurrentContextTideId, setToolExecuting, currentContextTide } =
+    useContextTide();
 
   // Template injection callback
   const injectTemplate = useCallback((template: string) => {
@@ -44,7 +54,7 @@ export default function Home() {
 
   // Clear template after injection
   const onTemplateInjected = useCallback(() => {
-    setTemplateToInject('');
+    setTemplateToInject("");
   }, []);
 
   // Tool menu state management - context-aware
@@ -65,11 +75,7 @@ export default function Home() {
   });
 
   // Chat input state management - context-aware
-  const {
-    inputMessage,
-    setInputMessage,
-    handleSendMessage,
-  } = useChatInput({
+  const { inputMessage, setInputMessage, handleSendMessage } = useChatInput({
     getCurrentContextTideId, // ✅ Context-aware tide ID
     isConnected,
     getCurrentServerUrl,
@@ -150,6 +156,7 @@ export default function Home() {
           <EnergyChart onPress={() => ""} />
         </View> */}
 
+        <EnergyChart data={data} />
         {/* Messages */}
         <ChatMessages messages={messages} />
       </ScrollView>

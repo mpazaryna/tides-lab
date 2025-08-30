@@ -14,6 +14,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { colors } from "./src/design-system/tokens";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const AppContent: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -56,9 +57,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <SafeAreaProvider>
-      <AppContent />
-    </SafeAreaProvider>
+    <GestureHandlerRootView>
+      <SafeAreaProvider>
+        <AppContent />
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 };
 
