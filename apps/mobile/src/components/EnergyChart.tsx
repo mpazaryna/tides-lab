@@ -1,8 +1,9 @@
-import { StyleSheet, Text } from "react-native";
-import React, { useMemo } from "react";
+import { StyleSheet, Text, TouchableOpacity, Alert, Clipboard } from "react-native";
+import React, { useMemo, useEffect } from "react";
 import { useTimeContext } from "../context/TimeContext";
-import { Canvas } from "@shopify/react-native-skia";
+import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import { curveBasis, line, scaleLinear } from "d3";
+import { useSharedValue, withTiming } from "react-native-reanimated";
 
 // ✅ TUTORIAL COMPARISON: Missing scalePoint import for proper x-axis scaling
 // Current implementation uses scaleLinear for both axes, but tutorial uses scalePoint for x-axis
@@ -75,6 +76,37 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
 
   const [startTime, endTime] = getTimeRange();
 
+  const animationLine = useSharedValue(0);
+
+  // Calculate animation progress based on current time and context
+  useEffect(() => {
+    // Reset animation to prevent "already working" error
+    animationLine.value = 0;
+    
+    // Small delay to prevent animation conflicts
+    const timer = setTimeout(() => {
+      if (currentContext === "daily") {
+        // For daily context: animate based on current time of day
+        const now = new Date();
+        
+        // Get current time as hours (0-24)
+        const currentHours = now.getHours() + now.getMinutes() / 60;
+        const progressPercent = Math.min(currentHours / 24, 1); // 0 to 1 based on time of day, capped at 1
+        
+        // If viewing current day, animate to current time
+        // If viewing past/future days, show full line
+        const targetProgress = dateOffset === 0 ? progressPercent : 1;
+        
+        animationLine.value = withTiming(targetProgress, { duration: 1000 });
+      } else {
+        // For weekly/monthly context: show full line
+        animationLine.value = withTiming(1, { duration: 1000 });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [currentContext, dateOffset]);
+
   // Filter data to show only points within the time range for non-project contexts
   const filteredData =
     currentContext === "project"
@@ -94,11 +126,6 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     [filteredData, startTime, endTime]
   );
 
-  const xRange = useMemo(
-    () => [chartMargin, chartWidth - chartMargin], // ✅ REQUIREMENT 6: Range for x-axis (pixel space)
-    [chartMargin, chartWidth]
-  );
-
   // ✅ REQUIREMENT 4 & 9: Y-domain for chart from mapping data values (energy level min/max always 0-10)
   const yDomain = useMemo(
     () =>
@@ -111,23 +138,23 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     [filteredData]
   );
 
-  // ✅ REQUIREMENT 10: Range for y-axis from chartHeight to 0
-  const yRange = useMemo(
-    () => [chartHeight - chartMargin, chartMargin], // Pixel space for y-axis (inverted)
-    [chartHeight, chartMargin]
-  );
-
   // ✅ REQUIREMENT 3: D3 scales for mapping data to pixels
   // ❌ REQUIREMENT 5 & 7: Should use scalePoint for x-axis (discrete time points), currently using scaleLinear
   const xScale = useMemo(
-    () => scaleLinear().domain(xDomain).range(xRange),
-    [xDomain, xRange]
+    () =>
+      scaleLinear()
+        .domain(xDomain)
+        .range([chartMargin, chartWidth - chartMargin]), // ✅ REQUIREMENT 6: Range for x-axis (pixel space)
+    [xDomain, chartMargin, chartWidth]
   );
 
   // ✅ REQUIREMENT 11: Y-scale created using scaleLinear mapping values from yDomain to yRange
   const yScale = useMemo(
-    () => scaleLinear().domain(yDomain).range(yRange),
-    [yDomain, yRange]
+    () =>
+      scaleLinear()
+        .domain(yDomain)
+        .range([chartHeight - chartMargin, chartMargin]), // ✅ REQUIREMENT 10: Range for y-axis from chartHeight to 0 (inverted)
+    [yDomain, chartHeight, chartMargin]
   );
 
   // Generate curved line following GitHub reference pattern
@@ -140,8 +167,44 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       .curve(curveBasis)(filteredData); // Following reference: .curve(curveBasis)(data)
   }, [filteredData, xScale, yScale]);
 
+  // Convert D3 SVG string to Skia path (following tutorial pattern)
+  const linePath = useMemo(() => {
+    if (!curvedLine) return null;
+    return Skia.Path.MakeFromSVGString(curvedLine);
+  }, [curvedLine]);
+
+  const copyDebugInfo = () => {
+    const debugInfo = `
+ENERGY CHART DEBUG INFO
+======================
+Context: ${currentContext} ${dateOffset > 0 ? `(-${dateOffset})` : "(current)"}
+Energy Points: ${filteredData.length} of ${data.length}
+X Min/Max: ${new Date(xDomain[0]).toLocaleDateString()} - ${new Date(xDomain[1]).toLocaleDateString()}
+Y Min/Max: [${yDomain[0]} - ${yDomain[1]}]
+X Range: [${chartMargin}px - ${chartWidth - chartMargin}px]
+Y Range: [${chartHeight - chartMargin}px - ${chartMargin}px]
+CurvedLine: ${curvedLine ? "✅ Generated" : "❌ Failed"}
+LinePath: ${linePath ? "✅ Created" : "❌ Failed"}
+Filtered Data: ${filteredData.length} points
+Chart Dimensions: ${chartWidth}x${chartHeight}, margin: ${chartMargin}
+Animation Progress: ${currentContext === "daily" && dateOffset === 0 ? `${((new Date().getHours() + new Date().getMinutes() / 60) / 24 * 100).toFixed(1)}%` : "100%"}
+
+FILTERED DATA POINTS:
+${filteredData.map(d => `- ${new Date(d.x).toLocaleString()}: Level ${d.y} (${d.originalLevel})`).join('\n')}
+
+RAW DATA:
+${data.map(d => `- ${new Date(d.x).toLocaleString()}: Level ${d.y} (${d.originalLevel})`).join('\n')}
+    `.trim();
+    
+    Clipboard.setString(debugInfo);
+    Alert.alert("Debug Info Copied!", "All debug information copied to clipboard");
+  };
+
   return (
     <>
+      <TouchableOpacity onPress={copyDebugInfo} style={{backgroundColor: 'orange', padding: 10, margin: 5, borderRadius: 5}}>
+        <Text style={{color: 'white', fontWeight: 'bold', textAlign: 'center'}}>📋 COPY DEBUG INFO</Text>
+      </TouchableOpacity>
       <Text>
         Context: {currentContext}{" "}
         {dateOffset > 0 ? `(-${dateOffset})` : "(current)"}
@@ -157,10 +220,10 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
         Y Min/Max: [{yDomain[0]} - {yDomain[1]}]
       </Text>
       <Text>
-        X Range: [{xRange[0]}px - {xRange[1]}px]
+        X Range: [{chartMargin}px - {chartWidth - chartMargin}px]
       </Text>
       <Text>
-        Y Range: [{yRange[0]}px - {yRange[1]}px]
+        Y Range: [{chartHeight - chartMargin}px - {chartMargin}px]
       </Text>
       {filteredData.length > 0 && (
         <Text>
@@ -179,12 +242,40 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       {curvedLine && (
         <Text>CurvedLine Generated: {curvedLine.length} characters</Text>
       )}
+      {linePath && <Text>LinePath Created: Skia path ready for rendering</Text>}
+      {!linePath && curvedLine && <Text>ERROR: CurvedLine exists but LinePath failed</Text>}
+      {!curvedLine && <Text>ERROR: No curvedLine generated</Text>}
+      <Text>
+        DEBUG: curvedLine={curvedLine ? "✅" : "❌"} | linePath={linePath ? "✅" : "❌"} | filteredData={filteredData.length}
+      </Text>
+      <Text>
+        Animation Progress: {
+          currentContext === "daily" && dateOffset === 0 
+            ? `${((new Date().getHours() + new Date().getMinutes() / 60) / 24 * 100).toFixed(1)}% (${new Date().getHours()}:${String(new Date().getMinutes()).padStart(2, '0')})`
+            : "100% (Full line)"
+        }
+      </Text>
       <Canvas
-        style={[
-          styles.container,
-          { height: chartHeight, width: chartWidth, margin: chartMargin },
-        ]}
-      ></Canvas>
+        style={{
+          height: chartHeight,
+          width: chartWidth,
+          backgroundColor: "#f0f0f0", // Light background to see canvas bounds
+          borderWidth: 2,
+          borderColor: "red", // Red border to debug canvas positioning
+        }}
+      >
+        {linePath && (
+          <Path
+            path={linePath}
+            style={"stroke"}
+            strokeWidth={6} // Thicker line to make it more visible
+            color={"blue"} // Blue color to make it stand out
+            strokeCap={"round"}
+            start={0}
+            end={animationLine}
+          />
+        )}
+      </Canvas>
     </>
   );
 };

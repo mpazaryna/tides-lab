@@ -107,6 +107,55 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     timestamp: "2025-08-30T16:30:00.000Z",
     timezone: "America/Los_Angeles",
   },
+  // August 31st data points
+  {
+    id: "energy_011",
+    tide_id: "daily_2025_08_31",
+    energy_level: "medium",
+    context: "Early morning start, coffee brewing",
+    timestamp: "2025-08-31T14:00:00.000Z", // 7:00 AM PDT = 14:00 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_012",
+    tide_id: "daily_2025_08_31",
+    energy_level: 8,
+    context: "Morning momentum building, tackling chart animations",
+    timestamp: "2025-08-31T16:30:00.000Z", // 9:30 AM PDT = 16:30 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_013",
+    tide_id: "daily_2025_08_31",
+    energy_level: "high",
+    context: "Flow state achieved working on line chart tutorial",
+    timestamp: "2025-08-31T18:15:00.000Z", // 11:15 AM PDT = 18:15 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_014",
+    tide_id: "daily_2025_08_31",
+    energy_level: 7,
+    context: "Post-lunch focus, debugging animation issues",
+    timestamp: "2025-08-31T21:00:00.000Z", // 2:00 PM PDT = 21:00 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_015",
+    tide_id: "daily_2025_08_31",
+    energy_level: 9,
+    context: "Breakthrough moment - time-based animation working!",
+    timestamp: "2025-08-31T23:45:00.000Z", // 4:45 PM PDT = 23:45 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_016",
+    tide_id: "daily_2025_08_31",
+    energy_level: "high",
+    context: "Evening wrap-up, satisfied with progress",
+    timestamp: "2025-09-01T02:20:00.000Z", // 7:20 PM PDT = 02:20 UTC next day
+    timezone: "America/Los_Angeles",
+  },
 ];
 
 // Sample tide progress data for dashboard/chart display
@@ -136,6 +185,15 @@ export const sampleTideProgress: TideEnergyProgress[] = [
       (e) => e.tide_id === "project_mobile_refactor"
     ),
     average_energy: 8.67,
+    trend: "increasing",
+  },
+  {
+    tide_id: "daily_2025_08_31",
+    tide_title: "Daily Focus - Aug 31",
+    energy_readings: sampleEnergyData.filter(
+      (e) => e.tide_id === "daily_2025_08_31"
+    ),
+    average_energy: 7.83,
     trend: "increasing",
   },
 ];
