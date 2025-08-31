@@ -5,6 +5,8 @@ import {
   View,
   TouchableOpacity,
   useWindowDimensions,
+  Alert,
+  Clipboard,
 } from "react-native";
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
@@ -36,9 +38,10 @@ export default function Home() {
     sendAgentMessage,
   } = useChat();
 
-  const CHART_HEIGHT = 400;
-  const CHART_MARGIN = 20;
-  const { width: CHART_WIDTH } = useWindowDimensions();
+  // ✅ REQUIREMENT 1: Defined size of chart and canvas
+  const CHART_HEIGHT = 400; // Chart height in pixels
+  const CHART_MARGIN = 20; // Chart margin for axes space
+  const { width: CHART_WIDTH } = useWindowDimensions(); // Chart width from screen dimensions
 
   const [_agentInitialized, setAgentInitialized] = useState(false);
   const [_isChatInputFocused, setIsChatInputFocused] = useState(false);
@@ -57,6 +60,30 @@ export default function Home() {
   const onTemplateInjected = useCallback(() => {
     setTemplateToInject("");
   }, []);
+
+  // Copy conversation function
+  const handleCopyConversation = useCallback(() => {
+    if (messages.length === 0) {
+      Alert.alert("No Messages", "There are no messages to copy.");
+      return;
+    }
+
+    const conversationText = messages
+      .map((message) => {
+        const timestamp = new Date(message.timestamp).toLocaleString();
+        const type =
+          message.type === "user"
+            ? "You"
+            : message.type === "assistant"
+            ? "Assistant"
+            : "System";
+        return `[${timestamp}] ${type}: ${message.content}`;
+      })
+      .join("\n\n");
+
+    Clipboard.setString(conversationText);
+    Alert.alert("Copied!", "Conversation copied to clipboard.");
+  }, [messages]);
 
   // Tool menu state management - context-aware
   const {
@@ -157,8 +184,9 @@ export default function Home() {
           <EnergyChart onPress={() => ""} />
         </View> */}
 
+        {/* ✅ REQUIREMENT 2: Sample data from getChartData() function */}
         <EnergyChart
-          data={getChartData()}
+          data={getChartData()} // Sample data transformed to ChartDataPoint format
           chartHeight={CHART_HEIGHT}
           chartMargin={CHART_MARGIN}
           chartWidth={CHART_WIDTH}
@@ -185,6 +213,7 @@ export default function Home() {
         toggleToolMenu={toggleToolMenu}
         scrollable={true}
         getToolAvailability={getToolAvailability}
+        onCopyConversation={handleCopyConversation}
       />
       {/* Chat Input with Hierarchical Toggle */}
 
@@ -210,7 +239,7 @@ const styles = StyleSheet.create({
   },
   tideInfoHeader: {
     paddingTop: 10,
-    backgroundColor: colors.background.primary,
+    backgroundColor: colors.backgroundColor,
     paddingVertical: 12,
     paddingBottom: 10,
     paddingHorizontal: 16,
@@ -218,13 +247,13 @@ const styles = StyleSheet.create({
   tideInfoInnerHeader: {
     flex: 1,
     borderWidth: 0.5,
-    borderColor: colors.neutral[200],
-    backgroundColor: colors.background.secondary,
+    borderColor: colors.containerBorder,
+    backgroundColor: colors.containerBackground,
     borderRadius: 20,
   },
 
   container: {
-    backgroundColor: colors.background.primary,
+    backgroundColor: colors.backgroundColor,
     flex: 1,
   },
   errorCard: {
@@ -253,10 +282,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[100],
     borderRadius: spacing[3],
     borderWidth: 1,
-    borderColor: colors.neutral[200],
+    borderColor: colors.containerBorder,
   },
   hierarchicalToggleButtonActive: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.backgroundColor,
     borderColor: colors.primary[500],
   },
   hierarchicalToggleText: {

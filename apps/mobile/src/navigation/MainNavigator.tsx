@@ -11,7 +11,6 @@ import {
 import {
   AlignLeft,
   ChartLine,
-  ChevronDown,
   Sun,
   Waves,
   Moon,
@@ -33,7 +32,7 @@ const SettingsHeaderButton = React.memo(({ navigation }: any) => (
     onPress={() => navigation.navigate(Routes.main.settings)}
     style={{ padding: 8 }}
   >
-    <AlignLeft size={24} color={colors.text.primary} />
+    <AlignLeft size={24} color={colors.titleColor} />
   </TouchableOpacity>
 ));
 
@@ -42,7 +41,7 @@ const TidesHeaderButton = React.memo(({ navigation }: any) => (
     onPress={() => navigation.navigate(Routes.main.settings)}
     style={{ padding: 8 }}
   >
-    <ChartLine size={24} color={colors.text.primary} />
+    <ChartLine size={24} color={colors.titleColor} />
   </TouchableOpacity>
 ));
 1;
@@ -113,10 +112,10 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
             marginTop: 0,
           }}
         >
-          <Text color={colors.text.primary} variant="header">
+          <Text color={colors.titleColor} variant="header">
             {title}
           </Text>
-
+          {/* 
           <View
             style={{
               flexDirection: "row",
@@ -136,7 +135,7 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
               strokeWidth={2.5}
               style={{ marginLeft: 2.5 }}
             />
-          </View>
+          </View> */}
         </View>
       </TouchableOpacity>
 
@@ -292,7 +291,7 @@ const getHomeScreenOptions = ({ navigation, route }: any) => ({
   headerShadowVisible: false,
   headerRight: () => <TidesHeaderButton navigation={navigation} />,
   headerLeft: () => <SettingsHeaderButton navigation={navigation} />,
-  back: colors.background.primary,
+  back: colors.backgroundColor,
 });
 
 export default function MainNavigator() {
@@ -302,7 +301,7 @@ export default function MainNavigator() {
       screenOptions={{
         ...NavigationOptions.withHeader,
         headerStyle: {
-          backgroundColor: colors.background.primary,
+          backgroundColor: colors.backgroundColor,
         },
       }}
     >

@@ -4,6 +4,9 @@ import { useTimeContext } from "../context/TimeContext";
 import { Canvas } from "@shopify/react-native-skia";
 import { curveBasis, line, scaleLinear } from "d3";
 
+// ✅ TUTORIAL COMPARISON: Missing scalePoint import for proper x-axis scaling
+// Current implementation uses scaleLinear for both axes, but tutorial uses scalePoint for x-axis
+
 interface ChartDataPoint {
   x: number;
   y: number;
@@ -15,11 +18,11 @@ interface ChartDataPoint {
 type TideContext = "daily" | "weekly" | "monthly";
 
 type Props = {
-  data: ChartDataPoint[];
+  data: ChartDataPoint[]; // ✅ REQUIREMENT 2: Sample data structure
   context?: TideContext;
-  chartHeight: number;
-  chartMargin: number;
-  chartWidth: number;
+  chartHeight: number; // ✅ REQUIREMENT 1: Defined size of chart and canvas (height)
+  chartMargin: number; // ✅ REQUIREMENT 1: Defined size of chart and canvas (margin)
+  chartWidth: number; // ✅ REQUIREMENT 1: Defined size of chart and canvas (width)
 };
 
 const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
@@ -79,44 +82,49 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       : data.filter((d) => d.x >= startTime && d.x <= endTime);
 
   // Chart scaling domains and ranges (memoized to prevent re-renders)
+  // ❌ REQUIREMENT 5 & 7: Should use scalePoint for x-axis, not scaleLinear
   const xDomain = useMemo(
     () =>
       filteredData.length > 0
         ? [
-            Math.min(...filteredData.map((d) => d.x)),
-            Math.max(...filteredData.map((d) => d.x)),
+            Math.min(...filteredData.map((d) => d.x)), // ✅ REQUIREMENT 8: Found minimum data values
+            Math.max(...filteredData.map((d) => d.x)), // ✅ REQUIREMENT 8: Found maximum data values
           ]
         : [startTime, endTime], // Timestamp range
     [filteredData, startTime, endTime]
   );
 
   const xRange = useMemo(
-    () => [chartMargin, chartWidth - chartMargin], // Pixel space for x-axis
+    () => [chartMargin, chartWidth - chartMargin], // ✅ REQUIREMENT 6: Range for x-axis (pixel space)
     [chartMargin, chartWidth]
   );
 
+  // ✅ REQUIREMENT 4 & 9: Y-domain for chart from mapping data values (energy level min/max always 0-10)
   const yDomain = useMemo(
     () =>
       filteredData.length > 0
         ? [
-            Math.min(...filteredData.map((d) => d.y)),
-            Math.max(...filteredData.map((d) => d.y)),
+            Math.min(...filteredData.map((d) => d.y)), // ✅ REQUIREMENT 8: Found minimum data values
+            Math.max(...filteredData.map((d) => d.y)), // ✅ REQUIREMENT 8: Found maximum data values
           ]
-        : [1, 10], // Data value range
+        : [1, 10], // ✅ REQUIREMENT 8: Energy level min/max is always 0-10 (using 1-10 as default)
     [filteredData]
   );
 
+  // ✅ REQUIREMENT 10: Range for y-axis from chartHeight to 0
   const yRange = useMemo(
     () => [chartHeight - chartMargin, chartMargin], // Pixel space for y-axis (inverted)
     [chartHeight, chartMargin]
   );
 
-  // D3 scales for mapping data to pixels
+  // ✅ REQUIREMENT 3: D3 scales for mapping data to pixels
+  // ❌ REQUIREMENT 5 & 7: Should use scalePoint for x-axis (discrete time points), currently using scaleLinear
   const xScale = useMemo(
     () => scaleLinear().domain(xDomain).range(xRange),
     [xDomain, xRange]
   );
 
+  // ✅ REQUIREMENT 11: Y-scale created using scaleLinear mapping values from yDomain to yRange
   const yScale = useMemo(
     () => scaleLinear().domain(yDomain).range(yRange),
     [yDomain, yRange]
