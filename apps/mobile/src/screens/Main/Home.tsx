@@ -8,6 +8,7 @@ import {
   Alert,
   Clipboard,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
 import { loggingService } from "../../services/loggingService";
@@ -27,8 +28,11 @@ import {
 import EnergyChart from "../../components/EnergyChart";
 import { getChartData } from "../../components/data/data";
 import { ContextToggle } from "../../components/ContextToggle";
+import { Text } from "../../design-system";
+import { ChevronLeft, ChevronRight, Timer } from "lucide-react-native";
 
 export default function Home() {
+  const insets = useSafeAreaInsets();
   const { getCurrentServerUrl, isConnected } = useMCP();
   const {
     messages,
@@ -40,7 +44,7 @@ export default function Home() {
   } = useChat();
 
   // ✅ REQUIREMENT 1: Defined size of chart and canvas
-  const CHART_HEIGHT = 64; // Chart height in pixels
+  const CHART_HEIGHT = 44; // Chart height in pixels
   const CHART_MARGIN = 20; // Chart margin for axes space
   const { width } = useWindowDimensions();
   const CHART_WIDTH = width - 48; // Chart width from screen dimensions minus 52px
@@ -171,7 +175,7 @@ export default function Home() {
   );
 
   return (
-    <View style={[styles.container]}>
+    <View style={[styles.container, { paddingTop: 44 }]}>
       <ScrollView
         ref={scrollViewRef}
         keyboardDismissMode="interactive"
@@ -188,6 +192,44 @@ export default function Home() {
 
         {/* ✅ REQUIREMENT 2: Sample data from getChartData() function */}
         <View style={styles.energyChartWrapper}>
+          <View style={styles.descriptionContainerRow}>
+            <View style={styles.wholeDescriptionContainer}>
+              <View style={styles.descriptionContainer}>
+                <Text variant="caption" color="rgba(255,255,255,.5)">
+                  Last updated:
+                </Text>
+
+                <Text
+                  variant="body"
+                  weight="semibold"
+                  color="rgba(255,255,255,1)"
+                  style={styles.title}
+                >
+                  Last updated:
+                </Text>
+              </View>
+            </View>
+            <View style={styles.wholeDescriptionContainer}>
+              <View style={styles.descriptionContainer}>
+                <Text
+                  variant="caption"
+                  color="rgba(255,255,255,.5)"
+                  style={{ textAlign: "right" }}
+                >
+                  Last updated:
+                </Text>
+                <Text
+                  variant="body"
+                  weight="semibold"
+                  color="rgba(255,255,255,1)"
+                  style={styles.title}
+                >
+                  Last updated:
+                </Text>
+              </View>
+              <Timer />
+            </View>
+          </View>
           <EnergyChart
             data={getChartData()} // Sample data transformed to ChartDataPoint format
             chartHeight={CHART_HEIGHT}
@@ -196,7 +238,43 @@ export default function Home() {
           />
           {/* Context Toggle */}
           <View style={styles.contextToggleWrapper}>
+            <View
+              style={{
+                height: 28,
+                width: 28,
+                backgroundColor: "rgba(255,255,255,.08)",
+                borderRadius: 100,
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ChevronLeft
+                height={18}
+                width={18}
+                color="rgba(255,255,255,0.5)"
+              />
+            </View>
             <ContextToggle variant="full" showLabels={true} />
+            <View
+              style={{
+                height: 28,
+                width: 28,
+                backgroundColor: "rgba(255,255,255,.08)",
+                borderRadius: 100,
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ChevronRight
+                height={18}
+                width={18}
+                color="rgba(255,255,255,0.5)"
+              />
+            </View>
           </View>
         </View>
         {/* Messages */}
@@ -319,25 +397,57 @@ const styles = StyleSheet.create({
   },
   energyChartWrapper: {
     margin: 16,
-    marginTop: 8,
+    marginTop: 4,
+    marginBottom: 0,
     backgroundColor: colors.inputPlaceholder,
     borderRadius: 20,
-    padding: 8,
-    shadowColor: "#000",
+    paddingBottom: 8,
+    paddingHorizontal: 12,
+    shadowColor: "#000000",
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowRadius: 20,
-    shadowOpacity: 0.035,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    gap: 10,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 44,
+    paddingTop: 13,
   },
   contextToggleWrapper: {
-    paddingBottom: 12,
-    paddingTop: 4,
+    paddingBottom: 0,
     alignItems: "center",
+    display: "flex",
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    height: 44,
+  },
+  descriptionContainerRow: {
+    width: "100%",
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 24,
+  },
+  wholeDescriptionContainer: {
+    display: "flex",
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  descriptionContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 0,
+  },
+  title: {},
+  description: {
+    color: "rgba(255,255,255,.6)",
+    fontSize: 13,
   },
 });

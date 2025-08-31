@@ -176,11 +176,129 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       return combinedData.sort((a, b) => a.x - b.x);
     }
 
+    if (currentContext === "weekly" && filteredData.length > 0) {
+      // For weekly context: group by day of week (hard-coded positions)
+      const weeklyData = new Map<number, ChartDataPoint[]>();
+
+      // Initialize all 7 days of the week
+      for (let i = 0; i < 7; i++) {
+        weeklyData.set(i, []);
+      }
+
+      filteredData.forEach((point) => {
+        const dayOfWeek = new Date(point.x).getDay(); // 0 = Sunday, 1 = Monday, etc.
+        weeklyData.get(dayOfWeek)!.push(point);
+      });
+
+      // Only create points for days that have actual data
+      const weeklyAverages: ChartDataPoint[] = [];
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+        const dayPoints = weeklyData.get(dayOfWeek)!;
+
+        // Only add points for days with actual data
+        if (dayPoints.length > 0) {
+          // Has data - show actual average
+          const avgEnergy =
+            dayPoints.reduce((sum, point) => sum + point.y, 0) /
+            dayPoints.length;
+
+          // Use actual day timestamp (noon of that day) for proper alignment with current time
+          const weekStart = new Date(startTime);
+          const dayTimestamp = new Date(weekStart);
+          dayTimestamp.setDate(weekStart.getDate() + dayOfWeek);
+          dayTimestamp.setHours(12, 0, 0, 0); // Noon of that day
+
+          weeklyAverages.push({
+            x: dayTimestamp.getTime(),
+            y: avgEnergy,
+            label: `${dayNames[dayOfWeek]} avg: ${avgEnergy.toFixed(1)}`,
+            timestamp: dayTimestamp.toISOString(),
+            originalLevel: avgEnergy.toFixed(1),
+          });
+        }
+        // Skip days with no data - don't add any point
+      }
+
+      console.log("Weekly averages by day:", weeklyAverages.length, "points");
+
+      // Add invisible edge points for continuous line if Sunday/Saturday missing
+      if (weeklyAverages.length > 0) {
+        const hasSunday = weeklyAverages.some((point) =>
+          point.label.startsWith("Sun")
+        );
+        const hasSaturday = weeklyAverages.some((point) =>
+          point.label.startsWith("Sat")
+        );
+
+        // Add invisible Sunday point if missing (use first available day's energy)
+        if (!hasSunday) {
+          const firstPoint = weeklyAverages[0];
+          const weekStart = new Date(startTime);
+          const sundayTimestamp = new Date(weekStart);
+          sundayTimestamp.setDate(weekStart.getDate() + 0); // Sunday (day 0)
+          sundayTimestamp.setHours(12, 0, 0, 0);
+
+          weeklyAverages.unshift({
+            x: sundayTimestamp.getTime(),
+            y: firstPoint.y,
+            label: `Sun edge: ${firstPoint.y.toFixed(1)}`,
+            timestamp: sundayTimestamp.toISOString(),
+            originalLevel: firstPoint.y.toFixed(1),
+            isGenerated: true, // Invisible edge point
+          });
+        }
+
+        // Add invisible Saturday point if missing (use last available day's energy)
+        if (!hasSaturday) {
+          const lastPoint = weeklyAverages[weeklyAverages.length - 1];
+          const weekStart = new Date(startTime);
+          const saturdayTimestamp = new Date(weekStart);
+          saturdayTimestamp.setDate(weekStart.getDate() + 6); // Saturday (day 6)
+          saturdayTimestamp.setHours(12, 0, 0, 0);
+
+          weeklyAverages.push({
+            x: saturdayTimestamp.getTime(),
+            y: lastPoint.y,
+            label: `Sat edge: ${lastPoint.y.toFixed(1)}`,
+            timestamp: saturdayTimestamp.toISOString(),
+            originalLevel: lastPoint.y.toFixed(1),
+            isGenerated: true, // Invisible edge point
+          });
+        }
+
+        // Sort by position to ensure proper line drawing
+        weeklyAverages.sort((a, b) => a.x - b.x);
+      }
+
+      // For current week (dateOffset === 0), add current time endpoint
+      if (dateOffset === 0 && weeklyAverages.length > 0) {
+        const now = new Date();
+        const lastDataPoint = weeklyAverages[weeklyAverages.length - 1];
+        
+        const currentTimePoint: ChartDataPoint = {
+          x: now.getTime(),
+          y: lastDataPoint.y,
+          label: "Current time",
+          timestamp: now.toISOString(),
+          originalLevel: lastDataPoint.y,
+          isGenerated: true,
+        };
+        weeklyAverages.push(currentTimePoint);
+      }
+
+      return weeklyAverages;
+    }
+
     if (currentContext !== "monthly" || filteredData.length === 0) {
       return filteredData;
     }
 
-    // Group data by date (ignore time within day)
+    // For monthly context: calculate 3-day rolling average for each day that has data
+    console.log("Monthly context - filteredData:", filteredData.length, "points");
+    
+    // Group data by date first
     const dailyData = new Map<string, ChartDataPoint[]>();
 
     filteredData.forEach((point) => {
@@ -191,52 +309,88 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       dailyData.get(dateKey)!.push(point);
     });
 
-    // Calculate daily averages
-    const dailyAverages: ChartDataPoint[] = [];
-    for (const [dateKey, dayPoints] of dailyData.entries()) {
-      const avgEnergy =
-        dayPoints.reduce((sum, point) => sum + point.y, 0) / dayPoints.length;
-      // Use noon of each day for positioning
-      const dayDate = new Date(dateKey);
-      dayDate.setHours(12, 0, 0, 0);
+    console.log("Monthly daily groups:", Array.from(dailyData.keys()));
 
-      dailyAverages.push({
-        x: dayDate.getTime(),
-        y: avgEnergy,
-        label: `Daily avg: ${avgEnergy.toFixed(1)}`,
-        timestamp: dayDate.toISOString(),
-        originalLevel: avgEnergy.toFixed(1),
-      });
+    // Calculate daily averages for days with data
+    const dailyAverages = new Map<number, number>(); // dayOfMonth -> average energy
+    for (const [dateKey, dayPoints] of dailyData.entries()) {
+      const avgEnergy = dayPoints.reduce((sum, point) => sum + point.y, 0) / dayPoints.length;
+      const dayOfMonth = new Date(dateKey).getDate();
+      dailyAverages.set(dayOfMonth, avgEnergy);
+      console.log(`Day ${dayOfMonth}: ${avgEnergy.toFixed(1)} (from ${dayPoints.length} points)`);
     }
 
-    // Sort by date
-    dailyAverages.sort((a, b) => a.x - b.x);
+    // Calculate total days in month for positioning
+    const monthStart = new Date(startTime);
+    const monthEnd = new Date(endTime);
+    const totalDays = Math.ceil((monthEnd.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Apply 3-day rolling average
-    const rollingAverages: ChartDataPoint[] = [];
-    for (let i = 0; i < dailyAverages.length; i++) {
-      const windowStart = Math.max(0, i - 1); // 1 day before
-      const windowEnd = Math.min(dailyAverages.length - 1, i + 1); // 1 day after
-
-      let sum = 0;
-      let count = 0;
-
-      for (let j = windowStart; j <= windowEnd; j++) {
-        sum += dailyAverages[j].y;
-        count++;
+    // Apply 3-day rolling average and position according to actual timestamps
+    const monthlyPoints: ChartDataPoint[] = [];
+    const now = new Date();
+    
+    for (const [dayOfMonth, dailyAvg] of dailyAverages.entries()) {
+      // For current month, only include days up to today
+      const dayTimestamp = new Date(monthStart.getFullYear(), monthStart.getMonth(), dayOfMonth, 12, 0, 0);
+      if (dateOffset === 0 && dayTimestamp.getTime() > now.getTime()) {
+        continue; // Skip future days in current month
       }
 
-      const rollingAvg = sum / count;
-      rollingAverages.push({
-        x: dailyAverages[i].x,
+      // Calculate 3-day rolling average (day-1, day, day+1)
+      let sum = 0;
+      let count = 0;
+      
+      for (let offset = -1; offset <= 1; offset++) {
+        const checkDay = dayOfMonth + offset;
+        if (dailyAverages.has(checkDay)) {
+          sum += dailyAverages.get(checkDay)!;
+          count++;
+        }
+      }
+      
+      const rollingAvg = count > 0 ? sum / count : dailyAvg;
+      
+      monthlyPoints.push({
+        x: dayTimestamp.getTime(),
         y: rollingAvg,
-        label: `3-day avg: ${rollingAvg.toFixed(1)}`,
-        timestamp: dailyAverages[i].timestamp,
+        label: `Day ${dayOfMonth}: ${rollingAvg.toFixed(1)}`,
+        timestamp: dayTimestamp.toISOString(),
         originalLevel: rollingAvg.toFixed(1),
       });
     }
 
-    return rollingAverages;
+    // Add month start point for continuous line (like daily midnight start)
+    if (monthlyPoints.length > 0) {
+      const firstDataPoint = monthlyPoints[0];
+      const monthStartPoint: ChartDataPoint = {
+        x: startTime,
+        y: firstDataPoint.y,
+        label: "Month start",
+        timestamp: new Date(startTime).toISOString(),
+        originalLevel: firstDataPoint.y,
+        isGenerated: true,
+      };
+      monthlyPoints.unshift(monthStartPoint);
+
+      // For current month (dateOffset === 0), add current time endpoint
+      if (dateOffset === 0) {
+        const now = new Date();
+        const lastDataPoint = monthlyPoints[monthlyPoints.length - 1];
+        
+        const currentTimePoint: ChartDataPoint = {
+          x: now.getTime(),
+          y: lastDataPoint.y,
+          label: "Current time",
+          timestamp: now.toISOString(),
+          originalLevel: lastDataPoint.y,
+          isGenerated: true,
+        };
+        monthlyPoints.push(currentTimePoint);
+      }
+    }
+
+    console.log("Monthly rolling averages:", monthlyPoints.length, "points");
+    return monthlyPoints.sort((a, b) => a.x - b.x);
   }, [currentContext, filteredData]);
 
   // Chart scaling domains and ranges (memoized to prevent re-renders)
@@ -245,8 +399,14 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     if (currentContext === "daily") {
       // Always use full day range for proper time positioning
       return [startTime, endTime]; // 00:00 to 23:59 of the selected day
+    } else if (currentContext === "weekly") {
+      // Always use full week range for proper day positioning
+      return [startTime, endTime]; // Full week regardless of which days have data
+    } else if (currentContext === "monthly") {
+      // Always use full month range for proper day positioning
+      return [startTime, endTime]; // Full month regardless of which days have data
     } else {
-      // For weekly/monthly: use min/max of actual data
+      // For project: use min/max of actual data
       return processedData.length > 0
         ? [
             Math.min(...processedData.map((d) => d.x)),
@@ -272,54 +432,87 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     [chartHeight] // yDomain is now constant [0, 10]
   );
 
-  // Generate current time line (up to present)
-  const curvedLine = useMemo(() => {
+  // Generate full background line (left to right across entire chart)
+  const fullBackgroundLine = useMemo(() => {
     if (processedData.length === 0) return null;
 
-    return line<ChartDataPoint>()
-      .x((d) => xScale(d.x)) // Following reference: .x(d => x(d.label)!)
-      .y((d) => yScale(d.y)) // Following reference: .y(d => y(d.value))
-      .curve(curveCardinal.tension(0.5))(processedData); // More responsive to data points than curveBasis
-  }, [processedData, xScale, yScale]);
+    // For background line, exclude current time endpoints to avoid the "turn around" effect
+    const backgroundData = processedData.filter(point => 
+      !point.isGenerated || (point.label !== "Current time")
+    );
 
-  // Generate future line data (from current time to end of day) - for daily context only
-  const futureLineData = useMemo(() => {
-    if (
-      currentContext !== "daily" ||
-      dateOffset !== 0 ||
-      processedData.length === 0
-    ) {
-      return [];
+    // Create extended data that spans full chart width
+    const extendedData = [...backgroundData];
+    
+    // Add starting point at left edge - natural extension from first point
+    if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
+      extendedData.unshift({
+        ...backgroundData[0],
+        x: xDomain[0],
+        y: backgroundData[0].y, // Use first point's energy for natural lead-in
+        isGenerated: true,
+      });
     }
-
-    // Get the current time point (last point from current data)
-    const currentTimePoint = processedData[processedData.length - 1];
-    if (!currentTimePoint) return [];
-
-    // Create end-of-day point using last RECORDED data point's energy level
-    const endOfDay = new Date(endTime);
-    const endOfDayPoint: ChartDataPoint = {
-      x: endOfDay.getTime(),
-      y: currentTimePoint.y, // Use the current time point's energy level (last recorded)
-      label: "End of day",
-      timestamp: endOfDay.toISOString(),
-      originalLevel: currentTimePoint.y,
-      isGenerated: true,
-    };
-
-    // Simple future line: just current time point + end of day point
-    // This creates a straight line from current time to end of day at last recorded energy level
-    return [currentTimePoint, endOfDayPoint];
-  }, [currentContext, dateOffset, filteredData, processedData, endTime]);
-
-  const futureCurvedLine = useMemo(() => {
-    if (futureLineData.length === 0) return null;
+    
+    // Add ending point at right edge - natural extension from last point
+    if (backgroundData.length > 0 && backgroundData[backgroundData.length - 1].x < xDomain[1]) {
+      extendedData.push({
+        ...backgroundData[backgroundData.length - 1],
+        x: xDomain[1],
+        y: backgroundData[backgroundData.length - 1].y, // Use last point's energy for natural lead-out
+        isGenerated: true,
+      });
+    }
 
     return line<ChartDataPoint>()
       .x((d) => xScale(d.x))
       .y((d) => yScale(d.y))
-      .curve(curveCardinal.tension(0.5))(futureLineData);
-  }, [futureLineData, xScale, yScale]);
+      .curve(curveCardinal.tension(0))(extendedData);
+  }, [processedData, xScale, yScale, xDomain]);
+
+  // Generate current time line (follows background line path, just truncated at current time)
+  const curvedLine = useMemo(() => {
+    if (processedData.length === 0) return null;
+
+    // Use the same data as background line but filter to current time for current periods
+    const backgroundData = processedData.filter(point => 
+      !point.isGenerated || (point.label !== "Current time")
+    );
+
+    let dataForLine = backgroundData;
+    if (dateOffset === 0) {
+      const now = new Date();
+      // Filter to current time but keep the same path structure as background
+      dataForLine = backgroundData.filter(point => point.x <= now.getTime());
+    }
+
+    // Add left edge starting point if needed (same as background line)
+    if (dataForLine.length > 0 && dataForLine[0].x > xDomain[0]) {
+      dataForLine = [{
+        ...dataForLine[0],
+        x: xDomain[0],
+        y: dataForLine[0].y,
+        isGenerated: true,
+      }, ...dataForLine];
+    }
+
+    return line<ChartDataPoint>()
+      .x((d) => xScale(d.x))
+      .y((d) => yScale(d.y))
+      .curve(curveCardinal.tension(0))(dataForLine);
+  }, [processedData, xScale, yScale, dateOffset, xDomain]);
+
+
+  // Convert background line to Skia path
+  const backgroundLinePath = useMemo(() => {
+    if (!fullBackgroundLine) return null;
+    try {
+      return Skia.Path.MakeFromSVGString(fullBackgroundLine);
+    } catch (error) {
+      console.warn("Failed to create background Skia path from SVG string:", error);
+      return null;
+    }
+  }, [fullBackgroundLine]);
 
   // Convert D3 SVG string to Skia path (following tutorial pattern)
   const linePath = useMemo(() => {
@@ -332,16 +525,6 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     }
   }, [curvedLine]);
 
-  // Convert future line to Skia path
-  const futureLinePath = useMemo(() => {
-    if (!futureCurvedLine) return null;
-    try {
-      return Skia.Path.MakeFromSVGString(futureCurvedLine);
-    } catch (error) {
-      console.warn("Failed to create future Skia path from SVG string:", error);
-      return null;
-    }
-  }, [futureCurvedLine]);
 
   const copyDebugInfo = () => {
     const debugInfo = `
@@ -410,13 +593,13 @@ ${data
         style={{
           height: chartHeight,
           width: chartWidth,
-          backgroundColor: colors.inputPlaceholder,
+          backgroundColor: "transparent",
         }}
       >
-        {/* Base line - 10% opacity, shows full path structure */}
-        {linePath && (
+        {/* Background line - 10% opacity, spans full chart from left to right */}
+        {backgroundLinePath && (
           <Path
-            path={linePath}
+            path={backgroundLinePath}
             style={"stroke"}
             strokeWidth={2}
             color={"rgba(255,255,255,0.1)"}
@@ -439,22 +622,8 @@ ${data
           />
         )}
 
-        {/* Future projection line - 10% opacity */}
-        {futureLinePath && (
-          <Path
-            path={futureLinePath}
-            style={"stroke"}
-            strokeWidth={2}
-            color={"rgba(255,255,255,0.1)"}
-            strokeCap={"round"}
-            start={0}
-            end={1}
-          />
-        )}
-
-        {/* Current time indicator for daily context */}
-        {currentContext === "daily" &&
-          dateOffset === 0 &&
+        {/* Current time indicator for all contexts */}
+        {dateOffset === 0 &&
           (() => {
             const now = new Date();
             const currentTimeX = xScale(now.getTime());
@@ -488,82 +657,116 @@ ${data
           })}
       </Canvas>
       <View style={styles.notchWrapper}>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-          <Text style={styles.notchNumber}>3</Text>
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-          <Text style={styles.notchNumber}>6</Text>
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-          <Text style={styles.notchNumber}>9</Text>
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-          <Text style={styles.notchNumber}>12</Text>
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-          <Text style={styles.notchNumber}>3</Text>
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-          <Text style={styles.notchNumber}>6</Text>
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-          <Text style={styles.notchNumber}>9</Text>
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
-        <View style={styles.notchItem}>
-          <View style={styles.notch} />
-        </View>
+        {currentContext === "daily" &&
+          // Daily: Show 25 hour notches (0-24) with labels: 3, 6, 9, 12, 3, 6, 9
+          // Includes midnight at start (hour 0) and midnight at end (hour 24)
+          Array.from({ length: 25 }, (_, i) => {
+            const hour = i; // Hours 0-24 (0=start midnight, 24=end midnight)
+            const isFirstNotch = hour === 0;
+            const isLastNotch = hour === 24;
+
+            return (
+              <View
+                key={hour}
+                style={[
+                  styles.notchItem,
+                  isFirstNotch && { marginLeft: -chartWidth / 50 },
+                  isLastNotch && { marginRight: -chartWidth / 50 },
+                ]}
+              >
+                {!isFirstNotch && !isLastNotch && <View style={styles.notch} />}
+                {(hour === 3 ||
+                  hour === 6 ||
+                  hour === 9 ||
+                  hour === 12 ||
+                  hour === 15 ||
+                  hour === 18 ||
+                  hour === 21) && (
+                  <Text style={styles.notchNumber} numberOfLines={1}>
+                    {hour === 12 ? 12 : hour > 12 ? hour - 12 : hour}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+
+        {currentContext === "weekly" &&
+          (() => {
+            // Calculate the start of the week
+            const weekStart = new Date(startTime);
+            const dayLabels = ["S", "M", "T", "W", "T", "F", "S"];
+            const days = [];
+
+            for (let i = 0; i < 7; i++) {
+              const currentDay = new Date(weekStart);
+              currentDay.setDate(weekStart.getDate() + i);
+              const dayOfWeek = currentDay.getDay();
+              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+              days.push(
+                <View key={i} style={styles.notchItem}>
+                  <View
+                    style={[styles.notch, isWeekend && styles.weekendNotch]}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.notchNumber,
+                      isWeekend && styles.weekendLabel,
+                    ]}
+                  >
+                    {dayLabels[dayOfWeek]}
+                  </Text>
+                </View>
+              );
+            }
+            return days;
+          })()}
+
+        {currentContext === "monthly" &&
+          (() => {
+            // Monthly: Show notch for every day + 2 edge notches, label every 3rd day (skip first/last)
+            const monthStart = new Date(startTime);
+            const monthEnd = new Date(endTime);
+            const totalDays = Math.ceil(
+              (monthEnd.getTime() - monthStart.getTime()) /
+                (1000 * 60 * 60 * 24)
+            );
+            const totalNotches = totalDays + 2; // Add 2 edge notches
+            const edgeMargin = -chartWidth / (totalNotches * 2);
+            const notches = [];
+
+            for (let dayNum = 0; dayNum <= totalDays + 1; dayNum++) {
+              const isFirstNotch = dayNum === 0;
+              const isLastNotch = dayNum === totalDays + 1;
+              const isEdgeNotch = isFirstNotch || isLastNotch;
+
+              // For labeling, only consider actual days (1 to totalDays)
+              const actualDay = dayNum;
+              const currentDate = new Date(monthStart);
+              currentDate.setDate(monthStart.getDate() + dayNum - 1);
+
+              notches.push(
+                <View
+                  key={dayNum}
+                  style={[
+                    styles.notchItem,
+                    isFirstNotch && { marginLeft: edgeMargin },
+                    isLastNotch && { marginRight: edgeMargin },
+                  ]}
+                >
+                  {!isEdgeNotch && <View style={styles.notch} />}
+                  {!isEdgeNotch &&
+                    actualDay % 3 === 1 && ( // Label every 3rd day, skip edge notches
+                      <Text style={styles.notchNumber} numberOfLines={1}>
+                        {currentDate.getDate()}
+                      </Text>
+                    )}
+                </View>
+              );
+            }
+            return notches;
+          })()}
       </View>
 
       {/* Tooltips showing energy levels and native timestamps (excluding generated points) */}
@@ -586,12 +789,9 @@ ${data
               hour12: true,
             });
           } else if (currentContext === "weekly") {
-            // Show day and time for weekly context: "Mon 7:00 AM"
-            timeText = localDate.toLocaleString([], {
+            // Show just the day for weekly context (average per day)
+            timeText = localDate.toLocaleDateString([], {
               weekday: "short",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
             });
           } else if (currentContext === "monthly") {
             // Show date for monthly context (3-day avg): "Aug 31"
@@ -662,20 +862,36 @@ const styles = StyleSheet.create({
   notchWrapper: {
     display: "flex",
     flexDirection: "row",
+    overflow: "visible",
   },
   notchItem: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: 2.5,
+    gap: 3,
     flex: 1,
+    overflow: "visible",
   },
   notch: {
     height: 3,
     width: 0.5,
-    backgroundColor: "rgba(255,255,255,.2)",
+    backgroundColor: "rgba(255,255,255,.3)",
+    overflow: "visible",
   },
   notchNumber: {
     color: "rgba(255,255,255,.4)",
+    overflow: "visible",
+    minWidth: 24,
+    textAlign: "center",
+    fontSize: 11,
+    lineHeight: 11,
+  },
+  weekendNotch: {
+    backgroundColor: "rgba(255,255,255,.1)",
+    overflow: "visible",
+  },
+  weekendLabel: {
+    color: "rgba(255,255,255,.25)",
+    overflow: "visible",
   },
 });

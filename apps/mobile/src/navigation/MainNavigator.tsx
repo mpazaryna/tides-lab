@@ -2,14 +2,8 @@
 
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import {
-  TouchableOpacity,
-  View,
-} from "react-native";
-import {
-  AlignLeft,
-  ChartLine,
-} from "lucide-react-native";
+import { TouchableOpacity, View } from "react-native";
+import { AlignLeft, ChartLine } from "lucide-react-native";
 import Home from "../screens/Main/Home";
 import Settings from "../screens/Main/Settings";
 import TideDetails from "../screens/Main/TideDetails";
@@ -63,7 +57,10 @@ const getHomeScreenOptions = ({ navigation, route }: any) => ({
   headerShadowVisible: false,
   headerRight: () => <TidesHeaderButton navigation={navigation} />,
   headerLeft: () => <SettingsHeaderButton navigation={navigation} />,
-  back: colors.backgroundColor,
+  headerTransparent: true,
+  headerStyle: {
+    backgroundColor: 'transparent',
+  },
 });
 
 export default function MainNavigator() {

@@ -61,26 +61,26 @@ export const sampleEnergyData: EnergyDataPoint[] = [
   },
   {
     id: "energy_005",
-    tide_id: "weekly_2025_w35",
+    tide_id: "weekly_2025_w36",
     energy_level: "high",
     context: "Monday morning motivation",
-    timestamp: "2025-08-25T08:00:00.000Z",
+    timestamp: "2025-09-01T08:00:00.000Z", // Monday Sept 1
     timezone: "America/Los_Angeles",
   },
   {
     id: "energy_006",
-    tide_id: "weekly_2025_w35",
+    tide_id: "weekly_2025_w36",
     energy_level: 7,
     context: "Wednesday productivity peak",
-    timestamp: "2025-08-27T14:30:00.000Z",
+    timestamp: "2025-09-03T14:30:00.000Z", // Wednesday Sept 3
     timezone: "America/Los_Angeles",
   },
   {
     id: "energy_007",
-    tide_id: "weekly_2025_w35",
+    tide_id: "weekly_2025_w36",
     energy_level: "low",
     context: "Friday afternoon energy crash",
-    timestamp: "2025-08-29T16:00:00.000Z",
+    timestamp: "2025-09-05T16:00:00.000Z", // Friday Sept 5
     timezone: "America/Los_Angeles",
   },
   {
@@ -107,9 +107,106 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     timestamp: "2025-08-30T16:30:00.000Z",
     timezone: "America/Los_Angeles",
   },
-  // August 31st data points
+  // August data points spread throughout the month
   {
     id: "energy_011",
+    tide_id: "daily_2025_08_05",
+    energy_level: 7,
+    context: "Strong Monday start",
+    timestamp: "2025-08-05T13:00:00.000Z",
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_012",
+    tide_id: "daily_2025_08_08",
+    energy_level: "high",
+    context: "Peak energy Thursday",
+    timestamp: "2025-08-08T15:30:00.000Z",
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_013",
+    tide_id: "daily_2025_08_12",
+    energy_level: 5,
+    context: "Monday blues",
+    timestamp: "2025-08-12T14:00:00.000Z",
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_014",
+    tide_id: "daily_2025_08_15",
+    energy_level: 8,
+    context: "Mid-month productivity",
+    timestamp: "2025-08-15T16:00:00.000Z",
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_015",
+    tide_id: "daily_2025_08_18",
+    energy_level: "medium",
+    context: "Weekend prep energy",
+    timestamp: "2025-08-18T12:00:00.000Z",
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_016",
+    tide_id: "daily_2025_08_22",
+    energy_level: 9,
+    context: "Thursday high performance",
+    timestamp: "2025-08-22T14:30:00.000Z",
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_017",
+    tide_id: "daily_2025_08_25",
+    energy_level: "low",
+    context: "Sunday recovery",
+    timestamp: "2025-08-25T17:00:00.000Z",
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_018",
+    tide_id: "daily_2025_08_28",
+    energy_level: 6,
+    context: "Wednesday steady pace",
+    timestamp: "2025-08-28T13:15:00.000Z",
+    timezone: "America/Los_Angeles",
+  },
+  // August 30-31st data points
+  {
+    id: "energy_019",
+    tide_id: "daily_2025_08_30",
+    energy_level: "high",
+    context: "Morning coffee kicked in, feeling very focused",
+    timestamp: "2025-08-30T13:15:00.000Z", // 9:15 AM EDT = 13:15 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_020",
+    tide_id: "daily_2025_08_30",
+    energy_level: 8,
+    context: "Mid-morning energy still strong",
+    timestamp: "2025-08-30T14:30:00.000Z", // 10:30 AM EDT = 14:30 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_021",
+    tide_id: "daily_2025_08_30",
+    energy_level: "medium",
+    context: "Post-lunch dip, struggling with concentration",
+    timestamp: "2025-08-30T17:45:00.000Z", // 1:45 PM EDT = 17:45 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_022",
+    tide_id: "daily_2025_08_30",
+    energy_level: 6,
+    context: "Afternoon recovery, second wind",
+    timestamp: "2025-08-30T19:20:00.000Z", // 3:20 PM EDT = 19:20 UTC
+    timezone: "America/Los_Angeles",
+  },
+  {
+    id: "energy_023",
     tide_id: "daily_2025_08_31",
     energy_level: "medium",
     context: "Early morning start, coffee brewing",
@@ -117,7 +214,7 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     timezone: "America/Los_Angeles",
   },
   {
-    id: "energy_012",
+    id: "energy_024",
     tide_id: "daily_2025_08_31",
     energy_level: 8,
     context: "Morning momentum building, tackling chart animations",
@@ -125,7 +222,7 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     timezone: "America/Los_Angeles",
   },
   {
-    id: "energy_013",
+    id: "energy_025",
     tide_id: "daily_2025_08_31",
     energy_level: "high",
     context: "Flow state achieved working on line chart tutorial",
@@ -133,14 +230,13 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     timezone: "America/Los_Angeles",
   },
   {
-    id: "energy_014",
+    id: "energy_026",
     tide_id: "daily_2025_08_31",
     energy_level: 7,
     context: "Post-lunch focus, debugging animation issues",
     timestamp: "2025-08-31T18:00:00.000Z", // 2:00 PM EDT = 18:00 UTC
     timezone: "America/Los_Angeles",
   },
-
 ];
 
 // Sample tide progress data for dashboard/chart display

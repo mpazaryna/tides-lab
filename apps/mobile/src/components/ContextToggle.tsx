@@ -4,14 +4,9 @@ import {
   View,
   Modal,
   TouchableWithoutFeedback,
+  Pressable,
 } from "react-native";
-import {
-  ChartLine,
-  Sun,
-  Waves,
-  Moon,
-  Lock,
-} from "lucide-react-native";
+import { ChartLine, Sun, Waves, Moon, Lock } from "lucide-react-native";
 import { colors } from "../design-system/tokens";
 import { useTimeContext, TimeContextType } from "../context/TimeContext";
 import { Text } from "./Text";
@@ -21,9 +16,9 @@ interface ContextToggleProps {
   variant?: "compact" | "full";
 }
 
-export const ContextToggle: React.FC<ContextToggleProps> = ({ 
-  showLabels = false, 
-  variant = "compact" 
+export const ContextToggle: React.FC<ContextToggleProps> = ({
+  showLabels = false,
+  variant = "compact",
 }) => {
   const {
     currentContext,
@@ -64,48 +59,59 @@ export const ContextToggle: React.FC<ContextToggleProps> = ({
 
   if (variant === "full") {
     // Segmented control layout for energy chart
-    const activeOptions = contextOptions.filter(option => !option.disabled);
-    
+    const activeOptions = contextOptions.filter((option) => !option.disabled);
+
     return (
-      <View style={{
-        flexDirection: "row",
-        backgroundColor: "rgba(255,255,255,0.15)",
-        borderRadius: 12,
-        padding: 2,
-        opacity: contextSwitchingDisabled ? 0.6 : 1.0,
-      }}>
+      <View
+        style={{
+          flexDirection: "row",
+          backgroundColor: "rgba(255,255,255,0.08)",
+          borderRadius: 8,
+          padding: 2,
+          overflow: 'hidden',
+          opacity: contextSwitchingDisabled ? 0.6 : 1.0,
+          flex: 1,
+        }}
+      >
         {activeOptions.map((option) => {
           const isSelected = currentContext === option.value;
           const isDisabled = contextSwitchingDisabled || option.disabled;
 
           return (
-            <TouchableOpacity
+            <Pressable
               key={option.value}
               onPress={() => handleContextSelect(option.value)}
               disabled={isDisabled}
               style={{
                 flex: 1,
                 alignItems: "center",
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                borderRadius: 10,
+                height: 28,
+                justifyContent: "center",
+                borderRadius: 6,
                 backgroundColor: isSelected
-                  ? "rgba(255,255,255,0.25)"
+                  ? "rgba(255,255,255,0.15)"
                   : "transparent",
+                shadowColor: "#000",
+                shadowOffset: {
+                  width: 0,
+                  height: 4,
+                },
+                shadowRadius: 20,
+                shadowOpacity: 0.035,
               }}
             >
               <Text
                 style={{
-                  fontSize: 14,
-                  fontWeight: isSelected ? "600" : "400",
-                  color: isSelected 
-                    ? "rgba(255,255,255,1.0)"
-                    : "rgba(255,255,255,0.6)",
+                  fontSize: 13,
+                  fontWeight: isSelected ? "500" : "400",
+                  color: isSelected
+                    ? "rgba(255,255,255,0.87)"
+                    : "rgba(255,255,255,0.5)",
                 }}
               >
                 {option.label}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
@@ -130,7 +136,9 @@ export const ContextToggle: React.FC<ContextToggleProps> = ({
         disabled={contextSwitchingDisabled}
       >
         {(() => {
-          const currentOption = contextOptions.find(option => option.value === currentContext);
+          const currentOption = contextOptions.find(
+            (option) => option.value === currentContext
+          );
           const IconComponent = currentOption?.icon || Sun;
           return (
             <>
@@ -156,12 +164,14 @@ export const ContextToggle: React.FC<ContextToggleProps> = ({
 
       <Modal visible={showTooltip} transparent animationType="fade">
         <TouchableWithoutFeedback onPress={() => setShowTooltip(false)}>
-          <View style={{ 
-            flex: 1, 
-            alignItems: "center", 
-            justifyContent: "center",
-            backgroundColor: "rgba(0,0,0,0.3)" 
-          }}>
+          <View
+            style={{
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "rgba(0,0,0,0.3)",
+            }}
+          >
             <View
               style={{
                 backgroundColor: colors.background.secondary,
