@@ -39,9 +39,10 @@ export default function Home() {
   } = useChat();
 
   // ✅ REQUIREMENT 1: Defined size of chart and canvas
-  const CHART_HEIGHT = 400; // Chart height in pixels
+  const CHART_HEIGHT = 64; // Chart height in pixels
   const CHART_MARGIN = 20; // Chart margin for axes space
-  const { width: CHART_WIDTH } = useWindowDimensions(); // Chart width from screen dimensions
+  const { width } = useWindowDimensions();
+  const CHART_WIDTH = width - 48; // Chart width from screen dimensions minus 52px
 
   const [_agentInitialized, setAgentInitialized] = useState(false);
   const [_isChatInputFocused, setIsChatInputFocused] = useState(false);
@@ -185,12 +186,14 @@ export default function Home() {
         </View> */}
 
         {/* ✅ REQUIREMENT 2: Sample data from getChartData() function */}
-        <EnergyChart
-          data={getChartData()} // Sample data transformed to ChartDataPoint format
-          chartHeight={CHART_HEIGHT}
-          chartMargin={CHART_MARGIN}
-          chartWidth={CHART_WIDTH}
-        />
+        <View style={styles.energyChartWrapper}>
+          <EnergyChart
+            data={getChartData()} // Sample data transformed to ChartDataPoint format
+            chartHeight={CHART_HEIGHT}
+            chartMargin={CHART_MARGIN}
+            chartWidth={CHART_WIDTH}
+          />
+        </View>
         {/* Messages */}
         <ChatMessages messages={messages} />
       </ScrollView>
@@ -308,5 +311,23 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: "transparent",
+  },
+  energyChartWrapper: {
+    margin: 16,
+    marginTop: 8,
+    backgroundColor: colors.inputPlaceholder,
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowRadius: 20,
+    shadowOpacity: 0.035,
+    height: 169,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

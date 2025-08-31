@@ -113,7 +113,7 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     tide_id: "daily_2025_08_31",
     energy_level: "medium",
     context: "Early morning start, coffee brewing",
-    timestamp: "2025-08-31T14:00:00.000Z", // 7:00 AM PDT = 14:00 UTC
+    timestamp: "2025-08-31T11:00:00.000Z", // 7:00 AM EDT = 11:00 UTC
     timezone: "America/Los_Angeles",
   },
   {
@@ -121,7 +121,7 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     tide_id: "daily_2025_08_31",
     energy_level: 8,
     context: "Morning momentum building, tackling chart animations",
-    timestamp: "2025-08-31T16:30:00.000Z", // 9:30 AM PDT = 16:30 UTC
+    timestamp: "2025-08-31T13:30:00.000Z", // 9:30 AM EDT = 13:30 UTC
     timezone: "America/Los_Angeles",
   },
   {
@@ -129,7 +129,7 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     tide_id: "daily_2025_08_31",
     energy_level: "high",
     context: "Flow state achieved working on line chart tutorial",
-    timestamp: "2025-08-31T18:15:00.000Z", // 11:15 AM PDT = 18:15 UTC
+    timestamp: "2025-08-31T15:15:00.000Z", // 11:15 AM EDT = 15:15 UTC
     timezone: "America/Los_Angeles",
   },
   {
@@ -137,25 +137,10 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     tide_id: "daily_2025_08_31",
     energy_level: 7,
     context: "Post-lunch focus, debugging animation issues",
-    timestamp: "2025-08-31T21:00:00.000Z", // 2:00 PM PDT = 21:00 UTC
+    timestamp: "2025-08-31T18:00:00.000Z", // 2:00 PM EDT = 18:00 UTC
     timezone: "America/Los_Angeles",
   },
-  {
-    id: "energy_015",
-    tide_id: "daily_2025_08_31",
-    energy_level: 9,
-    context: "Breakthrough moment - time-based animation working!",
-    timestamp: "2025-08-31T23:45:00.000Z", // 4:45 PM PDT = 23:45 UTC
-    timezone: "America/Los_Angeles",
-  },
-  {
-    id: "energy_016",
-    tide_id: "daily_2025_08_31",
-    energy_level: "high",
-    context: "Evening wrap-up, satisfied with progress",
-    timestamp: "2025-09-01T02:20:00.000Z", // 7:20 PM PDT = 02:20 UTC next day
-    timezone: "America/Los_Angeles",
-  },
+
 ];
 
 // Sample tide progress data for dashboard/chart display

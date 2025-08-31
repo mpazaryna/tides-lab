@@ -6,7 +6,7 @@ export const colors = {
   textColor: "#425466",
   backgroundColor: "#F6F9FC",
   inputBackground: "#F6F9FC",
-  checkboxInputBackgorund: "#E7ECF1",
+  checkboxInputBackground: "#E7ECF1",
   inputPlaceholder: "#727F96",
   containerBackground: "#FFFFFF",
   containerBorder: "#CBD6E0",
