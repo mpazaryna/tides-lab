@@ -26,6 +26,7 @@ import {
 } from "../../utils/agentCommandUtils";
 import EnergyChart from "../../components/EnergyChart";
 import { getChartData } from "../../components/data/data";
+import { ContextToggle } from "../../components/ContextToggle";
 
 export default function Home() {
   const { getCurrentServerUrl, isConnected } = useMCP();
@@ -193,6 +194,10 @@ export default function Home() {
             chartMargin={CHART_MARGIN}
             chartWidth={CHART_WIDTH}
           />
+          {/* Context Toggle */}
+          <View style={styles.contextToggleWrapper}>
+            <ContextToggle variant="full" showLabels={true} />
+          </View>
         </View>
         {/* Messages */}
         <ChatMessages messages={messages} />
@@ -325,9 +330,14 @@ const styles = StyleSheet.create({
     },
     shadowRadius: 20,
     shadowOpacity: 0.035,
-    height: 169,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 44,
+  },
+  contextToggleWrapper: {
+    paddingBottom: 12,
+    paddingTop: 4,
+    alignItems: "center",
   },
 });

@@ -19,7 +19,6 @@ import {
 import { curveBasis, line, scaleLinear, curveCardinal } from "d3";
 import { useSharedValue, withTiming } from "react-native-reanimated";
 import { colors } from "../design-system";
-import { ContextToggle } from "./ContextToggle";
 
 // ✅ TUTORIAL COMPARISON: Missing scalePoint import for proper x-axis scaling
 // Current implementation uses scaleLinear for both axes, but tutorial uses scalePoint for x-axis
@@ -116,7 +115,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     const timer = setTimeout(() => {
       // Animate all contexts - they all get the same smooth drawing animation
       animationLine.value = withTiming(1, { duration: 600 });
-    }, 100);
+    }, 0);
 
     return () => clearTimeout(timer);
   }, [currentContext, dateOffset, startTime, endTime]);
@@ -407,11 +406,6 @@ ${data
         position: "relative",
       }}
     >
-      {/* Context Toggle */}
-      <View style={styles.contextToggleWrapper}>
-        <ContextToggle variant="full" showLabels={true} />
-      </View>
-      
       <Canvas
         style={{
           height: chartHeight,
@@ -419,7 +413,20 @@ ${data
           backgroundColor: colors.inputPlaceholder,
         }}
       >
-        {/* Current time line - full opacity */}
+        {/* Base line - 10% opacity, shows full path structure */}
+        {linePath && (
+          <Path
+            path={linePath}
+            style={"stroke"}
+            strokeWidth={2}
+            color={"rgba(255,255,255,0.1)"}
+            strokeCap={"round"}
+            start={0}
+            end={1}
+          />
+        )}
+
+        {/* Animated line - 100% opacity, fills from left to current time */}
         {linePath && (
           <Path
             path={linePath}
@@ -650,11 +657,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
     borderRadius: 8,
     justifyContent: "center",
-    alignItems: "center",
-  },
-  contextToggleWrapper: {
-    paddingBottom: 12,
-    paddingTop: 4,
     alignItems: "center",
   },
   notchWrapper: {
