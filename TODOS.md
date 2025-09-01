@@ -137,6 +137,8 @@ export default {
 Impact: Core hierarchical features are untested in production scenarios.
 ```
 
+- turn the "wholedecriptioncontainer into a touchable opacity that opens a modal for teh "give energy update for the MCP tool call   
+
 - **[BACKEND]** AI Service Resource Management (src/services/aiService.ts)
 
 ```javascript
