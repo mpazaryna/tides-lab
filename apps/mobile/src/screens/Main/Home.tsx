@@ -117,19 +117,19 @@ export default function Home() {
     //   minute: '2-digit',
     //   hour12: true
     // });
-    
+
     // Format the relative time
     let relativeTime;
     if (minutes < 1) relativeTime = "Just now";
-    else if (minutes < 60) relativeTime = `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-    else if (hours < 24) relativeTime = `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    else if (minutes < 60)
+      relativeTime = `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    else if (hours < 24)
+      relativeTime = `${hours} hour${hours > 1 ? "s" : ""} ago`;
     else if (days === 1) relativeTime = "Yesterday";
     else relativeTime = `${days} day${days > 1 ? "s" : ""} ago`;
-    
+
     return `${relativeTime}`;
   }, []);
-
-
 
   // Template injection callback
   const injectTemplate = useCallback((template: string) => {
@@ -265,32 +265,31 @@ export default function Home() {
         </View> */}
 
         {/* ✅ REQUIREMENT 2: Sample data from getChartData() function */}
-        <ImageBackground 
-          source={require('../../../assets/defaultTidesGradient.png')}
+        <ImageBackground
+          source={require("../../../assets/defaultTidesGradient.png")}
           style={styles.energyChartWrapper}
           imageStyle={styles.energyChartBackgroundImage}
         >
           <View style={styles.descriptionContainerRow}>
             <View style={styles.wholeDescriptionContainer}>
               <View style={styles.descriptionContainer}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                >
                   <Text variant="caption" color="rgba(255,255,255,.5)">
                     Updated {getLastUpdatedDisplay()}
                   </Text>
                   <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
                 </View>
 
-           
-                  <Text
-                    variant="body"
-                    weight="semibold"
-                    color="rgba(255,255,255,1)"
-                    style={styles.title}
-                  >
-                    {getLastEnergyDisplay()}
-                  </Text>
-   
-            
+                <Text
+                  variant="body"
+                  weight="semibold"
+                  color="rgba(255,255,255,1)"
+                  style={styles.title}
+                >
+                  {getLastEnergyDisplay()}
+                </Text>
               </View>
             </View>
             <View style={styles.wholeDescriptionContainer}>
@@ -311,15 +310,17 @@ export default function Home() {
                   {isAtPresent ? 'Current' : `${dateOffset} ${currentContext === 'daily' ? 'day' : currentContext === 'weekly' ? 'week' : 'month'}${dateOffset > 1 ? 's' : ''} ago`}
                 </Text> */}
               </View>
-              <Timer />
+              <Timer color={"white"} />
             </View>
           </View>
+
           <EnergyChart
             data={getChartData()} // Sample data transformed to ChartDataPoint format
             chartHeight={CHART_HEIGHT}
             chartMargin={CHART_MARGIN}
             chartWidth={CHART_WIDTH}
           />
+
           {/* Context Toggle */}
           <View style={styles.contextToggleWrapper}>
             <TouchableOpacity
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   wholeDescriptionContainer: {
     display: "flex",

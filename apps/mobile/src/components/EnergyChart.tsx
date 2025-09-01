@@ -1,11 +1,4 @@
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Alert,
-  Clipboard,
-  View,
-} from "react-native";
+import { StyleSheet, Alert, Clipboard, View } from "react-native";
 import React, { useMemo, useEffect } from "react";
 import { useTimeContext } from "../context/TimeContext";
 import { useLocationData } from "../hooks/useLocationData";
@@ -15,13 +8,12 @@ import {
   Path,
   Skia,
   Circle,
-  Text as SkiaText,
   Group,
   Shadow,
 } from "@shopify/react-native-skia";
 import { curveBasis, line, scaleLinear, curveCardinal } from "d3";
 import { useSharedValue, withTiming } from "react-native-reanimated";
-import { colors } from "../design-system";
+import { colors, Text } from "../design-system";
 
 // ✅ TUTORIAL COMPARISON: Missing scalePoint import for proper x-axis scaling
 // Current implementation uses scaleLinear for both axes, but tutorial uses scalePoint for x-axis
@@ -111,7 +103,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
   // Calculate sunrise/sunset for the current date being displayed
   const getSunTimes = useMemo(() => {
     if (!locationInfo.latitude || !locationInfo.longitude) return null;
-    
+
     const targetDate = new Date();
     if (currentContext === "daily") {
       targetDate.setDate(targetDate.getDate() - dateOffset);
@@ -121,8 +113,12 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     } else {
       return null; // No sun markers for monthly/project
     }
-    
-    return SunCalc.getTimes(targetDate, locationInfo.latitude, locationInfo.longitude);
+
+    return SunCalc.getTimes(
+      targetDate,
+      locationInfo.latitude,
+      locationInfo.longitude
+    );
   }, [locationInfo, currentContext, dateOffset]);
 
   const animationLine = useSharedValue(0);
@@ -297,7 +293,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       if (dateOffset === 0 && weeklyAverages.length > 0) {
         const now = new Date();
         const lastDataPoint = weeklyAverages[weeklyAverages.length - 1];
-        
+
         const currentTimePoint: ChartDataPoint = {
           x: now.getTime(),
           y: lastDataPoint.y,
@@ -317,8 +313,12 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     }
 
     // For monthly context: calculate 3-day rolling average for each day that has data
-    console.log("Monthly context - filteredData:", filteredData.length, "points");
-    
+    console.log(
+      "Monthly context - filteredData:",
+      filteredData.length,
+      "points"
+    );
+
     // Group data by date first
     const dailyData = new Map<string, ChartDataPoint[]>();
 
@@ -335,24 +335,38 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     // Calculate daily averages for days with data
     const dailyAverages = new Map<number, number>(); // dayOfMonth -> average energy
     for (const [dateKey, dayPoints] of dailyData.entries()) {
-      const avgEnergy = dayPoints.reduce((sum, point) => sum + point.y, 0) / dayPoints.length;
+      const avgEnergy =
+        dayPoints.reduce((sum, point) => sum + point.y, 0) / dayPoints.length;
       const dayOfMonth = new Date(dateKey).getDate();
       dailyAverages.set(dayOfMonth, avgEnergy);
-      console.log(`Day ${dayOfMonth}: ${avgEnergy.toFixed(1)} (from ${dayPoints.length} points)`);
+      console.log(
+        `Day ${dayOfMonth}: ${avgEnergy.toFixed(1)} (from ${
+          dayPoints.length
+        } points)`
+      );
     }
 
     // Calculate total days in month for positioning
     const monthStart = new Date(startTime);
     const monthEnd = new Date(endTime);
-    const totalDays = Math.ceil((monthEnd.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24));
+    const totalDays = Math.ceil(
+      (monthEnd.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     // Apply 3-day rolling average and position according to actual timestamps
     const monthlyPoints: ChartDataPoint[] = [];
     const now = new Date();
-    
+
     for (const [dayOfMonth, dailyAvg] of dailyAverages.entries()) {
       // For current month, only include days up to today
-      const dayTimestamp = new Date(monthStart.getFullYear(), monthStart.getMonth(), dayOfMonth, 12, 0, 0);
+      const dayTimestamp = new Date(
+        monthStart.getFullYear(),
+        monthStart.getMonth(),
+        dayOfMonth,
+        12,
+        0,
+        0
+      );
       if (dateOffset === 0 && dayTimestamp.getTime() > now.getTime()) {
         continue; // Skip future days in current month
       }
@@ -360,7 +374,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       // Calculate 3-day rolling average (day-1, day, day+1)
       let sum = 0;
       let count = 0;
-      
+
       for (let offset = -1; offset <= 1; offset++) {
         const checkDay = dayOfMonth + offset;
         if (dailyAverages.has(checkDay)) {
@@ -368,9 +382,9 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
           count++;
         }
       }
-      
+
       const rollingAvg = count > 0 ? sum / count : dailyAvg;
-      
+
       monthlyPoints.push({
         x: dayTimestamp.getTime(),
         y: rollingAvg,
@@ -397,7 +411,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       if (dateOffset === 0) {
         const now = new Date();
         const lastDataPoint = monthlyPoints[monthlyPoints.length - 1];
-        
+
         const currentTimePoint: ChartDataPoint = {
           x: now.getTime(),
           y: lastDataPoint.y,
@@ -458,13 +472,13 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     if (processedData.length === 0) return null;
 
     // For background line, exclude current time endpoints to avoid the "turn around" effect
-    const backgroundData = processedData.filter(point => 
-      !point.isGenerated || (point.label !== "Current time")
+    const backgroundData = processedData.filter(
+      (point) => !point.isGenerated || point.label !== "Current time"
     );
 
     // Create extended data that spans full chart width
     const extendedData = [...backgroundData];
-    
+
     // Add starting point at left edge - natural extension from first point
     if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
       extendedData.unshift({
@@ -474,9 +488,12 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
         isGenerated: true,
       });
     }
-    
+
     // Add ending point at right edge - natural extension from last point
-    if (backgroundData.length > 0 && backgroundData[backgroundData.length - 1].x < xDomain[1]) {
+    if (
+      backgroundData.length > 0 &&
+      backgroundData[backgroundData.length - 1].x < xDomain[1]
+    ) {
       extendedData.push({
         ...backgroundData[backgroundData.length - 1],
         x: xDomain[1],
@@ -496,13 +513,13 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     if (processedData.length === 0) return null;
 
     // For background line, exclude current time endpoints to avoid the "turn around" effect
-    const backgroundData = processedData.filter(point => 
-      !point.isGenerated || (point.label !== "Current time")
+    const backgroundData = processedData.filter(
+      (point) => !point.isGenerated || point.label !== "Current time"
     );
 
     // Create extended data that spans full chart width
     const extendedData = [...backgroundData];
-    
+
     // Add starting point at left edge
     if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
       extendedData.unshift({
@@ -512,9 +529,12 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
         isGenerated: true,
       });
     }
-    
+
     // Add ending point at right edge
-    if (backgroundData.length > 0 && backgroundData[backgroundData.length - 1].x < xDomain[1]) {
+    if (
+      backgroundData.length > 0 &&
+      backgroundData[backgroundData.length - 1].x < xDomain[1]
+    ) {
       extendedData.push({
         ...backgroundData[backgroundData.length - 1],
         x: xDomain[1],
@@ -532,8 +552,10 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     if (!linePath) return null;
 
     // Convert to fill by adding bottom edge points
-    const fillPathString = `${linePath} L${xScale(xDomain[1])},${chartHeight} L${xScale(xDomain[0])},${chartHeight} Z`;
-    
+    const fillPathString = `${linePath} L${xScale(
+      xDomain[1]
+    )},${chartHeight} L${xScale(xDomain[0])},${chartHeight} Z`;
+
     try {
       return Skia.Path.MakeFromSVGString(fillPathString);
     } catch (error) {
@@ -544,20 +566,30 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
 
   // Generate daylight filled area below the background line (daily context only)
   const daylightFillPath = useMemo(() => {
-    if (currentContext !== "daily" || processedData.length === 0 || !getSunTimes?.sunrise || !getSunTimes?.sunset) {
+    if (
+      currentContext !== "daily" ||
+      processedData.length === 0 ||
+      !getSunTimes?.sunrise ||
+      !getSunTimes?.sunset
+    ) {
       return null;
     }
 
     const sunriseTime = getSunTimes.sunrise.getTime();
     const sunsetTime = getSunTimes.sunset.getTime();
     
+    // Calculate 7px buffer zones in time units
+    const bufferTimeMs = (7 / chartWidth) * (xDomain[1] - xDomain[0]);
+    const sunriseBufferEnd = sunriseTime + bufferTimeMs;
+    const sunsetBufferStart = sunsetTime - bufferTimeMs;
+
     // Use the same background data processing
-    const backgroundData = processedData.filter(point => 
-      !point.isGenerated || (point.label !== "Current time")
+    const backgroundData = processedData.filter(
+      (point) => !point.isGenerated || point.label !== "Current time"
     );
 
     const extendedData = [...backgroundData];
-    
+
     // Add starting point at left edge
     if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
       extendedData.unshift({
@@ -567,9 +599,12 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
         isGenerated: true,
       });
     }
-    
+
     // Add ending point at right edge
-    if (backgroundData.length > 0 && backgroundData[backgroundData.length - 1].x < xDomain[1]) {
+    if (
+      backgroundData.length > 0 &&
+      backgroundData[backgroundData.length - 1].x < xDomain[1]
+    ) {
       extendedData.push({
         ...backgroundData[backgroundData.length - 1],
         x: xDomain[1],
@@ -581,12 +616,13 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     // Find or interpolate the energy level at sunrise and sunset times
     const findEnergyAtTime = (targetTime: number) => {
       // Find the closest points before and after the target time
-      const beforePoint = extendedData.filter(p => p.x <= targetTime).pop();
-      const afterPoint = extendedData.find(p => p.x >= targetTime);
-      
+      const beforePoint = extendedData.filter((p) => p.x <= targetTime).pop();
+      const afterPoint = extendedData.find((p) => p.x >= targetTime);
+
       if (beforePoint && afterPoint && beforePoint.x !== afterPoint.x) {
         // Linear interpolation
-        const ratio = (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
+        const ratio =
+          (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
         return beforePoint.y + ratio * (afterPoint.y - beforePoint.y);
       } else if (beforePoint) {
         return beforePoint.y;
@@ -596,23 +632,35 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       return 5; // Default middle energy level
     };
 
-    // Create daylight data that includes boundary points and internal points
-    const sunriseY = findEnergyAtTime(sunriseTime);
-    const sunsetY = findEnergyAtTime(sunsetTime);
-    
-    // Include points within daylight hours plus boundary interpolated points
+    // Create daylight data with 7px buffer zones
+    const sunriseBufferY = findEnergyAtTime(sunriseBufferEnd);
+    const sunsetBufferY = findEnergyAtTime(sunsetBufferStart);
+
+    // Daylight area (shrunk by 7px buffer on each side)
     let daylightData = [
-      { x: sunriseTime, y: sunriseY, label: "sunrise", timestamp: "", originalLevel: sunriseY }
+      {
+        x: sunriseBufferEnd,
+        y: sunriseBufferY,
+        label: "sunrise buffer end",
+        timestamp: "",
+        originalLevel: sunriseBufferY,
+      },
     ];
-    
-    // Add actual data points within daylight hours
-    const innerPoints = extendedData.filter(point => 
-      point.x > sunriseTime && point.x < sunsetTime
+
+    // Add actual data points within daylight hours (excluding buffer zones)
+    const innerPoints = extendedData.filter(
+      (point) => point.x > sunriseBufferEnd && point.x < sunsetBufferStart
     );
     daylightData.push(...innerPoints);
-    
-    // Add sunset boundary point
-    daylightData.push({ x: sunsetTime, y: sunsetY, label: "sunset", timestamp: "", originalLevel: sunsetY });
+
+    // Add sunset buffer boundary point
+    daylightData.push({
+      x: sunsetBufferStart,
+      y: sunsetBufferY,
+      label: "sunset buffer start",
+      timestamp: "",
+      originalLevel: sunsetBufferY,
+    });
 
     if (daylightData.length < 2) {
       return null; // Need at least sunrise and sunset points
@@ -626,9 +674,11 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
 
     if (!daylightLinePath) return null;
 
-    // Create the fill path: line path + bottom edge
-    const fillPathString = `${daylightLinePath} L${xScale(sunsetTime)},${chartHeight} L${xScale(sunriseTime)},${chartHeight} Z`;
-    
+    // Create the fill path: line path + bottom edge (shrunk daylight area)
+    const fillPathString = `${daylightLinePath} L${xScale(
+      sunsetBufferStart
+    )},${chartHeight} L${xScale(sunriseBufferEnd)},${chartHeight} Z`;
+
     try {
       return Skia.Path.MakeFromSVGString(fillPathString);
     } catch (error) {
@@ -637,18 +687,190 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     }
   }, [processedData, xScale, yScale, currentContext, getSunTimes, chartHeight]);
 
+  // Generate sunrise buffer zone fill path (7px transition area)
+  const sunriseBufferFillPath = useMemo(() => {
+    if (
+      currentContext !== "daily" ||
+      processedData.length === 0 ||
+      !getSunTimes?.sunrise
+    ) {
+      return null;
+    }
+
+    const sunriseTime = getSunTimes.sunrise.getTime();
+    const bufferTimeMs = (7 / chartWidth) * (xDomain[1] - xDomain[0]);
+    const sunriseBufferEnd = sunriseTime + bufferTimeMs;
+
+    // Find energy levels at buffer boundaries using same helper as daylight
+    const backgroundData = processedData.filter(
+      (point) => !point.isGenerated || point.label !== "Current time"
+    );
+    const extendedData = [...backgroundData];
+    
+    if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
+      extendedData.unshift({
+        ...backgroundData[0],
+        x: xDomain[0],
+        y: backgroundData[0].y,
+        isGenerated: true,
+      });
+    }
+    
+    if (
+      backgroundData.length > 0 &&
+      backgroundData[backgroundData.length - 1].x < xDomain[1]
+    ) {
+      extendedData.push({
+        ...backgroundData[backgroundData.length - 1],
+        x: xDomain[1],
+        y: backgroundData[backgroundData.length - 1].y,
+        isGenerated: true,
+      });
+    }
+
+    const findEnergyAtTime = (targetTime: number) => {
+      const beforePoint = extendedData.filter((p) => p.x <= targetTime).pop();
+      const afterPoint = extendedData.find((p) => p.x >= targetTime);
+
+      if (beforePoint && afterPoint && beforePoint.x !== afterPoint.x) {
+        const ratio = (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
+        return beforePoint.y + ratio * (afterPoint.y - beforePoint.y);
+      } else if (beforePoint) {
+        return beforePoint.y;
+      } else if (afterPoint) {
+        return afterPoint.y;
+      }
+      return 5;
+    };
+
+    const sunriseY = findEnergyAtTime(sunriseTime);
+    const sunriseBufferY = findEnergyAtTime(sunriseBufferEnd);
+
+    // Create buffer zone data
+    const bufferData = [
+      { x: sunriseTime, y: sunriseY },
+      { x: sunriseBufferEnd, y: sunriseBufferY },
+    ];
+
+    // Create the buffer line path
+    const bufferLinePath = line<any>()
+      .x((d) => xScale(d.x))
+      .y((d) => yScale(d.y))
+      .curve(curveCardinal.tension(0))(bufferData);
+
+    if (!bufferLinePath) return null;
+
+    // Create fill path for sunrise buffer
+    const fillPathString = `${bufferLinePath} L${xScale(
+      sunriseBufferEnd
+    )},${chartHeight} L${xScale(sunriseTime)},${chartHeight} Z`;
+
+    try {
+      return Skia.Path.MakeFromSVGString(fillPathString);
+    } catch (error) {
+      console.warn("Failed to create sunrise buffer fill path:", error);
+      return null;
+    }
+  }, [processedData, xScale, yScale, currentContext, getSunTimes, chartHeight, xDomain]);
+
+  // Generate sunset buffer zone fill path (7px transition area)
+  const sunsetBufferFillPath = useMemo(() => {
+    if (
+      currentContext !== "daily" ||
+      processedData.length === 0 ||
+      !getSunTimes?.sunset
+    ) {
+      return null;
+    }
+
+    const sunsetTime = getSunTimes.sunset.getTime();
+    const bufferTimeMs = (7 / chartWidth) * (xDomain[1] - xDomain[0]);
+    const sunsetBufferStart = sunsetTime - bufferTimeMs;
+
+    // Find energy levels at buffer boundaries using same helper as daylight
+    const backgroundData = processedData.filter(
+      (point) => !point.isGenerated || point.label !== "Current time"
+    );
+    const extendedData = [...backgroundData];
+    
+    if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
+      extendedData.unshift({
+        ...backgroundData[0],
+        x: xDomain[0],
+        y: backgroundData[0].y,
+        isGenerated: true,
+      });
+    }
+    
+    if (
+      backgroundData.length > 0 &&
+      backgroundData[backgroundData.length - 1].x < xDomain[1]
+    ) {
+      extendedData.push({
+        ...backgroundData[backgroundData.length - 1],
+        x: xDomain[1],
+        y: backgroundData[backgroundData.length - 1].y,
+        isGenerated: true,
+      });
+    }
+
+    const findEnergyAtTime = (targetTime: number) => {
+      const beforePoint = extendedData.filter((p) => p.x <= targetTime).pop();
+      const afterPoint = extendedData.find((p) => p.x >= targetTime);
+
+      if (beforePoint && afterPoint && beforePoint.x !== afterPoint.x) {
+        const ratio = (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
+        return beforePoint.y + ratio * (afterPoint.y - beforePoint.y);
+      } else if (beforePoint) {
+        return beforePoint.y;
+      } else if (afterPoint) {
+        return afterPoint.y;
+      }
+      return 5;
+    };
+
+    const sunsetBufferY = findEnergyAtTime(sunsetBufferStart);
+    const sunsetY = findEnergyAtTime(sunsetTime);
+
+    // Create buffer zone data
+    const bufferData = [
+      { x: sunsetBufferStart, y: sunsetBufferY },
+      { x: sunsetTime, y: sunsetY },
+    ];
+
+    // Create the buffer line path
+    const bufferLinePath = line<any>()
+      .x((d) => xScale(d.x))
+      .y((d) => yScale(d.y))
+      .curve(curveCardinal.tension(0))(bufferData);
+
+    if (!bufferLinePath) return null;
+
+    // Create fill path for sunset buffer
+    const fillPathString = `${bufferLinePath} L${xScale(
+      sunsetTime
+    )},${chartHeight} L${xScale(sunsetBufferStart)},${chartHeight} Z`;
+
+    try {
+      return Skia.Path.MakeFromSVGString(fillPathString);
+    } catch (error) {
+      console.warn("Failed to create sunset buffer fill path:", error);
+      return null;
+    }
+  }, [processedData, xScale, yScale, currentContext, getSunTimes, chartHeight, xDomain]);
+
   // Generate current time line (follows background path but stops at current time)
   const curvedLine = useMemo(() => {
     if (processedData.length === 0) return null;
 
     // Use IDENTICAL data processing as fullBackgroundLine
-    const backgroundData = processedData.filter(point => 
-      !point.isGenerated || (point.label !== "Current time")
+    const backgroundData = processedData.filter(
+      (point) => !point.isGenerated || point.label !== "Current time"
     );
 
     // Create extended data EXACTLY like fullBackgroundLine
     const extendedData = [...backgroundData];
-    
+
     // Add starting point at left edge - IDENTICAL to background line
     if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
       extendedData.unshift({
@@ -658,9 +880,12 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
         isGenerated: true,
       });
     }
-    
+
     // Add ending point at right edge - IDENTICAL to background line
-    if (backgroundData.length > 0 && backgroundData[backgroundData.length - 1].x < xDomain[1]) {
+    if (
+      backgroundData.length > 0 &&
+      backgroundData[backgroundData.length - 1].x < xDomain[1]
+    ) {
       extendedData.push({
         ...backgroundData[backgroundData.length - 1],
         x: xDomain[1],
@@ -672,21 +897,23 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     // For current periods (dateOffset === 0), create a truncated version at current time
     if (dateOffset === 0) {
       const now = new Date();
-      
+
       // Generate the full path first, then interpolate at current time
       const fullLine = line<ChartDataPoint>()
         .x((d) => xScale(d.x))
         .y((d) => yScale(d.y))
         .curve(curveCardinal.tension(0))(extendedData);
-      
+
       if (!fullLine) return null;
-      
+
       // Find the Y value at current time by interpolating the background curve
       const currentTimeX = xScale(now.getTime());
-      
+
       // Filter points up to current time and add interpolated endpoint
-      const dataUpToNow = extendedData.filter(point => point.x <= now.getTime());
-      
+      const dataUpToNow = extendedData.filter(
+        (point) => point.x <= now.getTime()
+      );
+
       // Add current time point with interpolated Y value from the background curve
       if (dataUpToNow.length > 0) {
         const lastPoint = dataUpToNow[dataUpToNow.length - 1];
@@ -699,7 +926,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
           isGenerated: true,
         });
       }
-      
+
       return line<ChartDataPoint>()
         .x((d) => xScale(d.x))
         .y((d) => yScale(d.y))
@@ -713,14 +940,16 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       .curve(curveCardinal.tension(0))(extendedData);
   }, [processedData, xScale, yScale, dateOffset, xDomain]);
 
-
   // Convert background line to Skia path
   const backgroundLinePath = useMemo(() => {
     if (!fullBackgroundLine) return null;
     try {
       return Skia.Path.MakeFromSVGString(fullBackgroundLine);
     } catch (error) {
-      console.warn("Failed to create background Skia path from SVG string:", error);
+      console.warn(
+        "Failed to create background Skia path from SVG string:",
+        error
+      );
       return null;
     }
   }, [fullBackgroundLine]);
@@ -735,7 +964,6 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       return null;
     }
   }, [curvedLine]);
-
 
   const copyDebugInfo = () => {
     const debugInfo = `
@@ -800,7 +1028,6 @@ ${data
         position: "relative",
       }}
     >
-      
       <Canvas
         style={{
           height: chartHeight,
@@ -817,15 +1044,31 @@ ${data
                 <Path
                   path={backgroundFillPath}
                   style="fill"
-                  color="rgba(0,0,100,0.15)"
+                  color="rgba(255, 255, 255, .13)"
                 />
-                
+
                 {/* Light blue daylight fill that follows the energy line */}
                 {daylightFillPath && (
                   <Path
                     path={daylightFillPath}
                     style="fill"
-                    color="rgba(135,206,235,0.2)"
+                    color="rgba(255, 255, 255, .13)"
+                  />
+                )}
+
+                {/* Buffer zones - middle colors between night and day */}
+                {sunriseBufferFillPath && (
+                  <Path
+                    path={sunriseBufferFillPath}
+                    style="fill"
+                    color="rgba(255, 255, 255, .08)"
+                  />
+                )}
+                {sunsetBufferFillPath && (
+                  <Path
+                    path={sunsetBufferFillPath}
+                    style="fill"
+                    color="rgba(255, 255, 255, .08)"
                   />
                 )}
               </>
@@ -836,8 +1079,8 @@ ${data
                 style="fill"
                 color={
                   currentContext === "weekly"
-                    ? "rgba(75,0,130,0.12)" // Purple for weekly  
-                    : "rgba(139,69,19,0.15)" // Brown for monthly
+                    ? "rgba(255, 255, 255, .13)" // Purple for weekly
+                    : "rgba(255, 255, 255, .13)" // Brown for monthly
                 }
               />
             )}
@@ -869,6 +1112,7 @@ ${data
             end={animationLine}
           >
             <Shadow dx={0} dy={1.5} blur={3} color={"rgba(0,0,0,0.1)"} />
+            {/* <Shadow dx={0} dy={3} blur={3} color={"rgba(255,255,255,.6)"} /> */}
           </Path>
         )}
 
@@ -885,13 +1129,10 @@ ${data
                   style={"stroke"}
                   strokeWidth={1}
                   color={"rgba(255,255,255,0.5)"}
-                  strokeDashArray={[4, 4]}
                 />
               </Group>
             ) : null;
           })()}
-
-
 
         {/* Data point markers for all contexts (excluding generated points) - always show all dots */}
         {processedData
@@ -1035,11 +1276,14 @@ ${data
 
           if (currentContext === "daily") {
             // Show time for daily context: "7:00 AM"
-            timeText = localDate.toLocaleTimeString([], {
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            });
+            timeText = localDate
+              .toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })
+              .toLowerCase()
+              .replace(" ", "");
           } else if (currentContext === "weekly") {
             // Show just the day for weekly context (average per day)
             timeText = localDate.toLocaleDateString([], {
@@ -1053,13 +1297,16 @@ ${data
             });
           } else {
             // Project context: show full date and time
-            timeText = localDate.toLocaleString([], {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            });
+            timeText = localDate
+              .toLocaleString([], {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })
+              .toLowerCase()
+              .replace(" ", "");
           }
 
           return (
@@ -1073,24 +1320,30 @@ ${data
                 alignItems: "center",
                 justifyContent: "center",
                 left: x - 23,
-                top: y - 30,
+                top: y - 29,
               }}
             >
               <Text
                 style={{
-                  color: "rgba(255,255,255,.6)",
                   fontSize: 8,
                   textAlign: "center",
+                  lineHeight: 9,
+                  marginTop: 1,
                 }}
+                weight="medium"
+                color={"rgba(255,255,255,.4)"}
               >
                 {timeText}
               </Text>
               <Text
                 style={{
-                  color: "white",
                   fontSize: 13,
-                  fontWeight: "bold",
+                  textAlign: "center",
+                  lineHeight: 15,
+                  marginTop: 0,
                 }}
+                weight="medium"
+                color={"rgba(255,255,255,1)"}
               >
                 {energyLevel}
               </Text>
