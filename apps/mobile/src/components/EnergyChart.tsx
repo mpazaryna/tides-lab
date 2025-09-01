@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import React, { useMemo, useEffect } from "react";
 import { useTimeContext } from "../context/TimeContext";
+import { useLocationData } from "../hooks/useLocationData";
+import * as SunCalc from "suncalc";
 import {
   Canvas,
   Path,
@@ -15,6 +17,7 @@ import {
   Circle,
   Text as SkiaText,
   Group,
+  Shadow,
 } from "@shopify/react-native-skia";
 import { curveBasis, line, scaleLinear, curveCardinal } from "d3";
 import { useSharedValue, withTiming } from "react-native-reanimated";
@@ -56,6 +59,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     return null; // Gracefully handle empty data
   }
   const { currentContext, dateOffset } = useTimeContext();
+  const { locationInfo } = useLocationData();
 
   // Calculate time range based on current context and date offset
   const getTimeRange = () => {
@@ -103,6 +107,23 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
   };
 
   const [startTime, endTime] = getTimeRange();
+
+  // Calculate sunrise/sunset for the current date being displayed
+  const getSunTimes = useMemo(() => {
+    if (!locationInfo.latitude || !locationInfo.longitude) return null;
+    
+    const targetDate = new Date();
+    if (currentContext === "daily") {
+      targetDate.setDate(targetDate.getDate() - dateOffset);
+    } else if (currentContext === "weekly") {
+      // For weekly, we'll calculate for each day in the week
+      return null; // Handle separately for weekly
+    } else {
+      return null; // No sun markers for monthly/project
+    }
+    
+    return SunCalc.getTimes(targetDate, locationInfo.latitude, locationInfo.longitude);
+  }, [locationInfo, currentContext, dateOffset]);
 
   const animationLine = useSharedValue(0);
 
@@ -470,36 +491,80 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       .curve(curveCardinal.tension(0))(extendedData);
   }, [processedData, xScale, yScale, xDomain]);
 
-  // Generate current time line (follows background line path, just truncated at current time)
+  // Generate current time line (follows background path but stops at current time)
   const curvedLine = useMemo(() => {
     if (processedData.length === 0) return null;
 
-    // Use the same data as background line but filter to current time for current periods
+    // Use IDENTICAL data processing as fullBackgroundLine
     const backgroundData = processedData.filter(point => 
       !point.isGenerated || (point.label !== "Current time")
     );
 
-    let dataForLine = backgroundData;
+    // Create extended data EXACTLY like fullBackgroundLine
+    const extendedData = [...backgroundData];
+    
+    // Add starting point at left edge - IDENTICAL to background line
+    if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
+      extendedData.unshift({
+        ...backgroundData[0],
+        x: xDomain[0],
+        y: backgroundData[0].y, // Use first point's energy for natural lead-in
+        isGenerated: true,
+      });
+    }
+    
+    // Add ending point at right edge - IDENTICAL to background line
+    if (backgroundData.length > 0 && backgroundData[backgroundData.length - 1].x < xDomain[1]) {
+      extendedData.push({
+        ...backgroundData[backgroundData.length - 1],
+        x: xDomain[1],
+        y: backgroundData[backgroundData.length - 1].y, // Use last point's energy for natural lead-out
+        isGenerated: true,
+      });
+    }
+
+    // For current periods (dateOffset === 0), create a truncated version at current time
     if (dateOffset === 0) {
       const now = new Date();
-      // Filter to current time but keep the same path structure as background
-      dataForLine = backgroundData.filter(point => point.x <= now.getTime());
+      
+      // Generate the full path first, then interpolate at current time
+      const fullLine = line<ChartDataPoint>()
+        .x((d) => xScale(d.x))
+        .y((d) => yScale(d.y))
+        .curve(curveCardinal.tension(0))(extendedData);
+      
+      if (!fullLine) return null;
+      
+      // Find the Y value at current time by interpolating the background curve
+      const currentTimeX = xScale(now.getTime());
+      
+      // Filter points up to current time and add interpolated endpoint
+      const dataUpToNow = extendedData.filter(point => point.x <= now.getTime());
+      
+      // Add current time point with interpolated Y value from the background curve
+      if (dataUpToNow.length > 0) {
+        const lastPoint = dataUpToNow[dataUpToNow.length - 1];
+        dataUpToNow.push({
+          x: now.getTime(),
+          y: lastPoint.y, // Use last known energy level
+          label: "Current time endpoint",
+          timestamp: now.toISOString(),
+          originalLevel: lastPoint.y,
+          isGenerated: true,
+        });
+      }
+      
+      return line<ChartDataPoint>()
+        .x((d) => xScale(d.x))
+        .y((d) => yScale(d.y))
+        .curve(curveCardinal.tension(0))(dataUpToNow);
     }
 
-    // Add left edge starting point if needed (same as background line)
-    if (dataForLine.length > 0 && dataForLine[0].x > xDomain[0]) {
-      dataForLine = [{
-        ...dataForLine[0],
-        x: xDomain[0],
-        y: dataForLine[0].y,
-        isGenerated: true,
-      }, ...dataForLine];
-    }
-
+    // For past periods, use the full extended data (same as background)
     return line<ChartDataPoint>()
       .x((d) => xScale(d.x))
       .y((d) => yScale(d.y))
-      .curve(curveCardinal.tension(0))(dataForLine);
+      .curve(curveCardinal.tension(0))(extendedData);
   }, [processedData, xScale, yScale, dateOffset, xDomain]);
 
 
@@ -589,6 +654,59 @@ ${data
         position: "relative",
       }}
     >
+      {/* Dark blue full-width background */}
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: chartWidth,
+          height: chartHeight,
+          backgroundColor: "rgba(0,0,100,0.15)",
+        }}
+      />
+      
+      {/* Light blue daylight background for daily context */}
+      {currentContext === "daily" && getSunTimes && getSunTimes.sunrise && getSunTimes.sunset && (
+        <>
+          {/* Dawn transition zone */}
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: xScale(getSunTimes.sunrise.getTime()),
+              width: 6,
+              height: chartHeight,
+              backgroundColor: "rgba(100,149,237,0.15)",
+            }}
+          />
+          
+          {/* Full daylight background */}
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: xScale(getSunTimes.sunrise.getTime()) + 6,
+              width: xScale(getSunTimes.sunset.getTime()) - xScale(getSunTimes.sunrise.getTime()) - 12,
+              height: chartHeight,
+              backgroundColor: "rgba(135,206,235,0.2)",
+            }}
+          />
+          
+          {/* Dusk transition zone */}
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: xScale(getSunTimes.sunset.getTime()) - 6,
+              width: 6,
+              height: chartHeight,
+              backgroundColor: "rgba(100,149,237,0.15)",
+            }}
+          />
+        </>
+      )}
+      
       <Canvas
         style={{
           height: chartHeight,
@@ -619,7 +737,9 @@ ${data
             strokeCap={"round"}
             start={0}
             end={animationLine}
-          />
+          >
+            <Shadow dx={0} dy={1.5} blur={3} color={"rgba(0,0,0,0.1)"} />
+          </Path>
         )}
 
         {/* Current time indicator for all contexts */}
@@ -640,6 +760,8 @@ ${data
               </Group>
             ) : null;
           })()}
+
+
 
         {/* Data point markers for all contexts (excluding generated points) */}
         {processedData

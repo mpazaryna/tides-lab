@@ -16,6 +16,7 @@ import { colors, spacing } from "../../design-system/tokens";
 import { useToolMenu } from "../../hooks/useToolMenu";
 import { useChatInput } from "../../hooks/useChatInput";
 import { useContextTide } from "../../hooks/useContextTide";
+import { useTimeContext } from "../../context/TimeContext";
 import { ChatMessages } from "../../components/chat/ChatMessages";
 import { ChatInput } from "../../components/chat/ChatInput";
 import { ToolMenu } from "../../components/tools/ToolMenu";
@@ -56,6 +57,39 @@ export default function Home() {
   // Context tide management - handles daily/weekly/monthly switching
   const { getCurrentContextTideId, setToolExecuting, currentContextTide } =
     useContextTide();
+
+  // Time navigation for chart history
+  const { navigateBackward, navigateForward, dateOffset, currentContext, isAtPresent } = useTimeContext();
+
+  // Get current time period display text
+  const getTimePeriodText = useCallback(() => {
+    if (isAtPresent) {
+      switch (currentContext) {
+        case 'daily': return 'Today';
+        case 'weekly': return 'This Week';
+        case 'monthly': return 'This Month';
+        default: return 'Current';
+      }
+    }
+
+    const now = new Date();
+    if (currentContext === 'daily') {
+      const targetDate = new Date(now);
+      targetDate.setDate(now.getDate() - dateOffset);
+      if (dateOffset === 1) return 'Yesterday';
+      return targetDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } else if (currentContext === 'weekly') {
+      if (dateOffset === 1) return 'Last Week';
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - (now.getDay() + dateOffset * 7));
+      return `Week of ${weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+    } else if (currentContext === 'monthly') {
+      if (dateOffset === 1) return 'Last Month';
+      const targetMonth = new Date(now.getFullYear(), now.getMonth() - dateOffset, 1);
+      return targetMonth.toLocaleDateString([], { month: 'long', year: 'numeric' });
+    }
+    return 'Historical';
+  }, [currentContext, dateOffset, isAtPresent]);
 
   // Template injection callback
   const injectTemplate = useCallback((template: string) => {
@@ -196,7 +230,7 @@ export default function Home() {
             <View style={styles.wholeDescriptionContainer}>
               <View style={styles.descriptionContainer}>
                 <Text variant="caption" color="rgba(255,255,255,.5)">
-                  Last updated:
+                  Energy Flow
                 </Text>
 
                 <Text
@@ -205,7 +239,7 @@ export default function Home() {
                   color="rgba(255,255,255,1)"
                   style={styles.title}
                 >
-                  Last updated:
+                  {getTimePeriodText()}
                 </Text>
               </View>
             </View>
@@ -216,7 +250,7 @@ export default function Home() {
                   color="rgba(255,255,255,.5)"
                   style={{ textAlign: "right" }}
                 >
-                  Last updated:
+                  Navigation
                 </Text>
                 <Text
                   variant="body"
@@ -224,7 +258,7 @@ export default function Home() {
                   color="rgba(255,255,255,1)"
                   style={styles.title}
                 >
-                  Last updated:
+                  {isAtPresent ? 'Current' : `${dateOffset} ${currentContext === 'daily' ? 'day' : currentContext === 'weekly' ? 'week' : 'month'}${dateOffset > 1 ? 's' : ''} ago`}
                 </Text>
               </View>
               <Timer />
@@ -238,43 +272,34 @@ export default function Home() {
           />
           {/* Context Toggle */}
           <View style={styles.contextToggleWrapper}>
-            <View
-              style={{
-                height: 28,
-                width: 28,
-                backgroundColor: "rgba(255,255,255,.08)",
-                borderRadius: 100,
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+            <TouchableOpacity
+              onPress={navigateBackward}
+              style={[
+                styles.navigationButton,
+                { opacity: 1 }
+              ]}
             >
               <ChevronLeft
                 height={18}
                 width={18}
                 color="rgba(255,255,255,0.5)"
               />
-            </View>
+            </TouchableOpacity>
             <ContextToggle variant="full" showLabels={true} />
-            <View
-              style={{
-                height: 28,
-                width: 28,
-                backgroundColor: "rgba(255,255,255,.08)",
-                borderRadius: 100,
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+            <TouchableOpacity
+              onPress={navigateForward}
+              disabled={isAtPresent}
+              style={[
+                styles.navigationButton,
+                { opacity: isAtPresent ? 0.3 : 1 }
+              ]}
             >
               <ChevronRight
                 height={18}
                 width={18}
                 color="rgba(255,255,255,0.5)"
               />
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
         {/* Messages */}
@@ -449,5 +474,15 @@ const styles = StyleSheet.create({
   description: {
     color: "rgba(255,255,255,.6)",
     fontSize: 13,
+  },
+  navigationButton: {
+    height: 28,
+    width: 28,
+    backgroundColor: "rgba(255,255,255,.08)",
+    borderRadius: 100,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

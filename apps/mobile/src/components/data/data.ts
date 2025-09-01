@@ -60,30 +60,6 @@ export const sampleEnergyData: EnergyDataPoint[] = [
     timezone: "America/Los_Angeles",
   },
   {
-    id: "energy_005",
-    tide_id: "weekly_2025_w36",
-    energy_level: "high",
-    context: "Monday morning motivation",
-    timestamp: "2025-09-01T08:00:00.000Z", // Monday Sept 1
-    timezone: "America/Los_Angeles",
-  },
-  {
-    id: "energy_006",
-    tide_id: "weekly_2025_w36",
-    energy_level: 7,
-    context: "Wednesday productivity peak",
-    timestamp: "2025-09-03T14:30:00.000Z", // Wednesday Sept 3
-    timezone: "America/Los_Angeles",
-  },
-  {
-    id: "energy_007",
-    tide_id: "weekly_2025_w36",
-    energy_level: "low",
-    context: "Friday afternoon energy crash",
-    timestamp: "2025-09-05T16:00:00.000Z", // Friday Sept 5
-    timezone: "America/Los_Angeles",
-  },
-  {
     id: "energy_008",
     tide_id: "project_mobile_refactor",
     energy_level: "high",
