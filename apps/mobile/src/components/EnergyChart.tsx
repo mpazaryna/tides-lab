@@ -577,7 +577,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
 
     const sunriseTime = getSunTimes.sunrise.getTime();
     const sunsetTime = getSunTimes.sunset.getTime();
-    
+
     // Calculate 7px buffer zones in time units
     const bufferTimeMs = (7 / chartWidth) * (xDomain[1] - xDomain[0]);
     const sunriseBufferEnd = sunriseTime + bufferTimeMs;
@@ -706,7 +706,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       (point) => !point.isGenerated || point.label !== "Current time"
     );
     const extendedData = [...backgroundData];
-    
+
     if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
       extendedData.unshift({
         ...backgroundData[0],
@@ -715,7 +715,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
         isGenerated: true,
       });
     }
-    
+
     if (
       backgroundData.length > 0 &&
       backgroundData[backgroundData.length - 1].x < xDomain[1]
@@ -733,7 +733,8 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       const afterPoint = extendedData.find((p) => p.x >= targetTime);
 
       if (beforePoint && afterPoint && beforePoint.x !== afterPoint.x) {
-        const ratio = (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
+        const ratio =
+          (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
         return beforePoint.y + ratio * (afterPoint.y - beforePoint.y);
       } else if (beforePoint) {
         return beforePoint.y;
@@ -771,7 +772,15 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       console.warn("Failed to create sunrise buffer fill path:", error);
       return null;
     }
-  }, [processedData, xScale, yScale, currentContext, getSunTimes, chartHeight, xDomain]);
+  }, [
+    processedData,
+    xScale,
+    yScale,
+    currentContext,
+    getSunTimes,
+    chartHeight,
+    xDomain,
+  ]);
 
   // Generate sunset buffer zone fill path (7px transition area)
   const sunsetBufferFillPath = useMemo(() => {
@@ -792,7 +801,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       (point) => !point.isGenerated || point.label !== "Current time"
     );
     const extendedData = [...backgroundData];
-    
+
     if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
       extendedData.unshift({
         ...backgroundData[0],
@@ -801,7 +810,7 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
         isGenerated: true,
       });
     }
-    
+
     if (
       backgroundData.length > 0 &&
       backgroundData[backgroundData.length - 1].x < xDomain[1]
@@ -819,7 +828,8 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       const afterPoint = extendedData.find((p) => p.x >= targetTime);
 
       if (beforePoint && afterPoint && beforePoint.x !== afterPoint.x) {
-        const ratio = (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
+        const ratio =
+          (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
         return beforePoint.y + ratio * (afterPoint.y - beforePoint.y);
       } else if (beforePoint) {
         return beforePoint.y;
@@ -857,7 +867,15 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       console.warn("Failed to create sunset buffer fill path:", error);
       return null;
     }
-  }, [processedData, xScale, yScale, currentContext, getSunTimes, chartHeight, xDomain]);
+  }, [
+    processedData,
+    xScale,
+    yScale,
+    currentContext,
+    getSunTimes,
+    chartHeight,
+    xDomain,
+  ]);
 
   // Generate current time line (follows background path but stops at current time)
   const curvedLine = useMemo(() => {
@@ -1041,19 +1059,11 @@ ${data
             {currentContext === "daily" ? (
               <>
                 {/* Dark blue nighttime fill for daily */}
-                <Path
-                  path={backgroundFillPath}
-                  style="fill"
-                  color="rgba(255, 255, 255, .13)"
-                />
+                <Path path={backgroundFillPath} style="fill" color="#65859A" />
 
                 {/* Light blue daylight fill that follows the energy line */}
                 {daylightFillPath && (
-                  <Path
-                    path={daylightFillPath}
-                    style="fill"
-                    color="rgba(255, 255, 255, .13)"
-                  />
+                  <Path path={daylightFillPath} style="fill" color="#92B1BE" />
                 )}
 
                 {/* Buffer zones - middle colors between night and day */}
@@ -1061,14 +1071,14 @@ ${data
                   <Path
                     path={sunriseBufferFillPath}
                     style="fill"
-                    color="rgba(255, 255, 255, .08)"
+                    color="#7D9DB0"
                   />
                 )}
                 {sunsetBufferFillPath && (
                   <Path
                     path={sunsetBufferFillPath}
                     style="fill"
-                    color="rgba(255, 255, 255, .08)"
+                    color="#7D9DB0"
                   />
                 )}
               </>
@@ -1079,8 +1089,8 @@ ${data
                 style="fill"
                 color={
                   currentContext === "weekly"
-                    ? "rgba(255, 255, 255, .13)" // Purple for weekly
-                    : "rgba(255, 255, 255, .13)" // Brown for monthly
+                    ? "#7D9DB0" // Purple for weekly
+                    : "#7D9DB0" // Brown for monthly
                 }
               />
             )}
