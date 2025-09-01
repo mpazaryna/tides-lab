@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   Alert,
   Clipboard,
+  ImageBackground,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMCP } from "../../context/MCPContext";
@@ -27,10 +28,17 @@ import {
   executeAgentCommand,
 } from "../../utils/agentCommandUtils";
 import EnergyChart from "../../components/EnergyChart";
-import { getChartData } from "../../components/data/data";
+import { getChartData, numberToEnergyLevel } from "../../components/data/data";
 import { ContextToggle } from "../../components/ContextToggle";
+import { getSimpleTimeContext } from "../../utils/timeContextHelpers";
 import { Text } from "../../design-system";
-import { ChevronLeft, ChevronRight, Timer } from "lucide-react-native";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Timer,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react-native";
 
 export default function Home() {
   const insets = useSafeAreaInsets();
@@ -59,37 +67,69 @@ export default function Home() {
     useContextTide();
 
   // Time navigation for chart history
-  const { navigateBackward, navigateForward, dateOffset, currentContext, isAtPresent } = useTimeContext();
+  const {
+    navigateBackward,
+    navigateForward,
+    dateOffset,
+    currentContext,
+    isAtPresent,
+  } = useTimeContext();
 
-  // Get current time period display text
-  const getTimePeriodText = useCallback(() => {
-    if (isAtPresent) {
-      switch (currentContext) {
-        case 'daily': return 'Today';
-        case 'weekly': return 'This Week';
-        case 'monthly': return 'This Month';
-        default: return 'Current';
-      }
-    }
+  // Get last energy level with formatted display
+  const getLastEnergyDisplay = useCallback(() => {
+    const chartData = getChartData();
+    if (chartData.length === 0) return "No data";
 
+    // Sort by timestamp to get the most recent
+    const sortedData = chartData.sort((a, b) => b.x - a.x);
+    const lastPoint = sortedData[0];
+
+    // Convert to string descriptor and number
+    const energyNumber = Math.round(lastPoint.y);
+    const energyLabel = numberToEnergyLevel(energyNumber);
+
+    // Capitalize first letter
+    const capitalizedLabel =
+      energyLabel.charAt(0).toUpperCase() + energyLabel.slice(1);
+
+    return `${capitalizedLabel} (${energyNumber})`;
+  }, []);
+
+  // Get time and relative time since last update
+  const getLastUpdatedDisplay = useCallback(() => {
+    const chartData = getChartData();
+    if (chartData.length === 0) return "No updates";
+
+    // Sort by timestamp to get the most recent
+    const sortedData = chartData.sort((a, b) => b.x - a.x);
+    const lastPoint = sortedData[0];
+    const lastUpdateTime = new Date(lastPoint.x);
     const now = new Date();
-    if (currentContext === 'daily') {
-      const targetDate = new Date(now);
-      targetDate.setDate(now.getDate() - dateOffset);
-      if (dateOffset === 1) return 'Yesterday';
-      return targetDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    } else if (currentContext === 'weekly') {
-      if (dateOffset === 1) return 'Last Week';
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - (now.getDay() + dateOffset * 7));
-      return `Week of ${weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
-    } else if (currentContext === 'monthly') {
-      if (dateOffset === 1) return 'Last Month';
-      const targetMonth = new Date(now.getFullYear(), now.getMonth() - dateOffset, 1);
-      return targetMonth.toLocaleDateString([], { month: 'long', year: 'numeric' });
-    }
-    return 'Historical';
-  }, [currentContext, dateOffset, isAtPresent]);
+    const diffMs = now.getTime() - lastUpdateTime.getTime();
+
+    const minutes = Math.floor(diffMs / (1000 * 60));
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    // Format the actual time
+    // const actualTime = lastUpdateTime.toLocaleTimeString([], {
+    //   hour: 'numeric',
+    //   minute: '2-digit',
+    //   hour12: true
+    // });
+    
+    // Format the relative time
+    let relativeTime;
+    if (minutes < 1) relativeTime = "Just now";
+    else if (minutes < 60) relativeTime = `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    else if (hours < 24) relativeTime = `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    else if (days === 1) relativeTime = "Yesterday";
+    else relativeTime = `${days} day${days > 1 ? "s" : ""} ago`;
+    
+    return `${relativeTime}`;
+  }, []);
+
+
 
   // Template injection callback
   const injectTemplate = useCallback((template: string) => {
@@ -225,32 +265,42 @@ export default function Home() {
         </View> */}
 
         {/* ✅ REQUIREMENT 2: Sample data from getChartData() function */}
-        <View style={styles.energyChartWrapper}>
+        <ImageBackground 
+          source={require('../../../assets/defaultTidesGradient.png')}
+          style={styles.energyChartWrapper}
+          imageStyle={styles.energyChartBackgroundImage}
+        >
           <View style={styles.descriptionContainerRow}>
             <View style={styles.wholeDescriptionContainer}>
               <View style={styles.descriptionContainer}>
-                <Text variant="caption" color="rgba(255,255,255,.5)">
-                  Energy Flow
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text variant="caption" color="rgba(255,255,255,.5)">
+                    Updated {getLastUpdatedDisplay()}
+                  </Text>
+                  <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
+                </View>
 
-                <Text
-                  variant="body"
-                  weight="semibold"
-                  color="rgba(255,255,255,1)"
-                  style={styles.title}
-                >
-                  {getTimePeriodText()}
-                </Text>
+           
+                  <Text
+                    variant="body"
+                    weight="semibold"
+                    color="rgba(255,255,255,1)"
+                    style={styles.title}
+                  >
+                    {getLastEnergyDisplay()}
+                  </Text>
+   
+            
               </View>
             </View>
             <View style={styles.wholeDescriptionContainer}>
               <View style={styles.descriptionContainer}>
-                <Text
+                {/* <Text
                   variant="caption"
                   color="rgba(255,255,255,.5)"
                   style={{ textAlign: "right" }}
                 >
-                  Navigation
+                  {getSimpleTimeContext(currentContext, dateOffset)}
                 </Text>
                 <Text
                   variant="body"
@@ -259,7 +309,7 @@ export default function Home() {
                   style={styles.title}
                 >
                   {isAtPresent ? 'Current' : `${dateOffset} ${currentContext === 'daily' ? 'day' : currentContext === 'weekly' ? 'week' : 'month'}${dateOffset > 1 ? 's' : ''} ago`}
-                </Text>
+                </Text> */}
               </View>
               <Timer />
             </View>
@@ -274,10 +324,7 @@ export default function Home() {
           <View style={styles.contextToggleWrapper}>
             <TouchableOpacity
               onPress={navigateBackward}
-              style={[
-                styles.navigationButton,
-                { opacity: 1 }
-              ]}
+              style={[styles.navigationButton, { opacity: 1 }]}
             >
               <ChevronLeft
                 height={18}
@@ -291,7 +338,7 @@ export default function Home() {
               disabled={isAtPresent}
               style={[
                 styles.navigationButton,
-                { opacity: isAtPresent ? 0.3 : 1 }
+                { opacity: isAtPresent ? 0.3 : 1 },
               ]}
             >
               <ChevronRight
@@ -301,7 +348,7 @@ export default function Home() {
               />
             </TouchableOpacity>
           </View>
-        </View>
+        </ImageBackground>
         {/* Messages */}
         <ChatMessages messages={messages} />
       </ScrollView>
@@ -424,7 +471,6 @@ const styles = StyleSheet.create({
     margin: 16,
     marginTop: 4,
     marginBottom: 0,
-    backgroundColor: colors.inputPlaceholder,
     borderRadius: 20,
     paddingBottom: 8,
     paddingHorizontal: 12,
@@ -441,6 +487,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 13,
+    overflow: "hidden",
+  },
+  energyChartBackgroundImage: {
+    borderRadius: 20,
   },
   contextToggleWrapper: {
     paddingBottom: 0,

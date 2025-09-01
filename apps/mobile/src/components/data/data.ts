@@ -260,12 +260,23 @@ export const energyLevelToNumber = (level: string | number): number => {
   if (typeof level === "number") return Math.max(1, Math.min(10, level));
   if (typeof level === "string") {
     switch (level.toLowerCase()) {
+      case "drained":
+        return 2;
       case "low":
-        return 3;
+        return 4;
+      case "steady":
+        return 6;
+      case "strong":
+        return 8;
+      case "energized":
+        return 9;
+      case "peak":
+        return 10;
+      // Legacy support
       case "medium":
         return 6;
       case "high":
-        return 9;
+        return 8;
       case "completed":
         return 10;
       default: {
@@ -274,14 +285,16 @@ export const energyLevelToNumber = (level: string | number): number => {
       }
     }
   }
-  return 6; // Default medium
+  return 6; // Default steady
 };
 
 export const numberToEnergyLevel = (num: number): string => {
-  if (num <= 3) return "low";
-  if (num <= 6) return "medium";
-  if (num <= 9) return "high";
-  return "completed";
+  if (num <= 2) return "drained";
+  if (num <= 4) return "low";
+  if (num <= 6) return "steady";
+  if (num <= 8) return "strong";
+  if (num <= 9) return "energized";
+  return "peak";
 };
 
 // Chart-ready data transformation

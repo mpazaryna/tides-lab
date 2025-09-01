@@ -11,7 +11,8 @@ import { MainStackParamList, Routes, NavigationOptions } from "./types";
 import { colors } from "../design-system/tokens";
 import { useTimeContext } from "../context/TimeContext";
 import { getContextDateRangeWithOffset } from "../utils/contextUtils";
-import { Text } from "../components/Text";
+import { getHumanisticTimeContext } from "../utils/timeContextHelpers";
+import { Text } from "../design-system";
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -41,11 +42,33 @@ const HomeScreenTitle: React.FC<{ route: any }> = ({ route }) => {
     ? `${route.params?.tideName || "Home"} (${route.params.tideId})`
     : getContextDateRangeWithOffset(currentContext, dateOffset);
 
+  const timeContext = getHumanisticTimeContext(currentContext, dateOffset);
+  const isCurrentTime =
+    timeContext === "Today" ||
+    timeContext === "This week" ||
+    timeContext === "This month";
+
   return (
-    <View style={{ alignItems: "center" }}>
-      <Text color={colors.titleColor} variant="header">
+    <View
+      style={{ alignItems: "center", justifyContent: "center", minHeight: 40 }}
+    >
+      <Text
+        color={colors.titleColor}
+        style={{ lineHeight: 18.4 }}
+        variant="body"
+        weight="semibold"
+      >
         {title}
       </Text>
+      {!isCurrentTime && (
+        <Text
+          color={colors.inputPlaceholder}
+          variant="caption"
+          style={{ lineHeight: 13.8 }}
+        >
+          {timeContext}
+        </Text>
+      )}
     </View>
   );
 };
@@ -59,7 +82,7 @@ const getHomeScreenOptions = ({ navigation, route }: any) => ({
   headerLeft: () => <SettingsHeaderButton navigation={navigation} />,
   headerTransparent: true,
   headerStyle: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
 });
 

@@ -148,7 +148,7 @@ export const typography = {
     caption1: 16,
     caption2: 13,
     // Additional line heights for Text component compatibility
-    tight: 1.25,
+    tight: 1.15,
     pro: 1.29,
     normal: 1.5,
     relaxed: 1.75,

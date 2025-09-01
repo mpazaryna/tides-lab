@@ -491,6 +491,152 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
       .curve(curveCardinal.tension(0))(extendedData);
   }, [processedData, xScale, yScale, xDomain]);
 
+  // Generate filled area below the background line
+  const backgroundFillPath = useMemo(() => {
+    if (processedData.length === 0) return null;
+
+    // For background line, exclude current time endpoints to avoid the "turn around" effect
+    const backgroundData = processedData.filter(point => 
+      !point.isGenerated || (point.label !== "Current time")
+    );
+
+    // Create extended data that spans full chart width
+    const extendedData = [...backgroundData];
+    
+    // Add starting point at left edge
+    if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
+      extendedData.unshift({
+        ...backgroundData[0],
+        x: xDomain[0],
+        y: backgroundData[0].y,
+        isGenerated: true,
+      });
+    }
+    
+    // Add ending point at right edge
+    if (backgroundData.length > 0 && backgroundData[backgroundData.length - 1].x < xDomain[1]) {
+      extendedData.push({
+        ...backgroundData[backgroundData.length - 1],
+        x: xDomain[1],
+        y: backgroundData[backgroundData.length - 1].y,
+        isGenerated: true,
+      });
+    }
+
+    // Create the line path first
+    const linePath = line<ChartDataPoint>()
+      .x((d) => xScale(d.x))
+      .y((d) => yScale(d.y))
+      .curve(curveCardinal.tension(0))(extendedData);
+
+    if (!linePath) return null;
+
+    // Convert to fill by adding bottom edge points
+    const fillPathString = `${linePath} L${xScale(xDomain[1])},${chartHeight} L${xScale(xDomain[0])},${chartHeight} Z`;
+    
+    try {
+      return Skia.Path.MakeFromSVGString(fillPathString);
+    } catch (error) {
+      console.warn("Failed to create background fill path:", error);
+      return null;
+    }
+  }, [processedData, xScale, yScale, xDomain, chartHeight]);
+
+  // Generate daylight filled area below the background line (daily context only)
+  const daylightFillPath = useMemo(() => {
+    if (currentContext !== "daily" || processedData.length === 0 || !getSunTimes?.sunrise || !getSunTimes?.sunset) {
+      return null;
+    }
+
+    const sunriseTime = getSunTimes.sunrise.getTime();
+    const sunsetTime = getSunTimes.sunset.getTime();
+    
+    // Use the same background data processing
+    const backgroundData = processedData.filter(point => 
+      !point.isGenerated || (point.label !== "Current time")
+    );
+
+    const extendedData = [...backgroundData];
+    
+    // Add starting point at left edge
+    if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
+      extendedData.unshift({
+        ...backgroundData[0],
+        x: xDomain[0],
+        y: backgroundData[0].y,
+        isGenerated: true,
+      });
+    }
+    
+    // Add ending point at right edge
+    if (backgroundData.length > 0 && backgroundData[backgroundData.length - 1].x < xDomain[1]) {
+      extendedData.push({
+        ...backgroundData[backgroundData.length - 1],
+        x: xDomain[1],
+        y: backgroundData[backgroundData.length - 1].y,
+        isGenerated: true,
+      });
+    }
+
+    // Find or interpolate the energy level at sunrise and sunset times
+    const findEnergyAtTime = (targetTime: number) => {
+      // Find the closest points before and after the target time
+      const beforePoint = extendedData.filter(p => p.x <= targetTime).pop();
+      const afterPoint = extendedData.find(p => p.x >= targetTime);
+      
+      if (beforePoint && afterPoint && beforePoint.x !== afterPoint.x) {
+        // Linear interpolation
+        const ratio = (targetTime - beforePoint.x) / (afterPoint.x - beforePoint.x);
+        return beforePoint.y + ratio * (afterPoint.y - beforePoint.y);
+      } else if (beforePoint) {
+        return beforePoint.y;
+      } else if (afterPoint) {
+        return afterPoint.y;
+      }
+      return 5; // Default middle energy level
+    };
+
+    // Create daylight data that includes boundary points and internal points
+    const sunriseY = findEnergyAtTime(sunriseTime);
+    const sunsetY = findEnergyAtTime(sunsetTime);
+    
+    // Include points within daylight hours plus boundary interpolated points
+    let daylightData = [
+      { x: sunriseTime, y: sunriseY, label: "sunrise", timestamp: "", originalLevel: sunriseY }
+    ];
+    
+    // Add actual data points within daylight hours
+    const innerPoints = extendedData.filter(point => 
+      point.x > sunriseTime && point.x < sunsetTime
+    );
+    daylightData.push(...innerPoints);
+    
+    // Add sunset boundary point
+    daylightData.push({ x: sunsetTime, y: sunsetY, label: "sunset", timestamp: "", originalLevel: sunsetY });
+
+    if (daylightData.length < 2) {
+      return null; // Need at least sunrise and sunset points
+    }
+
+    // Create the daylight line path
+    const daylightLinePath = line<ChartDataPoint>()
+      .x((d) => xScale(d.x))
+      .y((d) => yScale(d.y))
+      .curve(curveCardinal.tension(0))(daylightData);
+
+    if (!daylightLinePath) return null;
+
+    // Create the fill path: line path + bottom edge
+    const fillPathString = `${daylightLinePath} L${xScale(sunsetTime)},${chartHeight} L${xScale(sunriseTime)},${chartHeight} Z`;
+    
+    try {
+      return Skia.Path.MakeFromSVGString(fillPathString);
+    } catch (error) {
+      console.warn("Failed to create daylight fill path:", error);
+      return null;
+    }
+  }, [processedData, xScale, yScale, currentContext, getSunTimes, chartHeight]);
+
   // Generate current time line (follows background path but stops at current time)
   const curvedLine = useMemo(() => {
     if (processedData.length === 0) return null;
@@ -654,58 +800,6 @@ ${data
         position: "relative",
       }}
     >
-      {/* Dark blue full-width background */}
-      <View
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: chartWidth,
-          height: chartHeight,
-          backgroundColor: "rgba(0,0,100,0.15)",
-        }}
-      />
-      
-      {/* Light blue daylight background for daily context */}
-      {currentContext === "daily" && getSunTimes && getSunTimes.sunrise && getSunTimes.sunset && (
-        <>
-          {/* Dawn transition zone */}
-          <View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: xScale(getSunTimes.sunrise.getTime()),
-              width: 6,
-              height: chartHeight,
-              backgroundColor: "rgba(100,149,237,0.15)",
-            }}
-          />
-          
-          {/* Full daylight background */}
-          <View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: xScale(getSunTimes.sunrise.getTime()) + 6,
-              width: xScale(getSunTimes.sunset.getTime()) - xScale(getSunTimes.sunrise.getTime()) - 12,
-              height: chartHeight,
-              backgroundColor: "rgba(135,206,235,0.2)",
-            }}
-          />
-          
-          {/* Dusk transition zone */}
-          <View
-            style={{
-              position: "absolute",
-              top: 0,
-              left: xScale(getSunTimes.sunset.getTime()) - 6,
-              width: 6,
-              height: chartHeight,
-              backgroundColor: "rgba(100,149,237,0.15)",
-            }}
-          />
-        </>
-      )}
       
       <Canvas
         style={{
@@ -714,6 +808,42 @@ ${data
           backgroundColor: "transparent",
         }}
       >
+        {/* Filled background area below the energy line */}
+        {backgroundFillPath && (
+          <>
+            {currentContext === "daily" ? (
+              <>
+                {/* Dark blue nighttime fill for daily */}
+                <Path
+                  path={backgroundFillPath}
+                  style="fill"
+                  color="rgba(0,0,100,0.15)"
+                />
+                
+                {/* Light blue daylight fill that follows the energy line */}
+                {daylightFillPath && (
+                  <Path
+                    path={daylightFillPath}
+                    style="fill"
+                    color="rgba(135,206,235,0.2)"
+                  />
+                )}
+              </>
+            ) : (
+              /* Solid fill for weekly and monthly */
+              <Path
+                path={backgroundFillPath}
+                style="fill"
+                color={
+                  currentContext === "weekly"
+                    ? "rgba(75,0,130,0.12)" // Purple for weekly  
+                    : "rgba(139,69,19,0.15)" // Brown for monthly
+                }
+              />
+            )}
+          </>
+        )}
+
         {/* Background line - 10% opacity, spans full chart from left to right */}
         {backgroundLinePath && (
           <Path
@@ -763,7 +893,7 @@ ${data
 
 
 
-        {/* Data point markers for all contexts (excluding generated points) */}
+        {/* Data point markers for all contexts (excluding generated points) - always show all dots */}
         {processedData
           .filter((point) => !point.isGenerated)
           .map((point, index) => {
