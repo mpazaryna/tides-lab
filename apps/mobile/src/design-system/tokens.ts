@@ -4,7 +4,7 @@ export const colors = {
   tableIcon: "#8C9EB1",
   titleColor: "#0A2540",
   textColor: "#425466",
-  backgroundColor: "#F6F9FC",
+  backgroundColor: "#FAF5F0",
   inputBackground: "#F6F9FC",
   checkboxInputBackground: "#E7ECF1",
   inputPlaceholder: "#727F96",

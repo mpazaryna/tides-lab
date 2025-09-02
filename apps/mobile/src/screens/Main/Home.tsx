@@ -56,7 +56,7 @@ export default function Home() {
   const CHART_HEIGHT = 44; // Chart height in pixels
   const CHART_MARGIN = 20; // Chart margin for axes space
   const { width } = useWindowDimensions();
-  const CHART_WIDTH = width - 48; // Chart width from screen dimensions minus 52px
+  const CHART_WIDTH = width; // Chart width from screen dimensions minus 52px
 
   const [_agentInitialized, setAgentInitialized] = useState(false);
   const [_isChatInputFocused, setIsChatInputFocused] = useState(false);
@@ -266,7 +266,7 @@ export default function Home() {
 
         {/* ✅ REQUIREMENT 2: Sample data from getChartData() function */}
         <ImageBackground
-          source={require("../../../assets/defaultTidesGradient.png")}
+          source={require("../../../assets/background.png")}
           style={styles.energyChartWrapper}
           imageStyle={styles.energyChartBackgroundImage}
         >
@@ -350,8 +350,7 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         </ImageBackground>
-        {/* Messages */}
-        <ChatMessages messages={messages} />
+ 
       </ScrollView>
 
       {/* Tool Menu Overlay */}
@@ -469,10 +468,9 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   energyChartWrapper: {
-    margin: 16,
-    marginTop: 4,
+
     marginBottom: 0,
-    borderRadius: 20,
+
     paddingBottom: 8,
     paddingHorizontal: 12,
     shadowColor: "#000000",
@@ -488,10 +486,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 13,
-    overflow: "hidden",
+  
   },
   energyChartBackgroundImage: {
-    borderRadius: 20,
+
   },
   contextToggleWrapper: {
     paddingBottom: 0,

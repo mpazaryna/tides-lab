@@ -107,18 +107,14 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     const targetDate = new Date();
     if (currentContext === "daily") {
       targetDate.setDate(targetDate.getDate() - dateOffset);
-    } else if (currentContext === "weekly") {
-      // For weekly, we'll calculate for each day in the week
-      return null; // Handle separately for weekly
+      return SunCalc.getTimes(
+        targetDate,
+        locationInfo.latitude,
+        locationInfo.longitude
+      );
     } else {
-      return null; // No sun markers for monthly/project
+      return null; // No sun times for weekly/monthly/project
     }
-
-    return SunCalc.getTimes(
-      targetDate,
-      locationInfo.latitude,
-      locationInfo.longitude
-    );
   }, [locationInfo, currentContext, dateOffset]);
 
   const animationLine = useSharedValue(0);
@@ -568,7 +564,6 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
   const daylightFillPath = useMemo(() => {
     if (
       currentContext !== "daily" ||
-      processedData.length === 0 ||
       !getSunTimes?.sunrise ||
       !getSunTimes?.sunset
     ) {
@@ -583,34 +578,56 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
     const sunriseBufferEnd = sunriseTime + bufferTimeMs;
     const sunsetBufferStart = sunsetTime - bufferTimeMs;
 
-    // Use the same background data processing
+    // Use background data processing or create default flat line if no data
     const backgroundData = processedData.filter(
       (point) => !point.isGenerated || point.label !== "Current time"
     );
 
-    const extendedData = [...backgroundData];
+    let extendedData = [...backgroundData];
 
-    // Add starting point at left edge
-    if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
-      extendedData.unshift({
-        ...backgroundData[0],
-        x: xDomain[0],
-        y: backgroundData[0].y,
-        isGenerated: true,
-      });
-    }
+    // If no data, create a flat line at energy level 5 (medium) for backgrounds to follow
+    if (backgroundData.length === 0) {
+      extendedData = [
+        {
+          x: xDomain[0],
+          y: 5,
+          label: "default start",
+          timestamp: "",
+          originalLevel: 5,
+          isGenerated: true,
+        },
+        {
+          x: xDomain[1],
+          y: 5,
+          label: "default end",
+          timestamp: "",
+          originalLevel: 5,
+          isGenerated: true,
+        },
+      ];
+    } else {
+      // Add starting point at left edge
+      if (backgroundData.length > 0 && backgroundData[0].x > xDomain[0]) {
+        extendedData.unshift({
+          ...backgroundData[0],
+          x: xDomain[0],
+          y: backgroundData[0].y,
+          isGenerated: true,
+        });
+      }
 
-    // Add ending point at right edge
-    if (
-      backgroundData.length > 0 &&
-      backgroundData[backgroundData.length - 1].x < xDomain[1]
-    ) {
-      extendedData.push({
-        ...backgroundData[backgroundData.length - 1],
-        x: xDomain[1],
-        y: backgroundData[backgroundData.length - 1].y,
-        isGenerated: true,
-      });
+      // Add ending point at right edge
+      if (
+        backgroundData.length > 0 &&
+        backgroundData[backgroundData.length - 1].x < xDomain[1]
+      ) {
+        extendedData.push({
+          ...backgroundData[backgroundData.length - 1],
+          x: xDomain[1],
+          y: backgroundData[backgroundData.length - 1].y,
+          isGenerated: true,
+        });
+      }
     }
 
     // Find or interpolate the energy level at sunrise and sunset times
@@ -691,7 +708,6 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
   const sunriseBufferFillPath = useMemo(() => {
     if (
       currentContext !== "daily" ||
-      processedData.length === 0 ||
       !getSunTimes?.sunrise
     ) {
       return null;
@@ -786,7 +802,6 @@ const EnergyChart = ({ data, chartHeight, chartMargin, chartWidth }: Props) => {
   const sunsetBufferFillPath = useMemo(() => {
     if (
       currentContext !== "daily" ||
-      processedData.length === 0 ||
       !getSunTimes?.sunset
     ) {
       return null;
@@ -1059,11 +1074,11 @@ ${data
             {currentContext === "daily" ? (
               <>
                 {/* Dark blue nighttime fill for daily */}
-                <Path path={backgroundFillPath} style="fill" color="#65859A" />
+                <Path path={backgroundFillPath} style="fill" color="#717F97" />
 
                 {/* Light blue daylight fill that follows the energy line */}
                 {daylightFillPath && (
-                  <Path path={daylightFillPath} style="fill" color="#92B1BE" />
+                  <Path path={daylightFillPath} style="fill" color="#B4C5E0" />
                 )}
 
                 {/* Buffer zones - middle colors between night and day */}
@@ -1071,14 +1086,14 @@ ${data
                   <Path
                     path={sunriseBufferFillPath}
                     style="fill"
-                    color="#7D9DB0"
+                    color="#98A7C0"
                   />
                 )}
                 {sunsetBufferFillPath && (
                   <Path
                     path={sunsetBufferFillPath}
                     style="fill"
-                    color="#7D9DB0"
+                    color="#98A7C0"
                   />
                 )}
               </>
@@ -1089,8 +1104,8 @@ ${data
                 style="fill"
                 color={
                   currentContext === "weekly"
-                    ? "#7D9DB0" // Purple for weekly
-                    : "#7D9DB0" // Brown for monthly
+                    ? "#98A7C0" // Purple for weekly
+                    : "#98A7C0" // Brown for monthly
                 }
               />
             )}
