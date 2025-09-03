@@ -15,6 +15,7 @@ import {
   Users,
   ArrowUpDown,
   Calendar,
+  Copy,
 } from "lucide-react-native";
 import { Text } from "../Text";
 import { colors, spacing } from "../../design-system/tokens";
@@ -33,17 +34,20 @@ interface ToolMenuProps {
     available: boolean;
     reason: string;
   };
+  onCopyConversation: () => void;
 }
 
 interface ToolButtonProps {
-  toolName: string;
+  toolName?: string;
   icon: any;
   title: string;
-  handleToolSelect: (toolName: string) => Promise<void>;
-  getToolAvailability: (toolName: string) => {
+  handleToolSelect?: (toolName: string) => Promise<void>;
+  getToolAvailability?: (toolName: string) => {
     available: boolean;
     reason: string;
   };
+  onPress?: () => void;
+  disabled?: boolean;
 }
 
 const ToolButton: React.FC<ToolButtonProps> = ({
@@ -52,15 +56,27 @@ const ToolButton: React.FC<ToolButtonProps> = ({
   title,
   handleToolSelect,
   getToolAvailability,
+  onPress,
+  disabled = false,
 }) => {
-  const availability = getToolAvailability(toolName);
-  const isDisabled = !availability.available;
+  const availability =
+    toolName && getToolAvailability
+      ? getToolAvailability(toolName)
+      : { available: true, reason: "" };
+  const isDisabled = Boolean(disabled) || (toolName && !availability.available);
+
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else if (handleToolSelect && toolName) {
+      handleToolSelect(toolName);
+    }
+  };
 
   return (
     <TouchableOpacity
       style={[styles.toolMenuItem, isDisabled && styles.toolMenuItemDisabled]}
-      onPress={() => handleToolSelect(toolName)}
-      disabled={isDisabled}
+      onPress={handlePress}
     >
       <View style={styles.toolMenuItemIcon}>
         <Icon
@@ -89,6 +105,7 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
   toggleToolMenu: _toggleToolMenu,
   scrollable = true,
   getToolAvailability,
+  onCopyConversation,
 }) => {
   if (!showToolMenu) {
     return null;
@@ -130,7 +147,6 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
             handleToolSelect={handleToolSelect}
             getToolAvailability={getToolAvailability}
           />
-
         </View>
 
         {/* Context Management */}
@@ -159,7 +175,6 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
             getToolAvailability={getToolAvailability}
           />
         </View>
-
 
         {/* Energy & Tasks */}
         <View style={styles.menuSection}>
@@ -228,6 +243,23 @@ export const ToolMenu: React.FC<ToolMenuProps> = ({
             title="View Participants"
             handleToolSelect={handleToolSelect}
             getToolAvailability={getToolAvailability}
+          />
+        </View>
+
+        {/* Utilities */}
+        <View style={styles.menuSection}>
+          <Text
+            variant="caption"
+            color="secondary"
+            style={styles.sectionHeader}
+          >
+            UTILITIES
+          </Text>
+
+          <ToolButton
+            icon={Copy}
+            title="Copy Conversation"
+            onPress={onCopyConversation}
           />
         </View>
       </ScrollView>

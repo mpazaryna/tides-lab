@@ -37,11 +37,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const getTextColor = () => {
     switch (message.type) {
       case "user":
-        return "secondary";
+        return colors.textColor;
       case "system":
-        return "secondary";
+        return colors.titleColor;
       default:
-        return "primary";
+        return colors.titleColor;
     }
   };
 
@@ -64,13 +64,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     const parts = cleanText.split(/(\*\*.*?\*\*)/g);
 
     return (
-      <Text variant="body" color={getTextColor()}>
+      <Text variant="body" style={[{ color: getTextColor() }]}>
         {parts.map((part, index) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             // Remove ** and render as bold (nested Text for inline styling)
             const boldText = part.slice(2, -2);
             return (
-              <Text key={index} style={styles.boldText}>
+              <Text key={index} style={[styles.boldText, { color: getTextColor() }]}>
                 {boldText}
               </Text>
             );
@@ -103,7 +103,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )} */}
 
         {message.type === "tool_result" && message.metadata?.toolResult ? (
-          <Text variant="body" color={getTextColor()}>
+          <Text variant="body" style={[{ color: getTextColor() }]}>
             {formatToolResult(message.metadata.toolResult)}
           </Text>
         ) : (
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   userBubble: {
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.containerBorderSoft,
     paddingLeft: 12,
     paddingRight: 12,
     paddingVertical: 7.5,

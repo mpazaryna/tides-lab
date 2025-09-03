@@ -1,5 +1,15 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { StyleSheet, ScrollView, View, TouchableOpacity } from "react-native";
+import {
+  StyleSheet,
+  ScrollView,
+  View,
+  TouchableOpacity,
+  useWindowDimensions,
+  Alert,
+  Clipboard,
+  ImageBackground,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMCP } from "../../context/MCPContext";
 import { useChat } from "../../context/ChatContext";
 import { loggingService } from "../../services/loggingService";
@@ -7,6 +17,7 @@ import { colors, spacing } from "../../design-system/tokens";
 import { useToolMenu } from "../../hooks/useToolMenu";
 import { useChatInput } from "../../hooks/useChatInput";
 import { useContextTide } from "../../hooks/useContextTide";
+import { useTimeContext } from "../../context/TimeContext";
 import { ChatMessages } from "../../components/chat/ChatMessages";
 import { ChatInput } from "../../components/chat/ChatInput";
 import { ToolMenu } from "../../components/tools/ToolMenu";
@@ -16,8 +27,21 @@ import {
   createAgentContext,
   executeAgentCommand,
 } from "../../utils/agentCommandUtils";
+import EnergyChart from "../../components/EnergyChart";
+import { getChartData, numberToEnergyLevel } from "../../components/data/data";
+import { ContextToggle } from "../../components/ContextToggle";
+import { getSimpleTimeContext } from "../../utils/timeContextHelpers";
+import { Text } from "../../design-system";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Timer,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react-native";
 
 export default function Home() {
+  const insets = useSafeAreaInsets();
   const { getCurrentServerUrl, isConnected } = useMCP();
   const {
     messages,
@@ -28,14 +52,84 @@ export default function Home() {
     sendAgentMessage,
   } = useChat();
 
+  // ✅ REQUIREMENT 1: Defined size of chart and canvas
+  const CHART_HEIGHT = 44; // Chart height in pixels
+  const CHART_MARGIN = 20; // Chart margin for axes space
+  const { width } = useWindowDimensions();
+  const CHART_WIDTH = width; // Chart width from screen dimensions minus 52px
+
   const [_agentInitialized, setAgentInitialized] = useState(false);
   const [_isChatInputFocused, setIsChatInputFocused] = useState(false);
-  const [templateToInject, setTemplateToInject] = useState<string>('');
+  const [templateToInject, setTemplateToInject] = useState<string>("");
 
   // Context tide management - handles daily/weekly/monthly switching
-  const { getCurrentContextTideId, setToolExecuting, currentContextTide } = useContextTide();
+  const { getCurrentContextTideId, setToolExecuting, currentContextTide } =
+    useContextTide();
 
+  // Time navigation for chart history
+  const {
+    navigateBackward,
+    navigateForward,
+    dateOffset,
+    currentContext,
+    isAtPresent,
+  } = useTimeContext();
 
+  // Get last energy level with formatted display
+  const getLastEnergyDisplay = useCallback(() => {
+    const chartData = getChartData();
+    if (chartData.length === 0) return "No data";
+
+    // Sort by timestamp to get the most recent
+    const sortedData = chartData.sort((a, b) => b.x - a.x);
+    const lastPoint = sortedData[0];
+
+    // Convert to string descriptor and number
+    const energyNumber = Math.round(lastPoint.y);
+    const energyLabel = numberToEnergyLevel(energyNumber);
+
+    // Capitalize first letter
+    const capitalizedLabel =
+      energyLabel.charAt(0).toUpperCase() + energyLabel.slice(1);
+
+    return `${capitalizedLabel} (${energyNumber})`;
+  }, []);
+
+  // Get time and relative time since last update
+  const getLastUpdatedDisplay = useCallback(() => {
+    const chartData = getChartData();
+    if (chartData.length === 0) return "No updates";
+
+    // Sort by timestamp to get the most recent
+    const sortedData = chartData.sort((a, b) => b.x - a.x);
+    const lastPoint = sortedData[0];
+    const lastUpdateTime = new Date(lastPoint.x);
+    const now = new Date();
+    const diffMs = now.getTime() - lastUpdateTime.getTime();
+
+    const minutes = Math.floor(diffMs / (1000 * 60));
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    // Format the actual time
+    // const actualTime = lastUpdateTime.toLocaleTimeString([], {
+    //   hour: 'numeric',
+    //   minute: '2-digit',
+    //   hour12: true
+    // });
+
+    // Format the relative time
+    let relativeTime;
+    if (minutes < 1) relativeTime = "Just now";
+    else if (minutes < 60)
+      relativeTime = `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+    else if (hours < 24)
+      relativeTime = `${hours} hour${hours > 1 ? "s" : ""} ago`;
+    else if (days === 1) relativeTime = "Yesterday";
+    else relativeTime = `${days} day${days > 1 ? "s" : ""} ago`;
+
+    return `${relativeTime}`;
+  }, []);
 
   // Template injection callback
   const injectTemplate = useCallback((template: string) => {
@@ -44,8 +138,32 @@ export default function Home() {
 
   // Clear template after injection
   const onTemplateInjected = useCallback(() => {
-    setTemplateToInject('');
+    setTemplateToInject("");
   }, []);
+
+  // Copy conversation function
+  const handleCopyConversation = useCallback(() => {
+    if (messages.length === 0) {
+      Alert.alert("No Messages", "There are no messages to copy.");
+      return;
+    }
+
+    const conversationText = messages
+      .map((message) => {
+        const timestamp = new Date(message.timestamp).toLocaleString();
+        const type =
+          message.type === "user"
+            ? "You"
+            : message.type === "assistant"
+            ? "Assistant"
+            : "System";
+        return `[${timestamp}] ${type}: ${message.content}`;
+      })
+      .join("\n\n");
+
+    Clipboard.setString(conversationText);
+    Alert.alert("Copied!", "Conversation copied to clipboard.");
+  }, [messages]);
 
   // Tool menu state management - context-aware
   const {
@@ -65,11 +183,7 @@ export default function Home() {
   });
 
   // Chat input state management - context-aware
-  const {
-    inputMessage,
-    setInputMessage,
-    handleSendMessage,
-  } = useChatInput({
+  const { inputMessage, setInputMessage, handleSendMessage } = useChatInput({
     getCurrentContextTideId, // ✅ Context-aware tide ID
     isConnected,
     getCurrentServerUrl,
@@ -135,7 +249,7 @@ export default function Home() {
   );
 
   return (
-    <View style={[styles.container]}>
+    <View style={[styles.container, { paddingTop: 44 }]}>
       <ScrollView
         ref={scrollViewRef}
         keyboardDismissMode="interactive"
@@ -150,8 +264,93 @@ export default function Home() {
           <EnergyChart onPress={() => ""} />
         </View> */}
 
-        {/* Messages */}
-        <ChatMessages messages={messages} />
+        {/* ✅ REQUIREMENT 2: Sample data from getChartData() function */}
+        <ImageBackground
+          source={require("../../../assets/background.png")}
+          style={styles.energyChartWrapper}
+          imageStyle={styles.energyChartBackgroundImage}
+        >
+          <View style={styles.descriptionContainerRow}>
+            <View style={styles.wholeDescriptionContainer}>
+              <View style={styles.descriptionContainer}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                >
+                  <Text variant="caption" color="rgba(255,255,255,.5)">
+                    Updated {getLastUpdatedDisplay()}
+                  </Text>
+                  <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
+                </View>
+
+                <Text
+                  variant="body"
+                  weight="semibold"
+                  color="rgba(255,255,255,1)"
+                  style={styles.title}
+                >
+                  {getLastEnergyDisplay()}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.wholeDescriptionContainer}>
+              <View style={styles.descriptionContainer}>
+                {/* <Text
+                  variant="caption"
+                  color="rgba(255,255,255,.5)"
+                  style={{ textAlign: "right" }}
+                >
+                  {getSimpleTimeContext(currentContext, dateOffset)}
+                </Text>
+                <Text
+                  variant="body"
+                  weight="semibold"
+                  color="rgba(255,255,255,1)"
+                  style={styles.title}
+                >
+                  {isAtPresent ? 'Current' : `${dateOffset} ${currentContext === 'daily' ? 'day' : currentContext === 'weekly' ? 'week' : 'month'}${dateOffset > 1 ? 's' : ''} ago`}
+                </Text> */}
+              </View>
+              <Timer color={"white"} />
+            </View>
+          </View>
+
+          <EnergyChart
+            data={getChartData()} // Sample data transformed to ChartDataPoint format
+            chartHeight={CHART_HEIGHT}
+            chartMargin={CHART_MARGIN}
+            chartWidth={CHART_WIDTH}
+          />
+
+          {/* Context Toggle */}
+          <View style={styles.contextToggleWrapper}>
+            <TouchableOpacity
+              onPress={navigateBackward}
+              style={[styles.navigationButton, { opacity: 1 }]}
+            >
+              <ChevronLeft
+                height={18}
+                width={18}
+                color="rgba(255,255,255,0.5)"
+              />
+            </TouchableOpacity>
+            <ContextToggle variant="full" showLabels={true} />
+            <TouchableOpacity
+              onPress={navigateForward}
+              disabled={isAtPresent}
+              style={[
+                styles.navigationButton,
+                { opacity: isAtPresent ? 0.3 : 1 },
+              ]}
+            >
+              <ChevronRight
+                height={18}
+                width={18}
+                color="rgba(255,255,255,0.5)"
+              />
+            </TouchableOpacity>
+          </View>
+        </ImageBackground>
+ 
       </ScrollView>
 
       {/* Tool Menu Overlay */}
@@ -172,6 +371,7 @@ export default function Home() {
         toggleToolMenu={toggleToolMenu}
         scrollable={true}
         getToolAvailability={getToolAvailability}
+        onCopyConversation={handleCopyConversation}
       />
       {/* Chat Input with Hierarchical Toggle */}
 
@@ -197,7 +397,7 @@ const styles = StyleSheet.create({
   },
   tideInfoHeader: {
     paddingTop: 10,
-    backgroundColor: colors.background.primary,
+    backgroundColor: colors.backgroundColor,
     paddingVertical: 12,
     paddingBottom: 10,
     paddingHorizontal: 16,
@@ -205,13 +405,13 @@ const styles = StyleSheet.create({
   tideInfoInnerHeader: {
     flex: 1,
     borderWidth: 0.5,
-    borderColor: colors.neutral[200],
-    backgroundColor: colors.background.secondary,
+    borderColor: colors.containerBorder,
+    backgroundColor: colors.containerBackground,
     borderRadius: 20,
   },
 
   container: {
-    backgroundColor: colors.background.primary,
+    backgroundColor: colors.backgroundColor,
     flex: 1,
   },
   errorCard: {
@@ -240,10 +440,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[100],
     borderRadius: spacing[3],
     borderWidth: 1,
-    borderColor: colors.neutral[200],
+    borderColor: colors.containerBorder,
   },
   hierarchicalToggleButtonActive: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.backgroundColor,
     borderColor: colors.primary[500],
   },
   hierarchicalToggleText: {
@@ -266,5 +466,72 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: "transparent",
+  },
+  energyChartWrapper: {
+
+    marginBottom: 0,
+
+    paddingBottom: 8,
+    paddingHorizontal: 12,
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    gap: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 13,
+  
+  },
+  energyChartBackgroundImage: {
+
+  },
+  contextToggleWrapper: {
+    paddingBottom: 0,
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    height: 44,
+  },
+  descriptionContainerRow: {
+    width: "100%",
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  wholeDescriptionContainer: {
+    display: "flex",
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  descriptionContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 0,
+  },
+  title: {},
+  description: {
+    color: "rgba(255,255,255,.6)",
+    fontSize: 13,
+  },
+  navigationButton: {
+    height: 28,
+    width: 28,
+    backgroundColor: "rgba(255,255,255,.08)",
+    borderRadius: 100,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -1,6 +1,22 @@
 import { getInterFont, getRobotoMonoFont } from "../utils/fonts";
 
 export const colors = {
+  tableIcon: "#8C9EB1",
+  titleColor: "#0A2540",
+  textColor: "#425466",
+  backgroundColor: "#FAF5F0",
+  inputBackground: "#F6F9FC",
+  checkboxInputBackground: "#E7ECF1",
+  inputPlaceholder: "#727F96",
+  containerBackground: "#FFFFFF",
+  containerBorder: "#CBD6E0",
+  containerBorderSoft: "#E7ECF1",
+  buttonDisabled: "#CFD7DF",
+  formFieldDescriptionText: "#3F4B66",
+  annotation: "#8C9EB1",
+  inlineBackground: "#DCE6EE",
+  inlineForeground: "#2C3A57",
+
   // Primary - Brand Blue
   primary: {
     50: "#f5f7fa",
@@ -29,7 +45,6 @@ export const colors = {
     900: "#272f35",
   },
 
-
   // Neutral - Dark Text
   neutral: {
     50: "#f9fafb", // Background 1
@@ -57,10 +72,10 @@ export const colors = {
     tertiary: "#f4f5f6",
   },
 
-  // Highlight: 
+  // Highlight:
   highlight: {
     foreground: "#4871A8",
-    background: "#EDF1F7"
+    background: "#EDF1F7",
   },
 
   // Text
@@ -133,7 +148,7 @@ export const typography = {
     caption1: 16,
     caption2: 13,
     // Additional line heights for Text component compatibility
-    tight: 1.25,
+    tight: 1.15,
     pro: 1.29,
     normal: 1.5,
     relaxed: 1.75,

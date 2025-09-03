@@ -6,8 +6,6 @@ import {
   Animated,
   StyleSheet,
   LayoutChangeEvent,
-  Clipboard,
-  Alert,
   Text,
   ScrollView,
 } from "react-native";
@@ -15,8 +13,6 @@ import {
 import {
   ArrowUp,
   Plus,
-  Copy,
-  X,
   HelpCircle,
   Zap,
   CheckCircle,
@@ -28,7 +24,6 @@ import { colors, spacing, typography } from "../../design-system/tokens";
 import { Text as CustomText } from "../Text";
 import { ToolSuggestion } from "./ToolSuggestion";
 
-import { useChat } from "../../context/ChatContext";
 import type { DetectedTool } from "../../config/toolPhrases";
 import {
   detectToolSuggestions,
@@ -91,7 +86,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     "suggestions" | "instructions" | null
   >(null);
 
-  const { messages } = useChat();
   // const insets = useSafeAreaInsets();
 
   // Icon mapping for tool categories
@@ -184,7 +178,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     return (
       <Text style={styles.formattedInputText}>
         <Text
-          style={[styles.toolHighlight, { color: colors.highlight.foreground }]}
+          style={[styles.toolHighlight, { color: colors.inlineForeground }]}
         >
           {highlightedTool}
         </Text>
@@ -212,14 +206,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }, 100);
   };
 
-  // Handle dismissing any overlay
-  const handleDismissOverlay = () => {
-    setShowSuggestions(false);
-    setToolSuggestions([]);
-    setHighlightedTool(null);
-    hideOverlay();
-  };
-
   // Get tool configuration for the highlighted tool
   const getHighlightedToolConfig = () => {
     if (!highlightedTool) return null;
@@ -239,23 +225,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
     return (
       <View style={styles.overlayContent}>
-        <View style={styles.overlayHeader}>
-          <CustomText
-            variant="caption"
-            weight="normal"
-            color={colors.text.tertiary}
-          >
-            Suggestions ({toolSuggestions.length})
-          </CustomText>
-          <TouchableOpacity
-            style={styles.overlayDismissButton}
-            onPress={handleDismissOverlay}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <X size={16} color={colors.text.tertiary} />
-          </TouchableOpacity>
-        </View>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -272,34 +241,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 onPress={() => handleToolSelect(suggestion)}
                 activeOpacity={1}
               >
-                <View style={styles.suggestionCardHeader}>
-                  <View
-                    style={[
-                      styles.suggestionIconContainer,
-                      { backgroundColor: colors.highlight.background },
-                    ]}
-                  >
-                    <Icon size={18} color={colors.highlight.foreground} />
-                  </View>
+                <View
+                  style={[
+                    styles.suggestionIconContainer,
+                    { backgroundColor: colors.inlineBackground },
+                  ]}
+                >
+                  <Icon size={18} color={colors.inlineForeground} />
                 </View>
 
-                <View style={styles.suggestionCardContent}>
-                  <CustomText
-                    variant="bodySmall"
-                    weight="semibold"
-                    color={colors.text.primary}
-                    numberOfLines={1}
-                  >
-                    {suggestion.title}
-                  </CustomText>
-                  <CustomText
-                    variant="caption"
-                    color={colors.text.tertiary}
-                    numberOfLines={2}
-                  >
-                    {suggestion.description}
-                  </CustomText>
-                </View>
+                <CustomText
+                  variant="body"
+                  weight="normal"
+                  color={colors.titleColor}
+                  numberOfLines={1}
+                >
+                  {suggestion.title}
+                </CustomText>
               </TouchableOpacity>
             );
           })}
@@ -313,95 +271,78 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const toolConfig = getHighlightedToolConfig();
     if (!toolConfig) return null;
 
-    const Icon = getCategoryIcon(toolConfig.category);
+    // const Icon = getCategoryIcon(toolConfig.category);
     const hasRequiredParams = toolConfig.requiredParams.length > 0;
     const hasOptionalParams = toolConfig.optionalParams.length > 0;
 
     return (
-      <View style={styles.overlayContent}>
-        <View style={styles.overlayHeader}>
+      <View style={styles.instructionsContainer}>
+        {/* <View style={styles.instructionsIconContainer}>
+          <Icon size={18} color={colors.inlineForeground} />
+        </View> */}
+        <CustomText style={styles.instructionsText}>
           <CustomText
-            variant="caption"
+            variant="bodySmall"
             weight="normal"
-            color={colors.text.tertiary}
+            color={colors.inlineForeground}
+            backgroundColor={colors.inlineBackground}
           >
-            Instructions
+            {toolConfig.title}
           </CustomText>
-          <TouchableOpacity
-            style={styles.overlayDismissButton}
-            onPress={handleDismissOverlay}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <X size={16} color={colors.text.tertiary} />
-          </TouchableOpacity>
-        </View>
 
-        <View style={styles.instructionsContainer}>
-          <View style={styles.instructionsIconContainer}>
-            <Icon size={20} color={colors.highlight.foreground} />
-          </View>
-          <CustomText style={styles.instructionsText}>
-            <CustomText
-              variant="bodySmall"
-              weight="medium"
-              color={colors.highlight.foreground}
-              backgroundColor={colors.highlight.background}
-            >
-              {toolConfig.title}
+          {hasRequiredParams && (
+            <CustomText>
+              {toolConfig.requiredParams.map((param, index) => {
+                const highlightColor = colors.inputPlaceholder;
+                return (
+                  <CustomText
+                    key={`req-${index}`}
+                    variant="bodySmall"
+                    weight="normal"
+                    color={highlightColor}
+                  >
+                    {index === 0 ? " " : ", "}
+                    {param.description}
+                  </CustomText>
+                );
+              })}
             </CustomText>
+          )}
 
-            {hasRequiredParams && (
-              <CustomText>
-                {toolConfig.requiredParams.map((param, index) => {
-                  return (
-                    <CustomText
-                      key={`req-${index}`}
-                      variant="bodySmall"
-                      weight={"medium"}
-                    >
-                      {index === 0 ? " " : ", "}
-                      {param.description}
-                    </CustomText>
-                  );
-                })}
+          {hasOptionalParams && (
+            <CustomText>
+              {toolConfig.optionalParams.map((param, index) => {
+                const highlightColor = colors.inputPlaceholder;
+
+                return (
+                  <CustomText
+                    key={`opt-${index}`}
+                    variant="bodySmall"
+                    weight="normal"
+                    color={highlightColor}
+                  >
+                    {hasRequiredParams || index > 0 ? ", " : " "}
+                    {param.description}
+                  </CustomText>
+                );
+              })}
+            </CustomText>
+          )}
+
+          {!hasRequiredParams && !hasOptionalParams && (
+            <View style={styles.noParamsContainer}>
+              <HelpCircle size={24} color={colors.inputPlaceholder} />
+              <CustomText
+                variant="body"
+                color="tertiary"
+                style={styles.noParamsText}
+              >
+                This tool doesn't require any parameters. Just type the tool
+                name and press enter.
               </CustomText>
-            )}
-
-            {hasOptionalParams && (
-              <CustomText>
-                {toolConfig.optionalParams.map((param, index) => {
-                  const highlightColor = colors.text.tertiary;
-
-                  return (
-                    <CustomText
-                      key={`opt-${index}`}
-                      variant="bodySmall"
-                      weight={"medium"}
-                      color={highlightColor}
-                    >
-                      {hasRequiredParams || index > 0 ? ", " : " "}
-                      {param.description}
-                    </CustomText>
-                  );
-                })}
-              </CustomText>
-            )}
-
-            {!hasRequiredParams && !hasOptionalParams && (
-              <View style={styles.noParamsContainer}>
-                <HelpCircle size={24} color={colors.neutral[300]} />
-                <CustomText
-                  variant="body"
-                  color="tertiary"
-                  style={styles.noParamsText}
-                >
-                  This tool doesn't require any parameters. Just type the tool
-                  name and press enter.
-                </CustomText>
-              </View>
-            )}
-          </CustomText>
-        </View>
+            </View>
+          )}
+        </CustomText>
       </View>
     );
   };
@@ -442,29 +383,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  const handleCopyConversation = () => {
-    if (messages.length === 0) {
-      Alert.alert("No Messages", "There are no messages to copy.");
-      return;
-    }
-
-    const conversationText = messages
-      .map((message) => {
-        const timestamp = new Date(message.timestamp).toLocaleString();
-        const type =
-          message.type === "user"
-            ? "You"
-            : message.type === "assistant"
-            ? "Assistant"
-            : "System";
-        return `[${timestamp}] ${type}: ${message.content}`;
-      })
-      .join("\n\n");
-
-    Clipboard.setString(conversationText);
-    Alert.alert("Copied!", "Conversation copied to clipboard.");
-  };
-
   return (
     <View style={[styles.inputContainer]} onLayout={handleLayout}>
       {/* Tool Suggestion */}
@@ -497,11 +415,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           ]}
         >
           {overlayType === "suggestions" && renderToolSuggestions()}
-          {overlayType === "instructions" && renderToolInstructions()}
         </Animated.View>
       )}
 
-      <View style={styles.mainRow}>
+      {overlayType === "instructions" && renderToolInstructions()}
+
+      <View style={[styles.mainRow, overlayType && styles.mainRowNoShadow]}>
         <TouchableOpacity style={styles.toolButton} onPress={toggleToolMenu}>
           <Animated.View
             style={{
@@ -517,24 +436,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           >
             <Plus
               size={22}
-              color={
-                toolButtonActive ? colors.primary[500] : colors.neutral[400]
-              }
+              color={toolButtonActive ? colors.titleColor : colors.tableIcon}
             />
           </Animated.View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.copyButton}
-          onPress={handleCopyConversation}
-          disabled={messages.length === 0}
-        >
-          <Copy
-            size={20}
-            color={
-              messages.length === 0 ? colors.neutral[300] : colors.neutral[500]
-            }
-          />
         </TouchableOpacity>
 
         <View style={styles.inputRow}>
@@ -545,7 +449,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               highlightedTool && styles.messageInputWithHighlight,
             ]}
             placeholder="Share your energy"
-            placeholderTextColor={colors.text.tertiary}
+            placeholderTextColor={colors.inputPlaceholder}
             value={inputMessage}
             onChangeText={handleInputChange}
             onSubmitEditing={handleSendMessage}
@@ -585,7 +489,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 const styles = StyleSheet.create({
   inputContainer: {
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.containerBackground,
     display: "flex",
     // borderWidth: 1,
     // borderColor: "red",
@@ -606,35 +510,35 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     paddingBottom: 12,
     paddingTop: 8,
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.containerBackground,
     display: "flex",
     flexDirection: "row",
     alignItems: "flex-end",
     gap: 10,
-    borderTopColor: colors.neutral[200],
-    shadowColor: "#000",
+    borderTopColor: colors.containerBorder,
     borderTopWidth: 0.5,
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: -0.5,
+      height: 4,
     },
-    shadowRadius: 0.5,
-    shadowOpacity: 0.03,
+    shadowRadius: 20,
+    shadowOpacity: 0.035,
   },
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: spacing[2],
     borderWidth: 0.5,
-    borderColor: colors.neutral[300],
+    borderColor: colors.containerBorder,
     flex: 1,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 1.5,
+      height: 4,
     },
-    shadowRadius: 1.5,
-    shadowOpacity: 0.03,
+    shadowRadius: 20,
+    shadowOpacity: 0.035,
     backgroundColor: "white",
     borderRadius: 18,
     maxHeight: 100,
@@ -644,7 +548,7 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
     paddingRight: 48,
     fontSize: typography.fontSize.base,
-    color: colors.text.primary,
+    color: colors.titleColor,
     paddingTop: 8,
     paddingBottom: 8,
     lineHeight: typography.fontSize.base * typography.lineHeight.pro,
@@ -652,16 +556,7 @@ const styles = StyleSheet.create({
   toolButton: {
     height: 34,
     width: 34,
-    backgroundColor: colors.neutral[200],
-    borderRadius: 100,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  copyButton: {
-    height: 34,
-    width: 34,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.containerBorderSoft,
     borderRadius: 100,
     display: "flex",
     alignItems: "center",
@@ -679,7 +574,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   sendButtonColor: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.titleColor,
     borderRadius: 1000,
     alignItems: "center",
     justifyContent: "center",
@@ -691,7 +586,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sendButtonColorDisabled: {
-    backgroundColor: colors.neutral[400],
+    backgroundColor: colors.buttonDisabled,
   },
   messageInputWithHighlight: {
     color: "transparent", // Make text transparent when highlighting is active
@@ -711,108 +606,99 @@ const styles = StyleSheet.create({
   formattedInputText: {
     fontSize: typography.fontSize.base,
     lineHeight: typography.fontSize.base * typography.lineHeight.pro,
-    color: colors.text.primary,
+    color: colors.titleColor,
   },
   toolHighlight: {
-    backgroundColor: colors.highlight.background, // Light purple background
+    backgroundColor: colors.inlineBackground, // Light purple background
   },
   normalText: {
-    color: colors.text.primary,
+    color: colors.titleColor,
   },
   // Unified overlay styles
   unifiedOverlay: {
     width: "100%",
-    backgroundColor: colors.background.tertiary,
-    borderTopColor: colors.neutral[200],
+    backgroundColor: colors.containerBackground,
+    borderTopColor: colors.containerBorder,
     borderTopWidth: 0.5,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: -0.5,
+      height: 4,
     },
-    shadowRadius: 0.5,
-    shadowOpacity: 0.03,
+    shadowRadius: 20,
+    shadowOpacity: 0.035,
     zIndex: 0,
     overflow: "hidden",
-    maxHeight: 169,
-    height: 169,
+    maxHeight: 58,
+    height: 58,
+    gap: 1,
   },
   overlayContent: {
     flex: 1,
-    paddingVertical: spacing[2],
   },
   overlayHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: spacing[4],
     marginBottom: spacing[2],
   },
   overlayDismissButton: {
     padding: spacing[1],
   },
   // Tool suggestions styles
-  suggestionsScrollView: {
-    flex: 1,
-  },
-  suggestionsScrollContent: {
-    paddingHorizontal: spacing[4],
-    gap: spacing[3],
-  },
+  suggestionsScrollView: {},
+  suggestionsScrollContent: {},
   suggestionCard: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-    padding: spacing[3],
-    width: 180,
-    borderWidth: 0.5,
-    borderColor: colors.neutral[200],
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1.5,
-    },
-    shadowOpacity: 0.03,
-    shadowRadius: 1.5,
-    elevation: 2,
-  },
-  suggestionCardHeader: {
+    backgroundColor: colors.containerBackground,
+    borderRadius: 0,
+    padding: 11,
+    paddingHorizontal: 16,
+    paddingLeft: 12,
+    display: "flex",
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing[2],
-  },
-  suggestionIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
+    height: 58,
+    borderLeftWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderColor: colors.containerBorder,
+    marginRight: -0.5,
   },
-  suggestionCardContent: {
-    gap: 2.4,
+
+  suggestionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.inlineBackground,
   },
+
   // Tool instructions styles
   instructionsContainer: {
+    position: "absolute",
     flex: 1,
     paddingHorizontal: spacing[3],
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "center",
-    gap: spacing[3],
+
     borderWidth: 0.5,
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.containerBackground,
     borderRadius: 12,
-    padding: spacing[3],
-    borderColor: colors.neutral[200],
+    padding: spacing[4],
+    borderColor: colors.containerBorder,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 1.5,
+      height: 4,
     },
-    shadowOpacity: 0.03,
-    shadowRadius: 1.5,
+    shadowRadius: 20,
+    shadowOpacity: 0.035,
     elevation: 2,
     marginHorizontal: spacing[4],
+    bottom: 66,
   },
   instructionsIconContainer: {
     width: 32,
@@ -820,7 +706,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.highlight.background,
+    backgroundColor: colors.inlineBackground,
   },
   instructionsText: {
     flex: 1,
@@ -833,5 +719,8 @@ const styles = StyleSheet.create({
   noParamsText: {
     textAlign: "center",
     paddingHorizontal: spacing[4],
+  },
+  mainRowNoShadow: {
+    shadowOpacity: 0,
   },
 });
