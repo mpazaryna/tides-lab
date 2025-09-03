@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "mcp__github__get_me",
+      "mcp__github__search_repositories",
+      "mcp__github__create_issue"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
