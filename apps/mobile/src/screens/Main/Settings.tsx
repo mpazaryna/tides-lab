@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Clipboard,
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 import { useMCP } from "../../context/MCPContext";
@@ -53,6 +54,22 @@ export default function Settings() {
       await checkConnection();
     } catch (err) {
       // Error handling is done in checkConnection
+    }
+  };
+
+  const handleCopyApiKey = async () => {
+    if (!apiKey) {
+      Alert.alert('No API Key', 'No API key available to copy');
+      return;
+    }
+
+    try {
+      await Clipboard.setString(apiKey);
+      console.log('[Settings] API Key copied to clipboard:', apiKey);
+      Alert.alert('Copied!', 'API key copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy API key:', error);
+      Alert.alert('Copy Failed', 'Failed to copy API key to clipboard');
     }
   };
 
@@ -270,13 +287,28 @@ export default function Settings() {
                   API Key:
                 </Text>
                 {apiKey ? (
-                  <Text
-                    variant="mono"
-                    color="success"
-                    style={styles.debugTokenStyle}
-                  >
-                    Bearer {apiKey}
-                  </Text>
+                  <View>
+                    <TouchableOpacity 
+                      style={styles.debugTokenContainer}
+                      onPress={handleCopyApiKey}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        variant="mono"
+                        color="success"
+                        style={styles.debugTokenStyle}
+                      >
+                        Bearer {apiKey}
+                      </Text>
+                      <Text
+                        variant="bodySmall"
+                        color="primary"
+                        style={styles.copyHintStyle}
+                      >
+                        Tap to copy
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   <Text variant="body" color="error" style={styles.debugValue}>
                     No API key available
@@ -457,8 +489,10 @@ const styles = StyleSheet.create({
   debugValue: {
     marginBottom: spacing[1],
   },
-  debugTokenStyle: {
+  debugTokenContainer: {
     marginBottom: spacing[1],
+  },
+  debugTokenStyle: {
     fontSize: 12,
     lineHeight: 16,
     padding: spacing[2],
@@ -466,6 +500,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: colors.success + "30",
+    marginBottom: spacing[1],
+  },
+  copyHintStyle: {
+    textAlign: "center",
+    fontSize: 12,
+    fontStyle: "italic",
   },
   debugNote: {
     fontStyle: "italic",
