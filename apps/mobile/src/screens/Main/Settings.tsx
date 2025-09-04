@@ -12,7 +12,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useMCP } from "../../context/MCPContext";
 import { useServerEnvironment } from "../../context/ServerEnvironmentContext";
 import { ServerEnvironmentSelector } from "../../components/ServerEnvironmentSelector";
-import { secureStorage } from "../../services/secureStorage";
 
 import { getRobotoMonoFont } from "../../utils/fonts";
 import {
@@ -77,37 +76,6 @@ export default function Settings() {
     } catch (error) {
       console.error("Failed to copy API key:", error);
       Alert.alert("Copy Failed", "Failed to copy API key to clipboard");
-    }
-  };
-
-  const handleTestSecureStorage = async () => {
-    try {
-      // TODO: Replace console logging with proper test result reporting
-      console.log("[Settings] Testing SecureStorage...");
-
-      // Test write
-      await secureStorage.setItem("test_key", "test_value_" + Date.now());
-      console.log("✅ SecureStorage write successful");
-
-      // Test read
-      const value = await secureStorage.getItem("test_key");
-      console.log("✅ SecureStorage read successful:", value);
-
-      // Test remove
-      await secureStorage.removeItem("test_key");
-      console.log("✅ SecureStorage remove successful");
-
-      Alert.alert(
-        "SecureStorage Test",
-        "✅ Test passed! Check console for details."
-      );
-    } catch (error) {
-      console.error("❌ SecureStorage test failed:", error);
-      Alert.alert(
-        "SecureStorage Test",
-        "❌ Test failed: " +
-          (error instanceof Error ? error.message : "Unknown error")
-      );
     }
   };
 
