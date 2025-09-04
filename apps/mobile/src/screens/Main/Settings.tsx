@@ -15,7 +15,14 @@ import { ServerEnvironmentSelector } from "../../components/ServerEnvironmentSel
 import { secureStorage } from "../../services/secureStorage";
 
 import { getRobotoMonoFont } from "../../utils/fonts";
-import { colors, spacing, Text, Card, Container, Button } from "../../design-system";
+import {
+  colors,
+  spacing,
+  Text,
+  Card,
+  Container,
+  Button,
+} from "../../design-system";
 
 export default function Settings() {
   const { user, signOut, apiKey } = useAuth();
@@ -59,47 +66,54 @@ export default function Settings() {
 
   const handleCopyApiKey = async () => {
     if (!apiKey) {
-      Alert.alert('No API Key', 'No API key available to copy');
+      Alert.alert("No API Key", "No API key available to copy");
       return;
     }
 
     try {
       await Clipboard.setString(apiKey);
-      console.log('[Settings] API Key copied to clipboard:', apiKey);
-      Alert.alert('Copied!', 'API key copied to clipboard');
+      console.log("[Settings] API Key copied to clipboard:", apiKey);
+      Alert.alert("Copied!", "API key copied to clipboard");
     } catch (error) {
-      console.error('Failed to copy API key:', error);
-      Alert.alert('Copy Failed', 'Failed to copy API key to clipboard');
+      console.error("Failed to copy API key:", error);
+      Alert.alert("Copy Failed", "Failed to copy API key to clipboard");
     }
   };
 
   const handleTestSecureStorage = async () => {
     try {
       // TODO: Replace console logging with proper test result reporting
-      console.log('[Settings] Testing SecureStorage...');
-      
+      console.log("[Settings] Testing SecureStorage...");
+
       // Test write
-      await secureStorage.setItem('test_key', 'test_value_' + Date.now());
-      console.log('✅ SecureStorage write successful');
-      
+      await secureStorage.setItem("test_key", "test_value_" + Date.now());
+      console.log("✅ SecureStorage write successful");
+
       // Test read
-      const value = await secureStorage.getItem('test_key');
-      console.log('✅ SecureStorage read successful:', value);
-      
+      const value = await secureStorage.getItem("test_key");
+      console.log("✅ SecureStorage read successful:", value);
+
       // Test remove
-      await secureStorage.removeItem('test_key');
-      console.log('✅ SecureStorage remove successful');
-      
-      Alert.alert('SecureStorage Test', '✅ Test passed! Check console for details.');
+      await secureStorage.removeItem("test_key");
+      console.log("✅ SecureStorage remove successful");
+
+      Alert.alert(
+        "SecureStorage Test",
+        "✅ Test passed! Check console for details."
+      );
     } catch (error) {
-      console.error('❌ SecureStorage test failed:', error);
-      Alert.alert('SecureStorage Test', '❌ Test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error("❌ SecureStorage test failed:", error);
+      Alert.alert(
+        "SecureStorage Test",
+        "❌ Test failed: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      );
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
@@ -288,7 +302,7 @@ export default function Settings() {
                 </Text>
                 {apiKey ? (
                   <View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.debugTokenContainer}
                       onPress={handleCopyApiKey}
                       activeOpacity={0.7}
@@ -332,8 +346,8 @@ export default function Settings() {
                   color="tertiary"
                   style={styles.debugNote}
                 >
-                  Mobile clients use API keys for enhanced security.
-                  Desktop clients use UUID-based Bearer tokens.
+                  Mobile clients use API keys for enhanced security. Desktop
+                  clients use UUID-based Bearer tokens.
                 </Text>
               </View>
 
@@ -355,25 +369,6 @@ export default function Settings() {
               </View>
             </Card>
           )}
-
-          {/* SecureStorage Test Section */}
-          <Card variant="outlined" padding={5} style={styles.sectionCardStyle}>
-            <Text variant="h3" style={styles.sectionTitleStyle}>
-              SecureStorage Test
-            </Text>
-            <Text variant="bodySmall" color="secondary" align="center" style={styles.testDescriptionStyle}>
-              Test if Keychain/SecureStorage is working on this device
-            </Text>
-            <Button
-              variant="secondary"
-              size="md"
-              onPress={handleTestSecureStorage}
-              fullWidth
-              style={styles.testButtonStyle}
-            >
-              Test SecureStorage
-            </Button>
-          </Card>
 
           {/* Sign Out Section */}
           <Button
