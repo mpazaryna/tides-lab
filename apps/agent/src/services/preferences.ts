@@ -13,16 +13,22 @@ export class PreferencesService {
   }
 
   /**
-   * Get user preferences (stored in KV)
+   * Get user preferences from KV storage
    */
   async getPreferences(userId: string): Promise<UserPreferences> {
     console.log(`[PreferencesService] Retrieving preferences for user: ${userId}`);
     
     try {
-      // TODO: Replace with real KV storage lookup
-      // const preferencesData = await this.env.TIDES_AUTH_KV.get(`preferences:${userId}`);
+      // Try to get preferences from KV storage
+      const preferencesData = await this.env.TIDES_AUTH_KV.get(`preferences:${userId}`);
       
-      // For now, return mock default preferences
+      if (preferencesData) {
+        const storedPreferences = JSON.parse(preferencesData) as UserPreferences;
+        console.log(`[PreferencesService] Found stored preferences for user: ${userId}`);
+        return storedPreferences;
+      }
+      
+      // Return defaults if no stored preferences
       const defaultPreferences: UserPreferences = {
         work_hours: {
           start: "09:00",
@@ -37,7 +43,7 @@ export class PreferencesService {
         }
       };
 
-      console.log(`[PreferencesService] Retrieved preferences for user: ${userId}`);
+      console.log(`[PreferencesService] No stored preferences found, returning defaults for user: ${userId}`);
       return defaultPreferences;
 
     } catch (error) {
@@ -72,8 +78,8 @@ export class PreferencesService {
         throw new Error(validationError);
       }
 
-      // TODO: Replace with real KV storage
-      // await this.env.TIDES_AUTH_KV.put(`preferences:${userId}`, JSON.stringify(updatedPreferences));
+      // Store updated preferences in KV storage
+      await this.env.TIDES_AUTH_KV.put(`preferences:${userId}`, JSON.stringify(updatedPreferences));
 
       console.log(`[PreferencesService] Preferences updated for user: ${userId}`);
       console.log(`[PreferencesService] Work hours: ${updatedPreferences.work_hours?.start} - ${updatedPreferences.work_hours?.end}`);

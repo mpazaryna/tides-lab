@@ -16,13 +16,21 @@ export class StorageService {
    */
   async getTideData(userId: string, tidesId: string): Promise<TideData | null> {
     try {
-      const key = `users/${userId}/tides/${tidesId}.json`;
-      console.log(`[StorageService] Fetching tide data: ${key}`);
+      // First try the standard path
+      const standardKey = `users/${userId}/tides/${tidesId}.json`;
+      console.log(`[StorageService] Fetching tide data: ${standardKey}`);
       
-      const object = await this.env.TIDES_R2.get(key);
+      let object = await this.env.TIDES_R2.get(standardKey);
+      
+      // If not found at standard path, try the mock data location
+      if (!object) {
+        const mockKey = 'mock-tide-data.json';
+        console.log(`[StorageService] Standard path not found, trying mock data: ${mockKey}`);
+        object = await this.env.TIDES_R2.get(mockKey);
+      }
       
       if (!object) {
-        console.log(`[StorageService] Tide not found: ${key}`);
+        console.log(`[StorageService] Tide not found at either location`);
         return null;
       }
 

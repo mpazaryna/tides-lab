@@ -36,7 +36,12 @@ export interface QuestionsRequest extends AgentRequest {
 
 export interface ChatRequest extends AgentRequest {
   question?: string;
+  message?: string;  // Support both question and message fields
   conversation_id?: string;
+  context?: {
+    recent_messages?: Array<{ role: string; content: string }>;
+    user_time?: string;
+  };
   previous_context?: {
     service?: string;
     response?: any;
@@ -97,15 +102,47 @@ export interface ScheduleConstraints {
   priority_tasks?: string[];
 }
 
+// Actual R2 tide data structure with rich time-series data
+export interface FlowSession {
+  id: string;                   // "session_TIMESTAMP_HASH"
+  tide_id: string;             // Parent tide reference
+  intensity: "gentle" | "moderate" | "strong";  // Work intensity
+  duration: number;            // Session duration in minutes
+  started_at: string;          // ISO timestamp
+  energy_level?: string;       // Starting energy level
+  work_context?: string;       // What specific work was done
+}
+
+export interface EnergyUpdate {
+  id: string;                  // "energy_TIMESTAMP_HASH"
+  tide_id: string;            // Parent tide reference
+  energy_level: string;       // "1-10" scale or descriptive
+  context?: string;           // What's affecting energy
+  timestamp: string;          // ISO timestamp
+}
+
+export interface TaskLink {
+  id: string;                  // "link_TIMESTAMP_HASH"
+  tide_id: string;            // Parent tide reference
+  task_url: string;           // URL to external task
+  task_title: string;         // Display title
+  task_type: string;          // System type (github_issue, linear_task, etc.)
+  linked_at: string;          // ISO timestamp
+}
+
 export interface TideData {
-  id: string;
-  user_id: string;
-  name: string;
-  description?: string;
-  status: 'active' | 'paused' | 'completed';
-  created_at: string;
-  updated_at: string;
-  metadata?: Record<string, any>;
+  // Basic metadata
+  id: string;                    // Format: "tide_TIMESTAMP_HASH"
+  name: string;                  // Display name
+  flow_type: "daily" | "weekly" | "monthly" | "project" | "seasonal";
+  description?: string;          // Optional description
+  created_at: string;           // ISO timestamp
+  status: "active" | "completed" | "paused";
+  
+  // Rich nested data arrays (the real insights source)
+  flow_sessions: FlowSession[];  // All focused work sessions
+  energy_updates: EnergyUpdate[]; // All energy check-ins
+  task_links: TaskLink[];       // All linked external tasks
 }
 
 export interface InsightsData {
