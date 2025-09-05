@@ -4,6 +4,7 @@
 
 import { ReportsService } from '../../../src/services/reports';
 import type { Env, ReportsRequest } from '../../../src/types';
+import { setupR2MockWithRealData } from '../../helpers/tideDataHelper';
 
 describe('ReportsService', () => {
   let reportsService: ReportsService;
@@ -32,21 +33,14 @@ describe('ReportsService', () => {
 
   describe('generateReport', () => {
     beforeEach(() => {
-      const mockR2 = mockEnv.TIDES_R2 as any;
-      mockR2.get.mockResolvedValue({
-        json: jest.fn().mockResolvedValue({
-          id: 'test-tide-123',
-          name: 'Test Productivity Tide',
-          user_id: 'test-user',
-          status: 'active'
-        })
-      });
+      // Setup R2 mock with real tide data structure
+      setupR2MockWithRealData(mockEnv);
     });
 
     test('should generate summary report', async () => {
       const request: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'summary'
       };
 
@@ -71,7 +65,7 @@ describe('ReportsService', () => {
     test('should generate detailed report', async () => {
       const request: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'detailed',
         period: '90d'
       };
@@ -100,7 +94,7 @@ describe('ReportsService', () => {
     test('should generate analytics report with charts', async () => {
       const request: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'analytics',
         period: '180d'
       };
@@ -139,7 +133,7 @@ describe('ReportsService', () => {
     test('should validate detailed metrics structure', async () => {
       const request: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'detailed'
       };
 
@@ -175,13 +169,13 @@ describe('ReportsService', () => {
     test('should have different recommendations for different report types', async () => {
       const summaryRequest: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'summary'
       };
 
       const detailedRequest: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'detailed'
       };
 
@@ -214,7 +208,7 @@ describe('ReportsService', () => {
     test('should use default period when not specified', async () => {
       const request: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'summary'
       };
 
@@ -314,7 +308,7 @@ describe('ReportsService', () => {
 
       const request: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'summary'
       };
 
@@ -327,7 +321,7 @@ describe('ReportsService', () => {
     test('should handle invalid report types', async () => {
       const request = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'invalid'
       } as ReportsRequest;
 
@@ -343,7 +337,7 @@ describe('ReportsService', () => {
     test('should generate consistent data across multiple calls', async () => {
       const request: ReportsRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         report_type: 'summary'
       };
 

@@ -82,7 +82,18 @@ export class StorageService {
         // Extract tide ID from key: users/{userId}/tides/{tideId}.json
         const parts = obj.key.split('/');
         const filename = parts[parts.length - 1];
-        return filename ? filename.replace('.json', '') : '';
+        
+        // Only process files that end with .json and belong to the correct user
+        if (!filename || !filename.endsWith('.json')) {
+          return '';
+        }
+        
+        // Verify the path belongs to the correct user (defensive programming)
+        if (parts.length >= 3 && parts[1] !== userId) {
+          return '';
+        }
+        
+        return filename.replace('.json', '');
       }).filter(id => id !== '');
 
       console.log(`[StorageService] Found ${tideIds.length} tides for user: ${userId}`);

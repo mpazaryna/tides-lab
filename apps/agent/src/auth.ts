@@ -32,15 +32,25 @@ export async function validateRequest(apiKey: string, tidesId: string, env: Env)
     }
 
     // Expected format: tides_{userId}_{randomId}
+    // Note: userId may contain underscores, so we need to handle this carefully
     const parts = apiKey.split('_');
-    if (parts.length !== 3 || parts[0] !== 'tides' || !parts[1] || !parts[2]) {
+    if (parts.length < 3 || parts[0] !== 'tides' || !parts[parts.length - 1]) {
       return {
         valid: false,
         error: 'Invalid API key format: must be in format tides_{userId}_{randomId}'
       };
     }
 
-    const userId = parts[1];
+    // Extract userId as everything between 'tides' and the last part (randomId)
+    const userId = parts.slice(1, -1).join('_');
+    
+    // Validate that userId is not empty
+    if (!userId) {
+      return {
+        valid: false,
+        error: 'Invalid API key format: must be in format tides_{userId}_{randomId}'
+      };
+    }
 
     // Validate tides ID
     if (!tidesId || typeof tidesId !== 'string') {

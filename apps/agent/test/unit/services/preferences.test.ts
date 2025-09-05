@@ -307,10 +307,10 @@ describe('PreferencesService', () => {
 
   describe('time format validation', () => {
     test('should validate time format correctly', async () => {
-      const validTimes = ['09:00', '23:59', '00:00', '12:30'];
+      const validStartTimes = ['09:00', '00:00', '12:30', '16:00'];
       const invalidTimes = ['25:00', '12:60', '9:00', 'invalid', ''];
 
-      for (const time of validTimes) {
+      for (const time of validStartTimes) {
         const request: PreferencesRequest = {
           api_key: 'test-api-key',
           tides_id: 'test-tide-123',

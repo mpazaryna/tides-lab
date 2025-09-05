@@ -2,8 +2,8 @@
  * Tests for AuthService
  */
 
-import { AuthService } from '../src/auth.js';
-import type { Env } from '../src/types.js';
+import { AuthService } from '../../src/auth.js';
+import type { Env } from '../../src/types.js';
 
 describe('AuthService', () => {
   let authService: AuthService;

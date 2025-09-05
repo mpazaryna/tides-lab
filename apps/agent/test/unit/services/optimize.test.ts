@@ -4,6 +4,7 @@
 
 import { OptimizeService } from '../../../src/services/optimize';
 import type { Env, OptimizeRequest } from '../../../src/types';
+import { setupR2MockWithRealData } from '../../helpers/tideDataHelper';
 
 describe('OptimizeService', () => {
   let optimizeService: OptimizeService;
@@ -27,24 +28,18 @@ describe('OptimizeService', () => {
       ENVIRONMENT: 'test'
     };
 
+    // Setup R2 mock with real data by default for all tests
+    setupR2MockWithRealData(mockEnv);
+
     optimizeService = new OptimizeService(mockEnv);
   });
 
   describe('optimizeSchedule', () => {
     test('should generate optimization with default preferences', async () => {
-      const mockR2 = mockEnv.TIDES_R2 as any;
-      mockR2.get.mockResolvedValue({
-        json: jest.fn().mockResolvedValue({
-          id: 'test-tide-123',
-          name: 'Test Tide',
-          user_id: 'test-user',
-          status: 'active'
-        })
-      });
 
       const request: OptimizeRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123'
+        tides_id: 'daily-tide-default'
       };
 
       const result = await optimizeService.optimizeSchedule(request, 'test-user');
@@ -71,19 +66,10 @@ describe('OptimizeService', () => {
     });
 
     test('should generate optimization with custom preferences', async () => {
-      const mockR2 = mockEnv.TIDES_R2 as any;
-      mockR2.get.mockResolvedValue({
-        json: jest.fn().mockResolvedValue({
-          id: 'test-tide-123',
-          name: 'Test Tide',
-          user_id: 'test-user',
-          status: 'active'
-        })
-      });
 
       const request: OptimizeRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         preferences: {
           work_hours: { start: '08:00', end: '16:00' },
           break_duration: 20,
@@ -106,10 +92,8 @@ describe('OptimizeService', () => {
         tides_id: 'nonexistent-tide'
       };
 
-      const result = await optimizeService.optimizeSchedule(request, 'test-user');
-
-      expect(result).toBeDefined();
-      expect(result.suggested_schedule).toBeDefined();
+      await expect(optimizeService.optimizeSchedule(request, 'test-user'))
+        .rejects.toThrow('No tide data found for user: test-user, tide: nonexistent-tide');
     });
   });
 
@@ -141,7 +125,7 @@ describe('OptimizeService', () => {
     test('should return array of productivity tips', async () => {
       const request: OptimizeRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123'
+        tides_id: 'daily-tide-default'
       };
 
       const result = await optimizeService.getProductivityTips(request, 'test-user');
@@ -174,7 +158,7 @@ describe('OptimizeService', () => {
     test('should return different tips on multiple calls', async () => {
       const request: OptimizeRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123'
+        tides_id: 'daily-tide-default'
       };
 
       const result1 = await optimizeService.getProductivityTips(request, 'test-user');
@@ -193,13 +177,13 @@ describe('OptimizeService', () => {
 
       const request: OptimizeRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123'
+        tides_id: 'daily-tide-default'
       };
 
-      // Should not throw, but should still return valid optimization data
-      const result = await optimizeService.optimizeSchedule(request, 'test-user');
-      expect(result).toBeDefined();
-      expect(result.suggested_schedule).toBeDefined();
+      // StorageService catches R2 errors and returns null,
+      // so OptimizeService throws "No tide data found" error
+      await expect(optimizeService.optimizeSchedule(request, 'test-user'))
+        .rejects.toThrow('No tide data found for user: test-user, tide: daily-tide-default');
     });
   });
 
@@ -215,7 +199,7 @@ describe('OptimizeService', () => {
 
       const request: OptimizeRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         preferences: undefined
       };
 
@@ -234,7 +218,7 @@ describe('OptimizeService', () => {
 
       const request: OptimizeRequest = {
         api_key: 'test-api-key',
-        tides_id: 'test-tide-123',
+        tides_id: 'daily-tide-default',
         constraints: {}
       };
 

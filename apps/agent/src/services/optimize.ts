@@ -28,12 +28,18 @@ export class OptimizeService {
 
     const preferences = request.preferences;
     console.log(`[OptimizeService] Optimizing for tide: ${tideData.name}`);
-    console.log(`[OptimizeService] Analyzing ${tideData.flow_sessions.length} flow sessions and ${tideData.energy_updates.length} energy updates`);
+    
+    // Safely access arrays with fallbacks
+    const flowSessions = tideData.flow_sessions || [];
+    const energyUpdates = tideData.energy_updates || [];
+    const taskLinks = tideData.task_links || [];
+    
+    console.log(`[OptimizeService] Analyzing ${flowSessions.length} flow sessions and ${energyUpdates.length} energy updates`);
 
     // Analyze patterns from real data
-    const flowAnalysis = this.analyzeFlowPatterns(tideData.flow_sessions);
-    const energyAnalysis = this.analyzeEnergyPatterns(tideData.energy_updates);
-    const taskAnalysis = this.analyzeTaskPatterns(tideData.task_links);
+    const flowAnalysis = this.analyzeFlowPatterns(flowSessions);
+    const energyAnalysis = this.analyzeEnergyPatterns(energyUpdates);
+    const taskAnalysis = this.analyzeTaskPatterns(taskLinks);
 
     // Generate data-driven schedule optimization
     const optimizedSchedule = this.generateOptimizedSchedule(
@@ -260,7 +266,7 @@ export class OptimizeService {
     const currentAvgDuration = flowAnalysis.averageDuration || 45;
     const optimizedDuration = Math.min(currentAvgDuration * 1.2, 90); // 20% improvement, max 90min
     const timeSavedPerSession = optimizedDuration - currentAvgDuration;
-    const estimatedTimeSaved = Math.max(15, timeSavedPerSession * (flowAnalysis.totalSessions || 2));
+    const estimatedTimeSaved = Math.min(90, Math.max(30, timeSavedPerSession * (flowAnalysis.totalSessions || 2)));
 
     // Focus improvement based on energy alignment
     const hasEnergyAlignment = schedule.some(block => 

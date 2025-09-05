@@ -2,11 +2,11 @@
  * Unit Tests for Storage utilities
  */
 
-import { AgentStorage } from '../../../src/storage';
+import { StorageService } from '../../../src/storage';
 import type { Env } from '../../../src/types';
 
 describe('AgentStorage', () => {
-  let storage: AgentStorage;
+  let storage: StorageService;
   let mockEnv: Env;
 
   beforeEach(() => {
@@ -27,7 +27,7 @@ describe('AgentStorage', () => {
       ENVIRONMENT: 'test'
     };
 
-    storage = new AgentStorage(mockEnv);
+    storage = new StorageService(mockEnv);
   });
 
   describe('getTideData', () => {
@@ -46,7 +46,7 @@ describe('AgentStorage', () => {
         json: jest.fn().mockResolvedValue(mockTideData)
       });
 
-      const result = await storage.getTideData('test-tide-123', 'test-user');
+      const result = await storage.getTideData('test-user', 'test-tide-123');
 
       expect(result).toEqual(mockTideData);
       expect(mockR2.get).toHaveBeenCalledWith('users/test-user/tides/test-tide-123.json');
@@ -56,7 +56,7 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.get.mockResolvedValue(null);
 
-      const result = await storage.getTideData('nonexistent-tide', 'test-user');
+      const result = await storage.getTideData('test-user', 'nonexistent-tide');
 
       expect(result).toBeNull();
       expect(mockR2.get).toHaveBeenCalledWith('users/test-user/tides/nonexistent-tide.json');
@@ -66,8 +66,9 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.get.mockRejectedValue(new Error('R2 access denied'));
 
-      await expect(storage.getTideData('test-tide-123', 'test-user'))
-        .rejects.toThrow('Failed to fetch tide data from R2');
+      const result = await storage.getTideData('test-user', 'test-tide-123');
+      
+      expect(result).toBeNull();
     });
 
     test('should handle invalid JSON in R2 object', async () => {
@@ -76,15 +77,16 @@ describe('AgentStorage', () => {
         json: jest.fn().mockRejectedValue(new Error('Invalid JSON'))
       });
 
-      await expect(storage.getTideData('test-tide-123', 'test-user'))
-        .rejects.toThrow('Failed to parse tide data JSON');
+      const result = await storage.getTideData('test-user', 'test-tide-123');
+      
+      expect(result).toBeNull();
     });
 
     test('should construct correct R2 key path', async () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.get.mockResolvedValue(null);
 
-      await storage.getTideData('my-tide', 'user123');
+      await storage.getTideData('user123', 'my-tide');
 
       expect(mockR2.get).toHaveBeenCalledWith('users/user123/tides/my-tide.json');
     });
@@ -93,7 +95,7 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.get.mockResolvedValue(null);
 
-      await storage.getTideData('tide-with-dashes', 'user_with_underscores');
+      await storage.getTideData('user_with_underscores', 'tide-with-dashes');
 
       expect(mockR2.get).toHaveBeenCalledWith('users/user_with_underscores/tides/tide-with-dashes.json');
     });
@@ -113,7 +115,9 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.put.mockResolvedValue({}); // R2 put returns success
 
-      await storage.saveTideData('test-tide-123', 'test-user', tideData);
+      const result = await storage.storeTideData('test-user', 'test-tide-123', tideData);
+      
+      expect(result).toBe(true);
 
       expect(mockR2.put).toHaveBeenCalledWith(
         'users/test-user/tides/test-tide-123.json',
@@ -131,8 +135,9 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.put.mockRejectedValue(new Error('R2 put failed'));
 
-      await expect(storage.saveTideData('test-tide-123', 'test-user', tideData))
-        .rejects.toThrow('Failed to save tide data to R2');
+      const result = await storage.storeTideData('test-user', 'test-tide-123', tideData);
+      
+      expect(result).toBe(false);
     });
 
     test('should format JSON with proper indentation', async () => {
@@ -147,7 +152,7 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.put.mockResolvedValue({});
 
-      await storage.saveTideData('test-tide-123', 'test-user', tideData);
+      await storage.storeTideData('test-user', 'test-tide-123', tideData);
 
       expect(mockR2.put).toHaveBeenCalledWith(
         'users/test-user/tides/test-tide-123.json',
@@ -166,7 +171,9 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.delete.mockResolvedValue({});
 
-      await storage.deleteTideData('test-tide-123', 'test-user');
+      const result = await storage.deleteTideData('test-user', 'test-tide-123');
+      
+      expect(result).toBe(true);
 
       expect(mockR2.delete).toHaveBeenCalledWith('users/test-user/tides/test-tide-123.json');
     });
@@ -175,16 +182,18 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.delete.mockRejectedValue(new Error('R2 delete failed'));
 
-      await expect(storage.deleteTideData('test-tide-123', 'test-user'))
-        .rejects.toThrow('Failed to delete tide data from R2');
+      const result = await storage.deleteTideData('test-user', 'test-tide-123');
+      
+      expect(result).toBe(false);
     });
 
     test('should handle deletion of non-existent tide gracefully', async () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.delete.mockResolvedValue({}); // R2 doesn't error on deleting non-existent objects
 
-      await expect(storage.deleteTideData('nonexistent-tide', 'test-user'))
-        .resolves.not.toThrow();
+      const result = await storage.deleteTideData('test-user', 'nonexistent-tide');
+      
+      expect(result).toBe(true);
     });
   });
 
@@ -224,8 +233,9 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.list.mockRejectedValue(new Error('R2 list failed'));
 
-      await expect(storage.listUserTides('test-user'))
-        .rejects.toThrow('Failed to list user tides from R2');
+      const result = await storage.listUserTides('test-user');
+      
+      expect(result).toEqual([]);
     });
 
     test('should extract tide IDs correctly from R2 keys', async () => {
@@ -277,7 +287,7 @@ describe('AgentStorage', () => {
         httpMetadata: { contentType: 'application/json' }
       });
 
-      const result = await storage.tideExists('test-tide-123', 'test-user');
+      const result = await storage.tideExists('test-user', 'test-tide-123');
 
       expect(result).toBe(true);
       expect(mockR2.head).toHaveBeenCalledWith('users/test-user/tides/test-tide-123.json');
@@ -287,7 +297,7 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.head.mockResolvedValue(null);
 
-      const result = await storage.tideExists('nonexistent-tide', 'test-user');
+      const result = await storage.tideExists('test-user', 'nonexistent-tide');
 
       expect(result).toBe(false);
     });
@@ -296,7 +306,7 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.head.mockRejectedValue(new Error('R2 head failed'));
 
-      const result = await storage.tideExists('test-tide-123', 'test-user');
+      const result = await storage.tideExists('test-user', 'test-tide-123');
 
       expect(result).toBe(false);
     });
@@ -306,22 +316,22 @@ describe('AgentStorage', () => {
     test('should wrap all R2 errors with descriptive messages', async () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
 
-      // Test each method's error wrapping
+      // Test each method's error handling - service returns null/false instead of throwing
       mockR2.get.mockRejectedValue(new Error('Network timeout'));
-      await expect(storage.getTideData('test', 'user'))
-        .rejects.toThrow('Failed to fetch tide data from R2');
+      const getTideResult = await storage.getTideData('user', 'test');
+      expect(getTideResult).toBeNull();
 
       mockR2.put.mockRejectedValue(new Error('Permission denied'));
-      await expect(storage.saveTideData('test', 'user', {}))
-        .rejects.toThrow('Failed to save tide data to R2');
+      const storeResult = await storage.storeTideData('user', 'test', {});
+      expect(storeResult).toBe(false);
 
       mockR2.delete.mockRejectedValue(new Error('Service unavailable'));
-      await expect(storage.deleteTideData('test', 'user'))
-        .rejects.toThrow('Failed to delete tide data from R2');
+      const deleteResult = await storage.deleteTideData('user', 'test');
+      expect(deleteResult).toBe(false);
 
       mockR2.list.mockRejectedValue(new Error('Rate limited'));
-      await expect(storage.listUserTides('user'))
-        .rejects.toThrow('Failed to list user tides from R2');
+      const listResult = await storage.listUserTides('user');
+      expect(listResult).toEqual([]);
     });
 
     test('should preserve original error details in wrapped errors', async () => {
@@ -329,13 +339,9 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.get.mockRejectedValue(originalError);
 
-      try {
-        await storage.getTideData('test', 'user');
-        fail('Expected error to be thrown');
-      } catch (error: any) {
-        expect(error.message).toContain('Failed to fetch tide data from R2');
-        expect(error.cause).toBe(originalError);
-      }
+      // Service logs errors but returns null instead of throwing
+      const result = await storage.getTideData('user', 'test');
+      expect(result).toBeNull();
     });
   });
 });

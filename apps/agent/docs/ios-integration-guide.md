@@ -23,12 +23,15 @@ GET /             # Agent status and service list
 GET /health       # Simple health check
 ```
 
-### Single Coordinator Endpoint (Recommended)
-All productivity services are accessed through the main coordinator endpoint with **intelligent service inference**:
+### Coordinator Endpoints (Recommended)
+All productivity services are accessed through the coordinator with **intelligent service inference**:
 
 ```http
-POST /coordinator
+POST /          # Main endpoint 
+POST /coordinator  # Explicit coordinator endpoint (equivalent)
 ```
+
+Both endpoints provide identical functionality - use either one.
 
 **Standard Frontend Request Format** (recommended for production):
 ```json

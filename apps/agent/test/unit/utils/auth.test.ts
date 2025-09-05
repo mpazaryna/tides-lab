@@ -164,10 +164,15 @@ describe('Auth Utilities', () => {
       for (const { apiKey, expectedUserId } of testCases) {
         const hashedKey = await hashApiKey(apiKey);
         const mockKV = mockEnv.TIDES_AUTH_KV as any;
-        mockKV.get.mockResolvedValue(JSON.stringify({
-          user_id: expectedUserId,
-          api_key_hash: hashedKey
-        }));
+        mockKV.get.mockImplementation((key: string) => {
+          if (key === `api_key:${hashedKey}`) {
+            return Promise.resolve(JSON.stringify({
+              user_id: expectedUserId,
+              api_key_hash: hashedKey
+            }));
+          }
+          return Promise.resolve(null);
+        });
 
         const result = await validateRequest(apiKey, 'test-tide', mockEnv);
 

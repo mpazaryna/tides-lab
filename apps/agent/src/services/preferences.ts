@@ -113,8 +113,8 @@ export class PreferencesService {
     };
 
     try {
-      // TODO: Replace with real KV storage
-      // await this.env.TIDES_AUTH_KV.put(`preferences:${userId}`, JSON.stringify(defaultPreferences));
+      // Store reset preferences in KV storage
+      await this.env.TIDES_AUTH_KV.put(`preferences:${userId}`, JSON.stringify(defaultPreferences));
 
       console.log(`[PreferencesService] Preferences reset to defaults for user: ${userId}`);
       return defaultPreferences;
@@ -197,7 +197,8 @@ export class PreferencesService {
    * Validate time format (HH:MM)
    */
   private isValidTimeFormat(time: string): boolean {
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    // Require strict HH:MM format (always 2 digits for hour and minute)
+    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
     return timeRegex.test(time);
   }
 }
