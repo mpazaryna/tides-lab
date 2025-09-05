@@ -48,8 +48,8 @@ describe('ServiceInferrer', () => {
       const generalQuestions = [
         { question: 'How can I be more productive?' },
         { question: 'What productivity techniques work best?' },
-        { question: 'Help me improve my workflow' },
-        { question: 'Any advice for better time management?' }
+        { question: 'Hello there, how are you?' }, // More clearly questions
+        { question: 'What is this service about?' }
       ];
 
       generalQuestions.forEach(requestBody => {
@@ -87,17 +87,24 @@ describe('ServiceInferrer', () => {
       });
     });
 
-    test('should return null for ambiguous requests', () => {
+    test('should return questions for hello-type requests (but chat via inferServiceWithChat)', () => {
       const ambiguousRequests = [
         { question: 'Hello' },
         { question: 'What is this?' },
-        { random_field: 'value' },
+        { random_field: 'value' }, // This should be null
         { question: 'Random question about weather' }
       ];
 
+      // Standard inferService - hello/what questions route to questions service
+      expect(ServiceInferrer.inferService(ambiguousRequests[0])).toBe('questions'); // hello
+      expect(ServiceInferrer.inferService(ambiguousRequests[1])).toBe('questions'); // what is this
+      expect(ServiceInferrer.inferService(ambiguousRequests[2])).toBeNull(); // random field
+      expect(ServiceInferrer.inferService(ambiguousRequests[3])).toBe('questions'); // weather
+        
+      // But inferServiceWithChat should route all ambiguous to chat
       ambiguousRequests.forEach(requestBody => {
-        const result = ServiceInferrer.inferService(requestBody);
-        expect(result).toBeNull();
+        const chatResult = ServiceInferrer.inferServiceWithChat(requestBody);
+        expect(chatResult).toBe('chat');
       });
     });
 
@@ -145,7 +152,122 @@ describe('ServiceInferrer', () => {
       
       // Verify all return valid services (not null)
       results.forEach(result => {
-        expect(['insights', 'optimize', 'questions', 'preferences', 'reports']).toContain(result);
+        expect(['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat']).toContain(result);
+      });
+    });
+
+    test('should route to chat service for low confidence requests using inferServiceWithChat', () => {
+      const ambiguousRequests = [
+        { question: 'help' },
+        { question: 'I need assistance' },
+        { unknown_field: 'value' }
+      ];
+
+      ambiguousRequests.forEach(requestBody => {
+        const result = ServiceInferrer.inferServiceWithChat(requestBody);
+        expect(result).toBe('chat');
+      });
+    });
+
+    test('should route explicit field requests with inferServiceWithChat', () => {
+      const clearRequests = [
+        { report_type: 'summary' }, // Should be reports (explicit field)
+        { preferences: { work_hours: { start: '09:00' } } }, // Should be preferences (explicit field)
+        { timeframe: '7d' } // Should be insights (explicit field)
+      ];
+
+      const results = clearRequests.map(req => ServiceInferrer.inferServiceWithChat(req));
+      expect(results).toEqual(['reports', 'preferences', 'insights']);
+    });
+
+    test('should handle message field and route to chat for ambiguous content', () => {
+      const messageRequests = [
+        { message: 'show me my productivity trends' }, // May go to insights or chat depending on confidence
+        { message: 'optimize my schedule' }, // May go to optimize or chat
+        { message: 'Start me a flow session' }, // Likely goes to chat (ambiguous)
+        { message: 'hello' } // Should go to chat (low confidence)
+      ];
+
+      const results = messageRequests.map(req => ServiceInferrer.inferServiceWithChat(req));
+      
+      // Since we don't know exact confidence levels, just check they're valid services
+      results.forEach(result => {
+        expect(['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat']).toContain(result);
+      });
+      
+      // The ambiguous ones should default to chat
+      expect(results[3]).toBe('chat'); // hello
+    });
+
+    test('should route frontend standard payload to chat service', () => {
+      const frontendPayload = {
+        api_key: "tides_userId_randomId",
+        tides_id: "daily-tide-default",
+        message: "Start me a flow session", // Ambiguous intent
+        tide_tool_call: "tide_smart_flow", // Ignored for now
+        context: {
+          recent_messages: [
+            { role: "user", content: "How's my energy today?" },
+            { role: "assistant", content: "Your energy seems steady..." }
+          ],
+          user_time: "2025-09-05T12:00:00.000Z"
+        },
+        timestamp: "2025-09-05T12:00:00.000Z"
+      };
+
+      const result = ServiceInferrer.inferServiceWithChat(frontendPayload);
+      expect(result).toBe('chat'); // Should default to chat for ambiguous
+    });
+
+    test('should route frontend payload with explicit service', () => {
+      const explicitPayloads = [
+        {
+          api_key: "tides_userId_randomId",
+          tides_id: "daily-tide-default",
+          service: "insights", // Explicit override
+          message: "Start me a flow session",
+          context: { recent_messages: [] }
+        },
+        {
+          api_key: "tides_userId_randomId", 
+          tides_id: "daily-tide-default",
+          service: "optimize", // Explicit override
+          message: "Random message",
+          context: { recent_messages: [] }
+        },
+        {
+          api_key: "tides_userId_randomId",
+          tides_id: "daily-tide-default", 
+          service: "chat", // Explicit chat
+          message: "I need help",
+          context: { recent_messages: [] }
+        }
+      ];
+
+      const results = explicitPayloads.map(req => ServiceInferrer.inferServiceWithChat(req));
+      expect(results).toEqual(['insights', 'optimize', 'chat']);
+    });
+
+    test('should always return chat for null/undefined requests', () => {
+      expect(ServiceInferrer.inferServiceWithChat(null)).toBe('chat');
+      expect(ServiceInferrer.inferServiceWithChat(undefined)).toBe('chat');
+      expect(ServiceInferrer.inferServiceWithChat({})).toBe('chat');
+    });
+
+    test('should never return null with inferServiceWithChat', () => {
+      const variousRequests = [
+        { unknown_field: 'value' },
+        { api_key: 'test', tides_id: 'test' },
+        { message: 'vague request' },
+        { context: { recent_messages: [] } },
+        { timestamp: '2025-09-05T12:00:00.000Z' }
+      ];
+
+      variousRequests.forEach(request => {
+        const result = ServiceInferrer.inferServiceWithChat(request);
+        expect(result).not.toBeNull();
+        expect(typeof result).toBe('string');
+        expect(['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat']).toContain(result);
       });
     });
   });

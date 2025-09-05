@@ -34,6 +34,28 @@ export interface QuestionsRequest extends AgentRequest {
   context?: string;
 }
 
+export interface ChatRequest extends AgentRequest {
+  question?: string;
+  conversation_id?: string;
+  previous_context?: {
+    service?: string;
+    response?: any;
+  };
+}
+
+export interface ChatResponse {
+  needs_clarification: boolean;
+  message?: string;
+  suggestions?: string[];
+  conversation_id?: string;
+  confidence?: number;
+  follow_up?: {
+    insights: string[];
+    questions: string[];
+    recommendations: string[];
+  };
+}
+
 export interface PreferencesRequest extends AgentRequest {
   preferences?: UserPreferences;
 }

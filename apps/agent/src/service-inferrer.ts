@@ -44,6 +44,39 @@ export class ServiceInferrer {
   }
 
   /**
+   * Infer service with chat fallback for low confidence requests
+   * This is the main method that coordinator should use
+   * - service field (if present) takes precedence for explicit routing/testing
+   * - High confidence inference (>=70%) routes to specific service
+   * - Low/no confidence defaults to 'chat' for clarification
+   */
+  static inferServiceWithChat(requestBody: any): string {
+    // Handle null/undefined requests - default to chat
+    if (!requestBody || typeof requestBody !== 'object') {
+      return 'chat';
+    }
+
+    // Explicit service field takes absolute precedence (for testing/explicit routing)
+    if (requestBody.service) {
+      return requestBody.service;
+    }
+
+    // Try intelligent inference
+    const service = this.inferService(requestBody);
+    
+    // If we got a service with good confidence, return it
+    if (service) {
+      const confidence = this.getInferenceConfidence(requestBody, service);
+      if (confidence >= 70) {
+        return service;
+      }
+    }
+
+    // Default to chat for all ambiguous/low confidence requests
+    return 'chat';
+  }
+
+  /**
    * Check if request is for insights service
    */
   private static isInsightsRequest(body: any): boolean {
@@ -57,14 +90,16 @@ export class ServiceInferrer {
       return true;
     }
 
-    // Check for productivity-related questions (specific patterns)
-    if (body.question) {
-      const question = body.question.toLowerCase();
-      return question.includes('how productive was i') || 
-             question.includes('productivity trends') || 
-             question.includes('focus score') ||
-             question.includes('how did i perform') ||
-             question.includes('show me my productivity');
+    // Check for productivity-related questions/messages (specific patterns)
+    if (body.question || body.message) {
+      const text = (body.question || body.message).toLowerCase();
+      return text.includes('how productive was i') || 
+             text.includes('productivity trends') || 
+             text.includes('focus score') ||
+             text.includes('how did i perform') ||
+             text.includes('show me my productivity') ||
+             text.includes('insights') ||
+             text.includes('analysis');
     }
     
     return false;
@@ -114,14 +149,16 @@ export class ServiceInferrer {
       return true;
     }
     
-    // Check for optimization questions
-    if (body.question) {
-      const question = body.question.toLowerCase();
-      return question.includes('optimize') || 
-             question.includes('schedule') ||
-             question.includes('best time') ||
-             question.includes('efficiency') ||
-             question.includes('organize');
+    // Check for optimization questions/messages
+    if (body.question || body.message) {
+      const text = (body.question || body.message).toLowerCase();
+      return text.includes('optimize') || 
+             text.includes('schedule') ||
+             text.includes('best time') ||
+             text.includes('efficiency') ||
+             text.includes('organize') ||
+             text.includes('flow') ||
+             text.includes('flow session');
     }
     
     return ('preferences' in body && 'constraints' in body);
@@ -218,7 +255,19 @@ export class ServiceInferrer {
 
     switch (inferredService) {
       case 'questions':
-        return requestBody.question ? 95 : 70;
+        if (requestBody.question || requestBody.message) {
+          const text = (requestBody.question || requestBody.message).toLowerCase();
+          // Lower confidence for very short or greeting-like questions
+          if (text.length < 10 || 
+              text.includes('hello') || 
+              text.includes('hi ') ||
+              text.includes('what is this') ||
+              text.includes('weather')) {
+            return 60; // Below 70% threshold, will route to chat
+          }
+          return 95;
+        }
+        return 70;
         
       case 'insights':
         const insightsFields = ['timeframe', 'focus_areas', 'trends'].filter(f => f in requestBody);
@@ -254,13 +303,13 @@ export class ServiceInferrer {
       confidence: this.getServiceScore(requestBody, service)
     })).sort((a, b) => b.confidence - a.confidence);
 
-    const suggested = scores[0].service;
-    const confidence = scores[0].confidence;
+    const suggested = scores[0]?.service || 'questions';
+    const confidence = scores[0]?.confidence || 0;
     const alternatives = scores.slice(1, 3).map(s => s.service);
 
     let reasoning = '';
-    if (requestBody.question) {
-      reasoning = 'Request contains a question field';
+    if (requestBody.question || requestBody.message) {
+      reasoning = 'Request contains a question/message field';
     } else if (requestBody.timeframe || requestBody.focus_areas) {
       reasoning = 'Request contains analytics-related fields';
     } else if (requestBody.preferences) {
@@ -272,6 +321,22 @@ export class ServiceInferrer {
     }
 
     return { suggested, confidence, alternatives, reasoning };
+  }
+
+  /**
+   * Get the service with highest confidence score for the request
+   */
+  static getHighestConfidenceService(requestBody: any): { service: string; confidence: number } {
+    const allServices = ['insights', 'questions', 'optimize', 'preferences', 'reports'];
+    const scores = allServices.map(service => ({
+      service,
+      confidence: this.getServiceScore(requestBody, service)
+    })).sort((a, b) => b.confidence - a.confidence);
+
+    return {
+      service: scores[0]?.service || 'questions',
+      confidence: scores[0]?.confidence || 0
+    };
   }
 
   /**

@@ -30,27 +30,44 @@ All productivity services are accessed through the main coordinator endpoint wit
 POST /coordinator
 ```
 
-**Smart Request Format** (service auto-detected):
+**Standard Frontend Request Format** (recommended for production):
 ```json
 {
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "your-tide-id",
-  "question": "How can I improve focus?"
-  // No 'service' field - automatically routes to 'questions' service
+  "api_key": "tides_userId_randomId",
+  "tides_id": "daily-tide-default",
+  "message": "Start me a flow session",
+  "tide_tool_call": "tide_smart_flow",
+  "context": {
+    "recent_messages": [
+      {"role": "user", "content": "How's my energy today?"},
+      {"role": "assistant", "content": "Your energy seems steady..."}
+    ],
+    "user_time": "2025-09-05T12:00:00.000Z"
+  },
+  "timestamp": "2025-09-05T12:00:00.000Z"
 }
 ```
+*→ Routes to **chat service** for intelligent clarification and response*
 
-**Override Request Format** (explicit service takes precedence):
+**Testing with Explicit Service Override**:
 ```json
 {
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "your-tide-id",
-  "service": "insights",
-  "question": "How can I improve focus?",
-  "timeframe": "7d"
-  // 'service' field overrides inference - routes to 'insights' not 'questions'
+  "api_key": "tides_userId_randomId",
+  "tides_id": "daily-tide-default", 
+  "service": "insights",  // ← Add this field for unit testing
+  "message": "Start me a flow session",
+  "tide_tool_call": "tide_smart_flow",
+  "context": {
+    "recent_messages": [
+      {"role": "user", "content": "How's my energy today?"},
+      {"role": "assistant", "content": "Your energy seems steady..."}
+    ],
+    "user_time": "2025-09-05T12:00:00.000Z"
+  },
+  "timestamp": "2025-09-05T12:00:00.000Z"
 }
 ```
+*→ Routes directly to **insights service** (bypasses inference for testing)*
 
 **Early Development Tip**: Include the `service` field during development for predictable routing, then remove it later to let the AI infer the correct service.
 
@@ -58,16 +75,25 @@ POST /coordinator
 
 The coordinator **automatically detects** which service you need based on your request content:
 
-| Field(s) | Inferred Service | Confidence |
-|----------|------------------|------------|
-| `service` (explicit) | **Any service** | **100% (takes precedence)** |
-| `question`, `query`, `ask` | questions | 95% |
-| `timeframe`, `focus_areas`, `trends` | insights | 80-95% |
-| `report_type`, `period` | reports | 90% |
-| `preferences`, `settings` | preferences | 85-90% |
-| `schedule`, `optimization`, `constraints` | optimize | 70-85% |
+| Field(s) | Inferred Service | Confidence | Purpose |
+|----------|------------------|------------|---------|
+| `service` (explicit) | **Any service** | **100%** | **Takes absolute precedence** |
+| `question`, `query`, `ask` (high confidence) | questions | 95% | Specific productivity Q&A |
+| `timeframe`, `focus_areas`, `trends` | insights | 80-95% | Productivity analytics |
+| `report_type`, `period` | reports | 90% | Data export and summaries |
+| `preferences`, `settings` | preferences | 85-90% | User configuration |
+| `schedule`, `optimization`, `constraints` | optimize | 70-85% | Schedule optimization |
+| **All other requests** | **chat** | **Default** | **Intent clarification & AI assistance** |
 
-**Priority Order**: `service` field → content inference → error with suggestion
+**Routing Logic**:
+1. **Explicit service field** → Route directly (100% confidence)
+2. **High confidence inference** (≥70%) → Route to specific service  
+3. **Low/ambiguous confidence** (<70%) → Route to **chat service** for clarification
+
+**Chat Service Benefits**:
+- Handles ambiguous requests with intelligent clarification questions
+- Provides contextual suggestions based on conversation history
+- Future AI integration point for natural language understanding
 
 ### Legacy Direct Endpoints (Still Supported)
 For backwards compatibility, direct service endpoints are still available:
@@ -78,6 +104,7 @@ POST /optimize      # Schedule optimization recommendations
 POST /questions     # Custom productivity Q&A with AI
 POST /preferences   # User preferences management
 POST /reports       # Comprehensive productivity reports
+POST /chat          # Intent clarification and AI assistance
 ```
 
 ## Authentication

@@ -12,6 +12,8 @@ import { OptimizeService } from './services/optimize.js';
 import { QuestionsService } from './services/questions.js';
 import { PreferencesService } from './services/preferences.js';
 import { ReportsService } from './services/reports.js';
+import { ChatService } from './services/chat.js';
+import { AITester } from './ai-test.js';
 
 export class Coordinator implements DurableObject {
   private state: DurableObjectState;
@@ -24,6 +26,8 @@ export class Coordinator implements DurableObject {
   private questionsService: QuestionsService;
   private preferencesService: PreferencesService;
   private reportsService: ReportsService;
+  private chatService: ChatService;
+  private aiTester: AITester;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -36,6 +40,8 @@ export class Coordinator implements DurableObject {
     this.questionsService = new QuestionsService(env);
     this.preferencesService = new PreferencesService(env);
     this.reportsService = new ReportsService(env);
+    this.chatService = new ChatService(env);
+    this.aiTester = new AITester(env);
 
     console.log(`[Coordinator] Initialized for agent: ${state.id.toString()}`);
   }
@@ -61,7 +67,7 @@ export class Coordinator implements DurableObject {
 
       // Handle GET requests (status, health checks, etc.)
       if (request.method === 'GET') {
-        return this.handleGetRequest(url.pathname, startTime);
+        return await this.handleGetRequest(url.pathname, startTime);
       }
 
       // Handle POST requests (main service endpoints)
@@ -80,14 +86,14 @@ export class Coordinator implements DurableObject {
   /**
    * Handle GET requests
    */
-  private handleGetRequest(pathname: string, startTime: number): Response {
+  private async handleGetRequest(pathname: string, startTime: number): Promise<Response> {
     switch (pathname) {
       case '/status':
       case '/':
         return ResponseBuilder.success(
           {
             status: 'healthy',
-            services: ['insights', 'optimize', 'questions', 'preferences', 'reports'],
+            services: ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'],
             version: '1.0.0',
             agent_id: this.state.id.toString()
           },
@@ -102,9 +108,18 @@ export class Coordinator implements DurableObject {
           performance.now() - startTime
         );
 
+      case '/ai-test':
+        console.log('[Coordinator] Running AI isolation tests...');
+        const aiTestResults = await this.aiTester.runAllTests();
+        return ResponseBuilder.success(
+          aiTestResults,
+          'ai-test',
+          performance.now() - startTime
+        );
+
       default:
         return ResponseBuilder.error(
-          `GET ${pathname} not found. Available endpoints: /status, /health`,
+          `GET ${pathname} not found. Available endpoints: /status, /health, /ai-test`,
           404,
           'coordinator'
         );
@@ -128,11 +143,11 @@ export class Coordinator implements DurableObject {
     let inferenceInfo = { confidence: 100, reasoning: 'Explicit endpoint' };
     
     if (pathname === '/coordinator' || pathname === '/') {
-      // Use intelligent service inference for coordinator endpoint
-      const inferredService = ServiceInferrer.inferService(body);
+      // Use intelligent service inference with chat fallback for coordinator endpoint
+      const inferredService = ServiceInferrer.inferServiceWithChat(body);
       
       if (!inferredService) {
-        // If we can't infer the service, suggest options
+        // This should rarely happen now with chat fallback, but keep for safety
         const suggestion = ServiceInferrer.suggestService(body);
         return ResponseBuilder.error(
           `Could not determine service from request content. Suggested: ${suggestion.suggested} (${suggestion.confidence}% confidence). Reason: ${suggestion.reasoning}. Add 'service' field to be explicit.`,
@@ -155,7 +170,7 @@ export class Coordinator implements DurableObject {
     }
 
     // Validate service
-    const validServices = ['insights', 'optimize', 'questions', 'preferences', 'reports'];
+    const validServices = ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'];
     if (!validServices.includes(targetService)) {
       return ResponseBuilder.error(
         `Invalid service: ${targetService}. Available services: ${validServices.join(', ')}`,
@@ -202,6 +217,10 @@ export class Coordinator implements DurableObject {
         case 'reports':
           const reportsResult = await this.reportsService.generateReport(body as any, userId);
           return this.buildSuccessResponse(reportsResult, 'reports', startTime, inferenceInfo);
+
+        case 'chat':
+          const chatResult = await this.chatService.clarifyIntent(body as any, userId);
+          return this.buildSuccessResponse(chatResult, 'chat', startTime, inferenceInfo);
 
         default:
           return ResponseBuilder.error(

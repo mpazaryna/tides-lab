@@ -1,10 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tides-agent",
-  "main": "src/index.ts",
+  "main": "src/index.ts", 
   "compatibility_date": "2025-06-17",
   
-  // Deploy directly to environment 101 (clean test environment)
   "account_id": "01bfa3fc31e4462e21428e9ca7d63e98",
 
   // Workers Logs configuration
@@ -33,6 +32,7 @@
   // Environment: 101 (Clean Test Environment)
   "env": {
     "101": {
+      "name": "tides-agent-101",
       // D1 Database binding
       "d1_databases": [
         {
@@ -86,6 +86,122 @@
         "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
         "R2_BUCKET_NAME": "tides-101-storage",
         "ENVIRONMENT": "clean-test"
+      }
+    },
+
+    "102": {
+      "name": "tides-agent-102",
+      // D1 Database binding - Staging
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tides-102-db", 
+          "database_id": "staging-database-id-placeholder"
+        }
+      ],
+
+      // KV namespace for authentication - Staging
+      "kv_namespaces": [
+        {
+          "binding": "TIDES_AUTH_KV",
+          "id": "staging-kv-id-placeholder"
+        }
+      ],
+
+      // R2 bucket for tide storage - Staging
+      "r2_buckets": [
+        {
+          "binding": "TIDES_R2",
+          "bucket_name": "tides-102-storage"
+        }
+      ],
+
+      // Durable Objects - Staging
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "COORDINATOR",
+            "class_name": "Coordinator"
+          }
+        ]
+      },
+
+      // Migrations for environment 102
+      "migrations": [
+        {
+          "tag": "v102-agent-coordinator",
+          "new_sqlite_classes": ["Coordinator"]
+        }
+      ],
+
+      // AI binding for Workers AI - Staging
+      "ai": {
+        "binding": "AI"
+      },
+
+      // Environment variables - Staging
+      "vars": {
+        "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
+        "R2_BUCKET_NAME": "tides-102-storage",
+        "ENVIRONMENT": "staging"
+      }
+    },
+
+    "103": {
+      "name": "tides-agent-103",
+      // D1 Database binding - Development
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tides-103-db",
+          "database_id": "74b20aee-081d-4a09-af95-be55470fe4f0"
+        }
+      ],
+
+      // KV namespace for authentication - Development  
+      "kv_namespaces": [
+        {
+          "binding": "TIDES_AUTH_KV",
+          "id": "c4ec43a892e64119a2f7665897144560"
+        }
+      ],
+
+      // R2 bucket for tide storage - Development
+      "r2_buckets": [
+        {
+          "binding": "TIDES_R2",
+          "bucket_name": "tides-103-storage"
+        }
+      ],
+
+      // Durable Objects - Development
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "COORDINATOR",
+            "class_name": "Coordinator"
+          }
+        ]
+      },
+
+      // Migrations for environment 103
+      "migrations": [
+        {
+          "tag": "v103-agent-coordinator", 
+          "new_sqlite_classes": ["Coordinator"]
+        }
+      ],
+
+      // AI binding for Workers AI - Development
+      "ai": {
+        "binding": "AI"
+      },
+
+      // Environment variables - Development
+      "vars": {
+        "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
+        "R2_BUCKET_NAME": "tides-103-storage",
+        "ENVIRONMENT": "development"
       }
     }
   }
