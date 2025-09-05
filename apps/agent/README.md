@@ -143,7 +143,3 @@ curl -X POST https://tides-agent.your-domain.workers.dev/questions \
     "question": "How can I improve my morning productivity?"
   }'
 ```
-
-## Bump 
-
-Test merge
