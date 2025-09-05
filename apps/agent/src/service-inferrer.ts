@@ -1,10 +1,88 @@
 /**
- * Service Inference Engine - Determines which service to use based on request content
+ * Service Inference Engine - Uses AI to determine which service to use based on request content
  */
 
+import type { Env } from './types.js';
+
 export class ServiceInferrer {
+  private env: Env;
+
+  constructor(env: Env) {
+    this.env = env;
+  }
+
   /**
-   * Infer the appropriate service from request content
+   * AI-powered service inference using semantic analysis
+   */
+  async inferServiceWithAI(requestBody: any): Promise<{ service: string; confidence: number }> {
+    // Handle null/undefined requests
+    if (!requestBody || typeof requestBody !== 'object') {
+      return { service: 'chat', confidence: 50 };
+    }
+
+    // Explicit service field takes precedence
+    if (requestBody.service) {
+      return { service: requestBody.service, confidence: 100 };
+    }
+
+    const message = requestBody.message || requestBody.question || '';
+    if (!message || message.length < 3) {
+      return { service: 'chat', confidence: 50 };
+    }
+
+    try {
+      const prompt = `Analyze this user request and classify it into one of these categories:
+
+SERVICES AVAILABLE:
+- insights: User wants productivity analytics, energy patterns, performance data, how they're doing
+- optimize: User wants schedule optimization, time management suggestions, when to work
+- questions: User has specific questions about their work, tasks, or productivity habits  
+- preferences: User wants to view/change their settings, work hours, notification preferences
+- reports: User wants comprehensive reports, detailed analytics, or data exports
+- chat: Ambiguous requests that need clarification
+
+USER REQUEST: "${message}"
+
+Respond with ONLY the service name (one word). Examples:
+- "How productive was I?" → insights
+- "Show my energy patterns" → insights  
+- "When should I work?" → optimize
+- "What did I work on?" → questions
+- "Change my work hours" → preferences
+- "Generate a report" → reports
+- "Help me" → chat`;
+
+      const response = await this.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 10,
+        temperature: 0.1 // Low temperature for consistent classification
+      });
+
+      const aiService = response.response?.trim().toLowerCase() || 'chat';
+      
+      // Validate AI response
+      const validServices = ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'];
+      const finalService = validServices.includes(aiService) ? aiService : 'chat';
+      
+      // Calculate confidence based on message clarity
+      let confidence = 85;
+      if (message.length < 10) confidence = 60;
+      if (finalService === 'chat') confidence = 50;
+      
+      console.log(`[AI Inference] "${message}" → ${finalService} (${confidence}%)`);
+      
+      return { service: finalService, confidence };
+
+    } catch (error) {
+      console.error('[AI Inference] Failed, falling back to keyword matching:', error);
+      // Fallback to original keyword-based inference
+      const fallbackService = ServiceInferrer.inferService(requestBody) || 'chat';
+      return { service: fallbackService, confidence: 50 };
+    }
+  }
+
+  /**
+   * Infer the appropriate service from request content (keyword-based fallback)
    */
   static inferService(requestBody: any): string | null {
     // Handle null/undefined requests
@@ -67,7 +145,7 @@ export class ServiceInferrer {
     // If we got a service with good confidence, return it
     if (service) {
       const confidence = this.getInferenceConfidence(requestBody, service);
-      if (confidence >= 70) {
+      if (confidence >= 50) {  // Lowered from 70 to be less conservative
         return service;
       }
     }
@@ -93,8 +171,14 @@ export class ServiceInferrer {
     // Check for productivity-related questions/messages (specific patterns)
     if (body.question || body.message) {
       const text = (body.question || body.message).toLowerCase();
-      return text.includes('how productive was i') || 
-             text.includes('productivity trends') || 
+      return text.includes('how productive') || 
+             text.includes('productivity') || 
+             text.includes('my insights') ||
+             text.includes('energy patterns') ||
+             text.includes('energy levels') ||
+             text.includes('show me my energy') ||
+             text.includes('how am i doing') ||
+             text.includes('how did i') ||
              text.includes('focus score') ||
              text.includes('how did i perform') ||
              text.includes('show me my productivity') ||
@@ -270,12 +354,26 @@ export class ServiceInferrer {
         return 70;
         
       case 'insights':
+        // If message mentions productivity/insights/energy, give higher confidence
+        if (requestBody.message || requestBody.question) {
+          const text = (requestBody.message || requestBody.question).toLowerCase();
+          if (text.includes('productive') || text.includes('insights') || text.includes('energy')) {
+            return 85;
+          }
+        }
         const insightsFields = ['timeframe', 'focus_areas', 'trends'].filter(f => f in requestBody);
-        return Math.min(95, 60 + (insightsFields.length * 15));
+        return Math.min(95, 70 + (insightsFields.length * 15));  // Raised base from 60 to 70
         
       case 'optimize':
+        // If message mentions scheduling/optimization, give higher confidence
+        if (requestBody.message || requestBody.question) {
+          const text = (requestBody.message || requestBody.question).toLowerCase();
+          if (text.includes('schedule') || text.includes('optimize') || text.includes('when should')) {
+            return 85;
+          }
+        }
         const optimizeFields = ['schedule', 'constraints', 'efficiency'].filter(f => f in requestBody);
-        return Math.min(90, 55 + (optimizeFields.length * 15));
+        return Math.min(90, 65 + (optimizeFields.length * 15));  // Raised base from 55 to 65
         
       case 'reports':
         return requestBody.report_type ? 90 : 75;

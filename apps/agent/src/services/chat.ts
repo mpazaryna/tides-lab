@@ -112,7 +112,7 @@ User context: ${request.context?.user_time ? `Current time: ${request.context.us
     } catch (error) {
       console.error('[ChatService] AI clarification failed:', error);
       // Fallback to simple clarification
-      return this.clarifyIntent(request, userId);
+      return this.clarifyIntentFallback(request, userId);
     }
   }
 

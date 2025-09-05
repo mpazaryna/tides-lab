@@ -28,6 +28,7 @@ export class Coordinator implements DurableObject {
   private reportsService: ReportsService;
   private chatService: ChatService;
   private aiTester: AITester;
+  private serviceInferrer: ServiceInferrer;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
@@ -42,6 +43,7 @@ export class Coordinator implements DurableObject {
     this.reportsService = new ReportsService(env);
     this.chatService = new ChatService(env);
     this.aiTester = new AITester(env);
+    this.serviceInferrer = new ServiceInferrer(env);
 
     console.log(`[Coordinator] Initialized for agent: ${state.id.toString()}`);
   }
@@ -144,7 +146,8 @@ export class Coordinator implements DurableObject {
     
     if (pathname === '/coordinator' || pathname === '/') {
       // Use intelligent service inference with chat fallback for coordinator endpoint
-      const inferredService = ServiceInferrer.inferServiceWithChat(body);
+      const aiInference = await this.serviceInferrer.inferServiceWithAI(body);
+      const inferredService = aiInference.service;
       
       if (!inferredService) {
         // This should rarely happen now with chat fallback, but keep for safety
@@ -157,13 +160,12 @@ export class Coordinator implements DurableObject {
       }
       
       targetService = inferredService;
-      const confidence = ServiceInferrer.getInferenceConfidence(body, inferredService);
       inferenceInfo = { 
-        confidence, 
-        reasoning: body.service ? 'Explicit service field' : 'Inferred from request content' 
+        confidence: aiInference.confidence, 
+        reasoning: body.service ? 'Explicit service field' : 'AI-powered semantic analysis' 
       };
       
-      console.log(`[Coordinator] Service inferred: ${targetService} (${confidence}% confidence)`);
+      console.log(`[Coordinator] Service inferred: ${targetService} (${aiInference.confidence}% confidence)`);
     } else {
       // Legacy direct endpoint support (for backwards compatibility)
       targetService = pathname.substring(1); // Remove leading slash
