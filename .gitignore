@@ -57,3 +57,5 @@ apps/mobile/coverage/
 apps/mobile/.metro-health-check*
 
 # App-specific ignores are handled by individual apps
+.mcp.json
+/apps/agent/coverage

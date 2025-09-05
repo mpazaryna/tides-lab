@@ -272,8 +272,71 @@
         "SUPABASE_AUTH_ENABLED": "true",
       },
     },
+
+    // ===== ENVIRONMENT: 101 (Clean Test Environment) =====
+    "101": {
+      // D1 Database binding for clean test
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tides-101-db",
+          "database_id": "0883f97a-2b95-4247-916d-04d021a739c2",
+        },
+      ],
+
+      // KV namespace for authentication
+      "kv_namespaces": [
+        {
+          "binding": "TIDES_AUTH_KV",
+          "id": "28b1be3455f847079eb0ca5d75bacf13",
+        },
+      ],
+
+      // R2 bucket for tide storage
+      "r2_buckets": [
+        {
+          "binding": "TIDES_R2",
+          "bucket_name": "tides-101-storage",
+        },
+      ],
+
+      // Durable Objects for clean test
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "HELLO_AGENT",
+            "class_name": "HelloAgent",
+          },
+          {
+            "name": "TIDE_PRODUCTIVITY_AGENT",
+            "class_name": "TideProductivityAgent",
+          },
+        ],
+      },
+
+      // Migrations for clean test environment
+      "migrations": [
+        {
+          "tag": "v101-clean-test",
+          "new_sqlite_classes": ["HelloAgent", "TideProductivityAgent"],
+        },
+      ],
+
+      // AI binding for Workers AI
+      "ai": {
+        "binding": "AI",
+      },
+
+      // Environment variables for clean test
+      "vars": {
+        "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
+        "R2_BUCKET_NAME": "tides-101-storage",
+        "ENVIRONMENT": "clean-test",
+        "SUPABASE_AUTH_ENABLED": "true",
+      },
+    },
   },
 
   // Note: CLOUDFLARE_API_TOKEN is loaded from .dev.vars file for development
-  // For production, set via: wrangler secret put CLOUDFLARE_API_TOKEN --env 006
+  // For production, set via: wrangler secret put CLOUDFLARE_API_TOKEN --env 101
 }

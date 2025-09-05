@@ -1,0 +1,92 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tides-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-17",
+  
+  // Deploy directly to environment 101 (clean test environment)
+  "account_id": "01bfa3fc31e4462e21428e9ca7d63e98",
+
+  // Workers Logs configuration
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+
+  // Default environment configuration
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COORDINATOR",
+        "class_name": "Coordinator"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1-agent-coordinator",
+      "new_classes": ["Coordinator"]
+    }
+  ],
+
+  // Environment: 101 (Clean Test Environment)
+  "env": {
+    "101": {
+      // D1 Database binding
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "tides-101-db",
+          "database_id": "0883f97a-2b95-4247-916d-04d021a739c2"
+        }
+      ],
+
+      // KV namespace for authentication
+      "kv_namespaces": [
+        {
+          "binding": "TIDES_AUTH_KV",
+          "id": "28b1be3455f847079eb0ca5d75bacf13"
+        }
+      ],
+
+      // R2 bucket for tide storage
+      "r2_buckets": [
+        {
+          "binding": "TIDES_R2",
+          "bucket_name": "tides-101-storage"
+        }
+      ],
+
+      // Durable Objects
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "COORDINATOR",
+            "class_name": "Coordinator"
+          }
+        ]
+      },
+
+      // Migrations for environment 101
+      "migrations": [
+        {
+          "tag": "v101-agent-coordinator",
+          "new_sqlite_classes": ["Coordinator"]
+        }
+      ],
+
+      // AI binding for Workers AI
+      "ai": {
+        "binding": "AI"
+      },
+
+      // Environment variables
+      "vars": {
+        "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
+        "R2_BUCKET_NAME": "tides-101-storage",
+        "ENVIRONMENT": "clean-test"
+      }
+    }
+  }
+}
