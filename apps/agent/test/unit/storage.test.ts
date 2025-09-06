@@ -2,8 +2,8 @@
  * Unit Tests for Storage utilities
  */
 
-import { StorageService } from '../../../src/storage';
-import type { Env } from '../../../src/types';
+import { StorageService } from '../../src/storage';
+import type { Env } from '../../src/types';
 
 describe('AgentStorage', () => {
   let storage: StorageService;

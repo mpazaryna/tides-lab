@@ -2,9 +2,9 @@
  * Unit Tests for ReportsService
  */
 
-import { ReportsService } from '../../../src/services/reports';
-import type { Env, ReportsRequest } from '../../../src/types';
-import { setupR2MockWithRealData } from '../../helpers/tideDataHelper';
+import { ReportsService } from '../../src/services/reports';
+import type { Env, ReportsRequest } from '../../src/types';
+import { setupR2MockWithRealData } from '../helpers/tideDataHelper';
 
 describe('ReportsService', () => {
   let reportsService: ReportsService;

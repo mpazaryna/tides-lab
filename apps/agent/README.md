@@ -6,11 +6,12 @@ Clean, microservices-based productivity agent built with Cloudflare Workers and 
 
 Single **Coordinator** Durable Object that routes requests to internal micro-services:
 
-- **InsightsService**: Productivity insights and analysis
-- **OptimizeService**: Schedule optimization recommendations  
+- **InsightsService**: Productivity insights and analysis with real R2 tide data
+- **OptimizeService**: Schedule optimization recommendations with personalized algorithms
 - **QuestionsService**: Custom Q&A with AI-powered responses
-- **PreferencesService**: User preferences management
-- **ReportsService**: Comprehensive productivity reports
+- **PreferencesService**: User preferences management with KV storage
+- **ReportsService**: Comprehensive productivity reports with analytics
+- **ChatService**: AI-powered conversation and intent clarification
 
 ## API Endpoints
 
@@ -23,11 +24,13 @@ All endpoints require `api_key` and `tides_id` in the request body.
 
 ### POST Endpoints
 
+- `POST /coordinator` - Smart routing with service inference (recommended)
 - `POST /insights` - Generate productivity insights
 - `POST /optimize` - Get schedule optimization recommendations
 - `POST /questions` - Ask custom productivity questions
 - `POST /preferences` - Get/update user preferences
 - `POST /reports` - Generate productivity reports
+- `POST /chat` - AI-powered conversation and clarification
 
 ## Request Format
 
@@ -81,37 +84,43 @@ npm run test:coverage
 ```
 
 Tests include:
-- Unit tests for all services
-- Coordinator routing tests  
+- Unit tests for all 6 services (195 tests)
+- Environment-specific storage integration tests
+- Coordinator routing and service inference tests
 - Authentication validation tests
-- Mock data generation tests
+- Real tide data validation tests
 - Response format validation
+- E2E tests with live endpoints
 
 ## Deployment
 
-The agent is configured to deploy to environment 101 (clean test environment):
+The agent supports multiple environments:
 
 ```bash
-npm run deploy:101
+npm run deploy:101    # Production (tides-001-storage)
+npm run deploy:102    # Staging (tides-002-storage) 
+npm run deploy:103    # Development (tides-003-storage)
 ```
+
+Each environment uses its own R2 bucket for isolated data storage.
 
 ## Current Implementation Status
 
-### ✅ Phase 1: Foundation & Mock Responses
+### ✅ Phase 1: Foundation & Services
 - [x] Project structure and configuration
 - [x] Coordinator with request routing
-- [x] All 5 micro-services with mock responses
+- [x] All 6 micro-services with production data
 - [x] Authentication and validation
-- [x] Comprehensive unit tests (90%+ coverage)
-- [x] Environment 101 deployment configuration
+- [x] Comprehensive unit tests (195 tests, 84.6% service coverage)
+- [x] Multi-environment deployment (101, 102, 103)
 
-### 🚧 Phase 2: Real Service Implementation (Next)
-- [ ] R2 storage integration for real tide data
-- [ ] Workers AI integration for insights
-- [ ] Real schedule optimization algorithms  
-- [ ] Advanced question processing with AI
-- [ ] Persistent user preferences storage
-- [ ] Rich report generation with analytics
+### ✅ Phase 2: Real Service Implementation (Complete)
+- [x] R2 storage integration for real tide data
+- [x] Workers AI integration for chat service
+- [x] Environment-specific storage with production data
+- [x] Advanced question processing with AI
+- [x] User preferences storage in KV
+- [x] Rich report generation with analytics
 
 ### 📋 Phase 3: Production Ready (Future)
 - [ ] Error handling and recovery

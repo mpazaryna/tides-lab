@@ -2,7 +2,7 @@
  * Unit Tests for ServiceInferrer
  */
 
-import { ServiceInferrer } from '../../../src/service-inferrer';
+import { ServiceInferrer } from '../../src/service-inferrer';
 
 describe('ServiceInferrer', () => {
   describe('inferService', () => {

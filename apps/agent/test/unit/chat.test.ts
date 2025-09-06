@@ -3,8 +3,8 @@
  * TDD Approach - Starting with the simplest test
  */
 
-import { ChatService } from '../../../src/services/chat.js';
-import type { Env, ChatRequest, ChatResponse } from '../../../src/types.js';
+import { ChatService } from '../../src/services/chat.js';
+import type { Env, ChatRequest, ChatResponse } from '../../src/types.js';
 
 describe('ChatService', () => {
   describe('Service Creation', () => {

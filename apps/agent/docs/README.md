@@ -8,12 +8,12 @@
 - **[API Reference](api-reference.md)** - Complete API endpoint documentation with examples
 - **[iOS Integration Guide](ios-integration-guide.md)** - Frontend integration guide with TypeScript examples
 - **[Chat Agent Architecture](chat-agent-architecture.md)** - AI-powered chat service architecture specification
-- **[Multi-Bucket Storage Guide](multi-bucket-storage.md)** - Cross-environment R2 data access implementation
 
 ### Implementation Reports
 - **[Chat Service Implementation Report](chat-service-implementation-report.md)** - TDD implementation report with live testing
 - **[iOS Mock Response Guide](ios-mock-response.md)** - Production response examples and testing guide
 - **[Documentation Audit Report](DOCUMENTATION-AUDIT-REPORT.md)** - Comprehensive documentation validation audit
+
 
 ## 🏗️ System Architecture
 
@@ -27,8 +27,8 @@
 
 ### Technical Stack
 - **Platform**: Cloudflare Workers with Durable Objects
-- **Storage**: Multi-bucket R2 for tide data, KV for user preferences and auth
-- **Multi-Source Data Access**: Automatic fallback across agent and server R2 buckets
+- **Storage**: Environment-specific R2 buckets for tide data, KV for user preferences and auth
+- **Data Access**: Single R2 bucket per environment (101: tides-001-storage, 102: tides-002-storage, 103: tides-003-storage)
 - **AI Integration**: Cloudflare Workers AI for chat responses
 - **Authentication**: SHA-256 hashed API keys with KV validation
 - **Architecture**: Microservices coordination with intelligent routing
@@ -64,10 +64,10 @@ https://tides-agent-101.mpazbot.workers.dev
 
 ## 📊 Current Status
 
-### Test Coverage (Verified)
-- **Services**: 84.48% statement coverage
-- **Overall**: 68.37% statement coverage  
-- **Total Tests**: 187 passing tests
+### Test Coverage (Current)
+- **Services**: 84.63% statement coverage
+- **Overall**: 61.76% statement coverage  
+- **Total Tests**: 195 passing tests (unit tests)
 - **Service Breakdown**:
   - OptimizeService: 100%
   - PreferencesService: 94.73%
@@ -82,38 +82,36 @@ https://tides-agent-101.mpazbot.workers.dev
 - **Uptime**: Production ready
 - **Environment**: Fully operational
 
-## 🗄️ Multi-Bucket Storage Architecture
+## 🗄️ Environment-Specific Storage Architecture
 
-The Tides Agent supports accessing tide data from multiple R2 buckets within the same Cloudflare account:
+The Tides Agent uses environment-specific R2 buckets for clean data isolation:
 
-### Available Buckets
-- **Agent Bucket**: `TIDES_R2` - Primary storage for agent environment
-- **Server Buckets**: 
-  - `TIDES_SERVER_001` - Production server data
-  - `TIDES_SERVER_002` - Staging server data  
-  - `TIDES_SERVER_003` - Development server data
+### Environment Configuration
+- **Environment 101** (Production): `tides-001-storage` bucket
+- **Environment 102** (Staging): `tides-002-storage` bucket  
+- **Environment 103** (Development): `tides-003-storage` bucket
 
 ### Data Access Strategy
-The storage service implements intelligent fallback:
+Each environment accesses only its designated bucket:
 
-1. **Primary**: Check agent bucket first (fastest access)
-2. **Fallback**: Search server buckets in order (001 → 002 → 003)
-3. **Aggregation**: Combine results from all sources for comprehensive data access
+1. **Isolation**: Each environment has dedicated storage
+2. **Simplicity**: Single `TIDES_R2` binding per environment
+3. **Predictability**: No fallback complexity, direct bucket access
 
 ### Usage Examples
 
 ```typescript
-// Fetch from specific server bucket
-const data = await storageService.getTideDataFromServer(userId, tideId, 'TIDES_SERVER_001');
+// Get tide data from current environment bucket
+const data = await storageService.getTideData(userId, tideId);
 
-// Auto-search across all buckets
-const data = await storageService.getTideDataFromAnySource(userId, tideId);
+// Save tide data to current environment bucket
+const success = await storageService.saveTideData(userId, tideId, tideData);
 
-// List tides from all sources with deduplication
-const allTides = await storageService.listUserTidesFromAllSources(userId);
+// List user tides from current environment
+const tides = await storageService.listUserTides(userId);
 
-// Get bucket configuration info
-const bucketInfo = await storageService.getBucketInfo();
+// Check if tide exists in current environment
+const exists = await storageService.tideExists(userId, tideId);
 ```
 
 ## 🔧 Service Inference
@@ -187,11 +185,11 @@ curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
 - ✅ All 6 services fully operational with production data
 - ✅ Chat service AI integration with Cloudflare Workers AI
 - ✅ Service inference engine with 70% confidence threshold
-- ✅ Comprehensive test coverage validation (202 tests)
-- ✅ Production deployment with performance optimization
-- ✅ Documentation audit and accuracy validation complete
-- ✅ **Multi-bucket R2 storage implementation** - Cross-environment data access
-- ✅ **TDD-driven storage enhancement** - 15 new tests, 91.12% coverage
+- ✅ Comprehensive test coverage validation (195 tests)
+- ✅ Multi-environment deployment configuration (101, 102, 103)
+- ✅ **Environment-specific R2 storage implementation** - Simplified, isolated data access
+- ✅ **Unit test directory structure flattening** - Improved test organization
+- ✅ **Documentation updates** - Aligned with current implementation
 
 ## 📞 Support
 

@@ -96,7 +96,7 @@
         {
           "binding": "DB",
           "database_name": "tides-102-db", 
-          "database_id": "staging-database-id-placeholder"
+          "database_id": "0883f97a-2b95-4247-916d-04d021a739c2"
         }
       ],
 
@@ -104,7 +104,7 @@
       "kv_namespaces": [
         {
           "binding": "TIDES_AUTH_KV",
-          "id": "staging-kv-id-placeholder"
+          "id": "28b1be3455f847079eb0ca5d75bacf13"
         }
       ],
 
@@ -112,7 +112,7 @@
       "r2_buckets": [
         {
           "binding": "TIDES_R2",
-          "bucket_name": "tides-002-storage"
+          "bucket_name": "tides-006-storage"
         }
       ],
 
@@ -142,7 +142,7 @@
       // Environment variables - Staging
       "vars": {
         "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
-        "R2_BUCKET_NAME": "tides-102-storage",
+        "R2_BUCKET_NAME": "tides-006-storage",
         "ENVIRONMENT": "staging"
       }
     },

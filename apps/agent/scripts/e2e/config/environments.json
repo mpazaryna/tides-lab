@@ -1,0 +1,26 @@
+{
+  "101": {
+    "name": "production",
+    "description": "Production environment with tides-001-storage",
+    "endpoint": "https://tides-agent-101.mpazbot.workers.dev",
+    "bucket": "tides-001-storage",
+    "api_key": "tides_production_user_12345",
+    "tides_id": "daily-tide-default"
+  },
+  "102": {
+    "name": "staging",
+    "description": "Staging environment with tides-006-storage", 
+    "endpoint": "https://tides-agent-102.mpazbot.workers.dev",
+    "bucket": "tides-006-storage",
+    "api_key": "tides_19874fa5-4a50-4dc4-9fea-ab4abf272ce1_12345",
+    "tides_id": "tide_1756412347954_wgq624k2ocf"
+  },
+  "103": {
+    "name": "development",
+    "description": "Development environment with tides-003-storage",
+    "endpoint": "https://tides-agent-103.mpazbot.workers.dev",
+    "bucket": "tides-003-storage", 
+    "api_key": "tides_testuser_12345",
+    "tides_id": "daily-tide-default"
+  }
+}

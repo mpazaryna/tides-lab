@@ -2,8 +2,8 @@
  * Unit Tests for PreferencesService
  */
 
-import { PreferencesService } from '../../../src/services/preferences';
-import type { Env, PreferencesRequest } from '../../../src/types';
+import { PreferencesService } from '../../src/services/preferences';
+import type { Env, PreferencesRequest } from '../../src/types';
 
 describe('PreferencesService', () => {
   let preferencesService: PreferencesService;

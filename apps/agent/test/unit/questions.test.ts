@@ -2,9 +2,9 @@
  * Unit Tests for QuestionsService
  */
 
-import { QuestionsService } from '../../../src/services/questions';
-import type { Env, QuestionsRequest } from '../../../src/types';
-import { setupR2MockWithRealData } from '../../helpers/tideDataHelper';
+import { QuestionsService } from '../../src/services/questions';
+import type { Env, QuestionsRequest } from '../../src/types';
+import { setupR2MockWithRealData } from '../helpers/tideDataHelper';
 
 describe('QuestionsService', () => {
   let questionsService: QuestionsService;

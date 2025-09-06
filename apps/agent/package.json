@@ -8,6 +8,8 @@
     "dev": "wrangler dev --local",
     "deploy": "wrangler deploy",
     "deploy:101": "wrangler deploy --env 101",
+    "deploy:102": "wrangler deploy --env 102",
+    "deploy:103": "wrangler deploy --env 103",
     "test": "./scripts/test-all.sh",
     "test:unit": "./scripts/test-unit.sh",
     "test:integration": "./scripts/test-integration.sh",

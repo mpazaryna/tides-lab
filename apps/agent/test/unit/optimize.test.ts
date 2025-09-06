@@ -2,9 +2,9 @@
  * Unit Tests for OptimizeService
  */
 
-import { OptimizeService } from '../../../src/services/optimize';
-import type { Env, OptimizeRequest } from '../../../src/types';
-import { setupR2MockWithRealData } from '../../helpers/tideDataHelper';
+import { OptimizeService } from '../../src/services/optimize';
+import type { Env, OptimizeRequest } from '../../src/types';
+import { setupR2MockWithRealData } from '../helpers/tideDataHelper';
 
 describe('OptimizeService', () => {
   let optimizeService: OptimizeService;

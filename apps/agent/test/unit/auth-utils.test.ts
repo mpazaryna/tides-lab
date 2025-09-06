@@ -2,8 +2,8 @@
  * Unit Tests for Auth utilities
  */
 
-import { validateRequest, hashApiKey } from '../../../src/auth';
-import type { Env } from '../../../src/types';
+import { validateRequest, hashApiKey } from '../../src/auth';
+import type { Env } from '../../src/types';
 
 describe('Auth Utilities', () => {
   let mockEnv: Env;

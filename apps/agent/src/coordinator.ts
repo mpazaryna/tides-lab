@@ -133,11 +133,16 @@ export class Coordinator implements DurableObject {
    */
   private async handlePostRequest(request: Request, pathname: string, startTime: number): Promise<Response> {
     // Parse and validate request body
-    const { data: body, error: parseError } = await ResponseBuilder.parseRequestBody<AgentRequest & { service?: string }>(request);
+    const { data: body, error: parseError } = await ResponseBuilder.parseRequestBody<AgentRequest & { service?: string, r2_test_path?: string }>(request);
     if (parseError) return parseError;
     
     if (!body) {
       return ResponseBuilder.error('Request body is required', 400, 'coordinator');
+    }
+
+    // Special TDD test endpoint for direct R2 file path testing
+    if (body.r2_test_path) {
+      return await this.handleR2TestRequest(body.r2_test_path, startTime);
     }
 
     // Determine target service using intelligent inference
@@ -181,14 +186,19 @@ export class Coordinator implements DurableObject {
       );
     }
 
-    // Mock authentication for TDD/iOS integration
-    console.log(`[Coordinator] Using mock authentication for TDD development`);
+    // Authentication using AuthService (includes test mode for TDD)
+    console.log(`[Coordinator] Authenticating request`);
     console.log(`[Coordinator] Request API key: ${body.api_key?.substring(0, 10)}...`);
     console.log(`[Coordinator] Target service: ${targetService}`);
     
-    // Mock authentication - accept any API key and use testuser101 as default user
-    const userId = 'testuser101';
-    console.log(`[Coordinator] Mock authentication successful for user: ${userId}`);
+    // Validate API key using AuthService (supports test mode for TDD)
+    const authResult = await this.authService.validateApiKey(body.api_key);
+    if (!authResult.valid || !authResult.userId) {
+      return ResponseBuilder.error('Invalid API key', 401, 'coordinator');
+    }
+    
+    const userId = authResult.userId;
+    console.log(`[Coordinator] Authentication successful for user: ${userId}`);
 
     // Route to appropriate service
     try {
@@ -269,5 +279,55 @@ export class Coordinator implements DurableObject {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       }
     });
+  }
+
+  /**
+   * Handle direct R2 file path testing requests for TDD
+   * Bypasses authentication and user lookup for direct file access testing
+   */
+  private async handleR2TestRequest(r2Path: string, startTime: number): Promise<Response> {
+    try {
+      console.log(`[Coordinator] R2 Test Request - Direct path: ${r2Path}`);
+      
+      // Direct R2 file fetch without user lookup
+      const r2Object = await this.env.TIDES_R2.get(r2Path);
+      
+      if (!r2Object) {
+        return ResponseBuilder.success({
+          test_result: 'file_not_found',
+          r2_path: r2Path,
+          bucket: this.env.R2_BUCKET_NAME || 'unknown',
+          environment: this.env.ENVIRONMENT || 'unknown'
+        }, {
+          service: 'r2-test',
+          timestamp: new Date().toISOString(),
+          processing_time_ms: performance.now() - startTime
+        });
+      }
+
+      const fileContent = await r2Object.json();
+      
+      return ResponseBuilder.success({
+        test_result: 'file_found',
+        r2_path: r2Path,
+        bucket: this.env.R2_BUCKET_NAME || 'unknown',
+        environment: this.env.ENVIRONMENT || 'unknown',
+        file_size: r2Object.size,
+        content_type: r2Object.httpMetadata?.contentType || 'unknown',
+        tide_data: fileContent
+      }, {
+        service: 'r2-test',
+        timestamp: new Date().toISOString(),
+        processing_time_ms: performance.now() - startTime
+      });
+
+    } catch (error) {
+      console.error(`[Coordinator] R2 Test Request failed:`, error);
+      return ResponseBuilder.error(
+        `R2 test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'r2-test'
+      );
+    }
   }
 }

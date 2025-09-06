@@ -2,9 +2,9 @@
  * Tests for InsightsService
  */
 
-import { InsightsService } from '../../../src/services/insights';
-import type { Env, InsightsRequest } from '../../../src/types';
-import { setupR2MockWithRealData } from '../../helpers/tideDataHelper';
+import { InsightsService } from '../../src/services/insights';
+import type { Env, InsightsRequest } from '../../src/types';
+import { setupR2MockWithRealData } from '../helpers/tideDataHelper';
 
 describe('InsightsService', () => {
   let insightsService: InsightsService;

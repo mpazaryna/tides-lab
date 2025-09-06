@@ -2,7 +2,7 @@
  * Unit Tests for Response utilities
  */
 
-import { createSuccessResponse, createErrorResponse, createValidationErrorResponse } from '../../../src/responses';
+import { createSuccessResponse, createErrorResponse, createValidationErrorResponse } from '../../src/responses';
 
 describe('Response Utilities', () => {
   describe('createSuccessResponse', () => {

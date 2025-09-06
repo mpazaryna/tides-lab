@@ -1,5 +1,36 @@
 # E2E Test Scripts & Demos
 
+## 🚀 Unified API Testing (Recommended)
+
+### `api-test.sh` - One Script for All Testing
+**Primary testing tool - replaces all individual curl scripts**
+
+```bash
+# Basic usage
+./api-test.sh ENV SERVICE [OPTIONS]
+
+# Examples
+./api-test.sh 102 insights                    # Test insights on staging
+./api-test.sh 103 optimize --timeframe=30d    # Test optimize with custom timeframe
+./api-test.sh 102 questions --question="How productive was I?"
+./api-test.sh 102 r2-test --path="users/.../tide_123.json"
+```
+
+**Environments:**
+- `101` - Production (tides-001-storage)
+- `102` - Staging (tides-006-storage) 
+- `103` - Development (tides-003-storage)
+
+**Services:**
+- `insights`, `optimize`, `questions`, `preferences`, `reports`, `chat`, `r2-test`
+
+**Features:**
+- ✅ **Centralized config** - All API keys and endpoints in one place
+- ✅ **Multi-environment** - Test across all environments easily  
+- ✅ **Consistent output** - Standardized test results and metrics
+- ✅ **Flexible options** - Custom parameters per service
+- ✅ **TDD support** - Direct R2 testing with `r2-test` service
+
 ## Interactive Chat Demos (For UI Team)
 
 ### 🎯 `chat-demo.sh` - Simple Interactive CLI
@@ -39,17 +70,22 @@ Features:
 - Shows confidence scores and service routing
 - Fold text for better readability
 
-## Service Test Scripts
+## ⚠️ Legacy Service Test Scripts (Deprecated)
 
-### Individual Service Tests
-Test each service with real R2 data:
+### Individual Service Tests (Use `api-test.sh` instead)
+~~Test each service with real R2 data:~~
 
 ```bash
-./e2e/curl-insights.sh    # Test insights service
-./e2e/curl-optimize.sh    # Test optimization service  
-./e2e/curl-questions.sh   # Test Q&A service
-./e2e/curl-preferences.sh # Test preferences with KV storage
+# DEPRECATED - Use api-test.sh instead
+./e2e/curl-insights.sh    # ➡️  ./api-test.sh 103 insights  
+./e2e/curl-optimize.sh    # ➡️  ./api-test.sh 103 optimize
+./e2e/curl-questions.sh   # ➡️  ./api-test.sh 103 questions
+./e2e/curl-preferences.sh # ➡️  ./api-test.sh 103 preferences
 ```
+
+**Migration Examples:**
+- `./curl-insights.sh` → `./api-test.sh 103 insights`
+- `./curl-insights-006.sh` → `./api-test.sh 102 insights`
 
 ### Service Inference Test
 Test automatic service routing without specifying service:
