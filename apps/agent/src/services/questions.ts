@@ -27,7 +27,7 @@ export class QuestionsService {
     console.log(`[QuestionsService] Processing question for tide: ${request.tides_id}`);
     console.log(`[QuestionsService] Question: ${request.question}`);
     
-    const tideData = await this.storage.getTideData(userId, request.tides_id);
+    const tideData = await this.storage.getTideDataFromAnySource(userId, request.tides_id);
     
     if (!tideData) {
       throw new Error(`No tide data found for user: ${userId}, tide: ${request.tides_id}`);

@@ -115,7 +115,7 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.put.mockResolvedValue({}); // R2 put returns success
 
-      const result = await storage.storeTideData('test-user', 'test-tide-123', tideData);
+      const result = await storage.saveTideData('test-user', 'test-tide-123', tideData);
       
       expect(result).toBe(true);
 
@@ -135,7 +135,7 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.put.mockRejectedValue(new Error('R2 put failed'));
 
-      const result = await storage.storeTideData('test-user', 'test-tide-123', tideData);
+      const result = await storage.saveTideData('test-user', 'test-tide-123', tideData);
       
       expect(result).toBe(false);
     });
@@ -152,7 +152,7 @@ describe('AgentStorage', () => {
       const mockR2 = mockEnv.TIDES_R2 as any;
       mockR2.put.mockResolvedValue({});
 
-      await storage.storeTideData('test-user', 'test-tide-123', tideData);
+      await storage.saveTideData('test-user', 'test-tide-123', tideData);
 
       expect(mockR2.put).toHaveBeenCalledWith(
         'users/test-user/tides/test-tide-123.json',
@@ -322,7 +322,7 @@ describe('AgentStorage', () => {
       expect(getTideResult).toBeNull();
 
       mockR2.put.mockRejectedValue(new Error('Permission denied'));
-      const storeResult = await storage.storeTideData('user', 'test', {});
+      const storeResult = await storage.saveTideData('user', 'test', {});
       expect(storeResult).toBe(false);
 
       mockR2.delete.mockRejectedValue(new Error('Service unavailable'));

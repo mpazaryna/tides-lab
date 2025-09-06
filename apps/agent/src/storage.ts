@@ -1,5 +1,6 @@
 /**
  * R2 Storage utilities for Tides Agent
+ * Simple environment-specific storage using TIDES_R2 bucket
  */
 
 import type { Env, TideData } from './types.js';
@@ -9,61 +10,86 @@ export class StorageService {
 
   constructor(env: Env) {
     this.env = env;
+    console.log(`[StorageService] Initialized for environment: ${env.ENVIRONMENT || 'development'}`);
   }
 
   /**
-   * Get tide data from R2 storage
+   * Build standardized R2 key for tide data
+   */
+  private buildTideKey(userId: string, tidesId: string): string {
+    return `users/${userId}/tides/${tidesId}.json`;
+  }
+
+  /**
+   * Extract tide IDs from R2 object keys
+   */
+  private extractTideIdsFromKeys(objects: Array<{ key: string }>, userId: string): string[] {
+    return objects.map(obj => {
+      const parts = obj.key.split('/');
+      const filename = parts[parts.length - 1];
+      
+      if (!filename || !filename.endsWith('.json')) {
+        return '';
+      }
+      
+      if (parts.length >= 3 && parts[1] !== userId) {
+        return '';
+      }
+      
+      return filename.replace('.json', '');
+    }).filter(id => id !== '');
+  }
+
+  /**
+   * Get tide data from R2 storage (environment-specific bucket)
    */
   async getTideData(userId: string, tidesId: string): Promise<TideData | null> {
     try {
-      // First try the standard path
-      const standardKey = `users/${userId}/tides/${tidesId}.json`;
-      console.log(`[StorageService] Fetching tide data: ${standardKey}`);
+      const key = this.buildTideKey(userId, tidesId);
+      console.log(`[StorageService] Getting tide data: ${key}`);
       
-      let object = await this.env.TIDES_R2.get(standardKey);
-      
-      // If not found at standard path, try the mock data location
+      const object = await this.env.TIDES_R2.get(key);
       if (!object) {
-        const mockKey = 'mock-tide-data.json';
-        console.log(`[StorageService] Standard path not found, trying mock data: ${mockKey}`);
-        object = await this.env.TIDES_R2.get(mockKey);
-      }
-      
-      if (!object) {
-        console.log(`[StorageService] Tide not found at either location`);
+        console.log(`[StorageService] Tide not found: ${key}`);
         return null;
       }
 
-      const tideData = await object.json<TideData>();
-      console.log(`[StorageService] Tide data retrieved: ${tideData.name}`);
-      
+      const tideData = await object.json() as TideData;
+      console.log(`[StorageService] Retrieved tide data: ${tideData.name}`);
       return tideData;
 
     } catch (error) {
-      console.error(`[StorageService] Failed to fetch tide data:`, error);
+      console.error(`[StorageService] Failed to get tide data:`, error);
       return null;
     }
   }
 
   /**
-   * Store tide data in R2
+   * Environment-aware tide data access (same as getTideData)
    */
-  async storeTideData(userId: string, tidesId: string, data: TideData): Promise<boolean> {
+  async getTideDataFromAnySource(userId: string, tidesId: string): Promise<TideData | null> {
+    return this.getTideData(userId, tidesId);
+  }
+
+  /**
+   * Save tide data to R2 storage
+   */
+  async saveTideData(userId: string, tidesId: string, data: TideData): Promise<boolean> {
     try {
-      const key = `users/${userId}/tides/${tidesId}.json`;
-      console.log(`[StorageService] Storing tide data: ${key}`);
+      const key = this.buildTideKey(userId, tidesId);
+      console.log(`[StorageService] Saving tide data: ${key}`);
       
       await this.env.TIDES_R2.put(key, JSON.stringify(data, null, 2), {
         httpMetadata: {
-          contentType: 'application/json'
-        }
+          contentType: 'application/json',
+        },
       });
-
-      console.log(`[StorageService] Tide data stored successfully: ${key}`);
+      
+      console.log(`[StorageService] Tide data saved successfully: ${key}`);
       return true;
 
     } catch (error) {
-      console.error(`[StorageService] Failed to store tide data:`, error);
+      console.error(`[StorageService] Failed to save tide data:`, error);
       return false;
     }
   }
@@ -78,23 +104,7 @@ export class StorageService {
       
       const objects = await this.env.TIDES_R2.list({ prefix });
       
-      const tideIds = objects.objects.map(obj => {
-        // Extract tide ID from key: users/{userId}/tides/{tideId}.json
-        const parts = obj.key.split('/');
-        const filename = parts[parts.length - 1];
-        
-        // Only process files that end with .json and belong to the correct user
-        if (!filename || !filename.endsWith('.json')) {
-          return '';
-        }
-        
-        // Verify the path belongs to the correct user (defensive programming)
-        if (parts.length >= 3 && parts[1] !== userId) {
-          return '';
-        }
-        
-        return filename.replace('.json', '');
-      }).filter(id => id !== '');
+      const tideIds = this.extractTideIdsFromKeys(objects.objects, userId);
 
       console.log(`[StorageService] Found ${tideIds.length} tides for user: ${userId}`);
       return tideIds;
@@ -106,11 +116,18 @@ export class StorageService {
   }
 
   /**
+   * Environment-aware user tides listing (same as listUserTides)
+   */
+  async listUserTidesFromAllSources(userId: string): Promise<string[]> {
+    return this.listUserTides(userId);
+  }
+
+  /**
    * Delete tide data from R2
    */
   async deleteTideData(userId: string, tidesId: string): Promise<boolean> {
     try {
-      const key = `users/${userId}/tides/${tidesId}.json`;
+      const key = this.buildTideKey(userId, tidesId);
       console.log(`[StorageService] Deleting tide data: ${key}`);
       
       await this.env.TIDES_R2.delete(key);
@@ -129,7 +146,7 @@ export class StorageService {
    */
   async tideExists(userId: string, tidesId: string): Promise<boolean> {
     try {
-      const key = `users/${userId}/tides/${tidesId}.json`;
+      const key = this.buildTideKey(userId, tidesId);
       const object = await this.env.TIDES_R2.head(key);
       return object !== null;
 
@@ -137,5 +154,15 @@ export class StorageService {
       console.error(`[StorageService] Failed to check tide existence:`, error);
       return false;
     }
+  }
+
+  /**
+   * Get bucket information
+   */
+  async getBucketInfo(): Promise<{ environment: string; bucket: string }> {
+    return {
+      environment: this.env.ENVIRONMENT || 'development',
+      bucket: this.env.R2_BUCKET_NAME || 'tides-r2-bucket'
+    };
   }
 }

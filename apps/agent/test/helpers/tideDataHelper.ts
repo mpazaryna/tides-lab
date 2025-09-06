@@ -36,5 +36,16 @@ export function setupR2MockWithRealData(mockEnv: any) {
   // Mock R2.get to return the real tide data
   mockR2.get.mockResolvedValue(createMockR2Response(mockTideData));
   
+  // Setup server bucket mocks if they exist
+  if (mockEnv.TIDES_SERVER_001) {
+    mockEnv.TIDES_SERVER_001.get.mockResolvedValue(createMockR2Response(mockTideData));
+  }
+  if (mockEnv.TIDES_SERVER_002) {
+    mockEnv.TIDES_SERVER_002.get.mockResolvedValue(createMockR2Response(mockTideData));
+  }
+  if (mockEnv.TIDES_SERVER_003) {
+    mockEnv.TIDES_SERVER_003.get.mockResolvedValue(createMockR2Response(mockTideData));
+  }
+  
   return mockTideData;
 }

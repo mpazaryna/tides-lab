@@ -21,7 +21,7 @@ export class OptimizeService {
   async optimizeSchedule(request: OptimizeRequest, userId: string): Promise<OptimizationData> {
     console.log(`[OptimizeService] Optimizing schedule for tide: ${request.tides_id}`);
     
-    const tideData = await this.storage.getTideData(userId, request.tides_id);
+    const tideData = await this.storage.getTideDataFromAnySource(userId, request.tides_id);
     if (!tideData) {
       throw new Error(`No tide data found for user: ${userId}, tide: ${request.tides_id}`);
     }

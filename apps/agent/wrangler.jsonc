@@ -54,7 +54,7 @@
       "r2_buckets": [
         {
           "binding": "TIDES_R2",
-          "bucket_name": "tides-101-storage"
+          "bucket_name": "tides-001-storage"
         }
       ],
 
@@ -112,7 +112,7 @@
       "r2_buckets": [
         {
           "binding": "TIDES_R2",
-          "bucket_name": "tides-102-storage"
+          "bucket_name": "tides-002-storage"
         }
       ],
 
@@ -170,7 +170,7 @@
       "r2_buckets": [
         {
           "binding": "TIDES_R2",
-          "bucket_name": "tides-103-storage"
+          "bucket_name": "tides-003-storage"
         }
       ],
 

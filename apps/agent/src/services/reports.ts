@@ -28,7 +28,7 @@ export class ReportsService {
   }> {
     console.log(`[ReportsService] Generating ${request.report_type} report for tide: ${request.tides_id}`);
     
-    const tideData = await this.storage.getTideData(userId, request.tides_id);
+    const tideData = await this.storage.getTideDataFromAnySource(userId, request.tides_id);
     const period = request.period || '30d';
     
     if (!tideData) {
