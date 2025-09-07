@@ -6,22 +6,19 @@ from typing import Dict, Any, List
 import json
 import requests
 
-from ..config import ENVIRONMENTS, API_KEYS
+from ..config import ENVIRONMENT_CONFIG
 
 
 class MCPClient:
     """Client for interacting with MCP servers"""
     
-    def __init__(self, environment: str):
+    def __init__(self):
         """
-        Initialize MCP client
-        
-        Args:
-            environment: Environment key (e.g., "103 - Development")
+        Initialize MCP client with stable environment configuration
         """
-        self.environment = environment
-        # Hardcode MCP server URL
-        self.base_url = "https://tides-006.mpazbot.workers.dev/mcp"
+        self.environment = "Stable Testing"
+        # Use environment config for MCP server URL
+        self.base_url = ENVIRONMENT_CONFIG["mcp"]
     
     def list_tools(self) -> List[Dict[str, Any]]:
         """List available MCP tools"""

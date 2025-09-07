@@ -10,36 +10,30 @@ def render_monitoring_tab():
     """Render the monitoring dashboard"""
     st.header("System Monitoring")
     
-    # System metrics
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        env_name = st.session_state.environment.split(" - ")[1]
-        st.metric("Environment", env_name)
-    with col2:
-        message_count = len(st.session_state.messages)
-        st.metric("Messages", message_count)
-    with col3:
-        st.metric("User ID", st.session_state.user_id)
-    
-    # Connection status
-    st.subheader("Connection Status")
+    # System metrics - simplified
     col1, col2 = st.columns(2)
     with col1:
-        st.success("🟢 Agent Connection: Active")
+        st.metric("Environment", "Stable Testing")
     with col2:
-        st.warning("🟡 MCP Connection: Not implemented")
+        message_count = len(st.session_state.messages)
+        st.metric("Chat Messages", message_count)
     
     # Recent activity
     st.subheader("Recent Activity")
     _render_activity_log()
     
-    # Performance metrics
-    st.subheader("Performance Metrics")
-    _render_performance_metrics()
+    # Last API test results
+    st.subheader("Last API Test")
+    _render_last_test_result()
     
-    # Session information
-    st.subheader("Session Information")
-    _render_session_info()
+    # Debug information
+    with st.expander("🔍 Debug Information"):
+        st.json({
+            "session_state_keys": list(st.session_state.keys()),
+            "environment": "Stable Testing",
+            "message_count": len(st.session_state.messages),
+            "has_test_results": 'last_test_result' in st.session_state
+        })
 
 
 def _render_activity_log():
@@ -60,53 +54,18 @@ def _render_activity_log():
         st.info("No activity yet. Start a conversation to see activity logs.")
 
 
-def _render_performance_metrics():
-    """Render performance metrics"""
-    # Placeholder metrics - in a real app, these would be calculated from actual data
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Avg Response Time", "1.2s", delta="-0.3s")
-    with col2:
-        st.metric("Success Rate", "98.5%", delta="2.1%")
-    with col3:
-        st.metric("Total Requests", "42", delta="12")
-    with col4:
-        st.metric("Uptime", "99.9%", delta="0.0%")
-
-
-def _render_session_info():
-    """Render current session information"""
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.info(f"""
-        **Session Details:**
-        - Environment: {st.session_state.environment}
-        - User ID: {st.session_state.user_id}
-        - Messages: {len(st.session_state.messages)}
-        - Auth Token: {'Set' if st.session_state.auth_token else 'Not set'}
-        """)
-    
-    with col2:
-        # Test results summary
-        if 'last_test_result' in st.session_state:
-            result = st.session_state.last_test_result
-            st.info(f"""
-            **Last API Test:**
-            - Service: {result['service']}
-            - Status: {'✅ Success' if 'error' not in result['result'] else '❌ Failed'}
-            - Time: {result['processing_time_ms']:.0f}ms
-            - Timestamp: {result['timestamp'][:19]}
-            """)
+def _render_last_test_result():
+    """Render the last API test result"""
+    if 'last_test_result' in st.session_state:
+        result = st.session_state.last_test_result
+        
+        # Status indicator
+        if 'error' not in result['result']:
+            st.success(f"✅ {result['service']} - Success ({result['processing_time_ms']:.0f}ms)")
         else:
-            st.info("**Last API Test:** None")
-    
-    # Debug information
-    with st.expander("🔍 Debug Information"):
-        st.json({
-            "session_state_keys": list(st.session_state.keys()),
-            "environment_config": st.session_state.get("environment", "Not set"),
-            "message_count": len(st.session_state.messages),
-            "has_test_results": 'last_test_result' in st.session_state
-        })
+            st.error(f"❌ {result['service']} - Failed ({result['processing_time_ms']:.0f}ms)")
+        
+        # Timestamp
+        st.caption(f"Last run: {result['timestamp'][:19]}")
+    else:
+        st.info("No API tests run yet. Use the API Tests tab to run a service test.")

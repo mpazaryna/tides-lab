@@ -10,7 +10,8 @@ from src.components import (
     render_chat_tab,
     render_api_tests_tab, 
     render_mcp_tools_tab,
-    render_monitoring_tab
+    render_monitoring_tab,
+    render_help_tab
 )
 
 # Page config
@@ -30,26 +31,17 @@ def main():
     # Render sidebar and get agent client + API key
     agent_client, api_key = render_sidebar()
     
-    # Show workflow header
-    st.header("Tides Workflow")
-    st.markdown("""
-    **Testing Flow:**
-    1. **Get Tide IDs** → Use MCP Tools tab to run `tide_list` and copy a tide_id
-    2. **Test Agent Services** → Use API Tests tab with the tide_id to test insights, questions, etc.
-    3. **Chat with Agent** → Use Agent Chat tab for conversational testing
-    """)
-    st.markdown("---")
-    
-    # Main content area with tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "🔧 MCP Tools (Get Tide IDs)", 
-        "🧪 API Tests (Use Tide ID)", 
+    # Main content area with tabs (moved up)
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🔧 MCP Tools", 
+        "🧪 API Tests", 
         "💬 Agent Chat",
-        "📊 Monitoring"
+        "📊 Monitoring",
+        "❓ Help"
     ])
     
     with tab1:
-        render_mcp_tools_tab("102 - Staging", api_key)
+        render_mcp_tools_tab(api_key)
     
     with tab2:
         render_api_tests_tab(agent_client, api_key)
@@ -59,6 +51,9 @@ def main():
     
     with tab4:
         render_monitoring_tab()
+    
+    with tab5:
+        render_help_tab()
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ Utility functions for the Streamlit app
 import streamlit as st
 from typing import Optional
 
-from ..config import ENVIRONMENTS
+from ..config import ENVIRONMENT_CONFIG, DEFAULT_API_KEY
 from ..services import AgentClient
 
 
@@ -13,9 +13,9 @@ def initialize_session_state():
     if 'messages' not in st.session_state:
         st.session_state.messages = []
     if 'environment' not in st.session_state:
-        st.session_state.environment = "103 - Development"
+        st.session_state.environment = "Stable Testing"
     if 'api_key' not in st.session_state:
-        st.session_state.api_key = "tides_55987798-3442-42a7-bd01-a24b07a071d5_ss651o"  # Default for testing
+        st.session_state.api_key = DEFAULT_API_KEY
     if 'user_id' not in st.session_state:
         st.session_state.user_id = "demo_user"
     if 'auth_token' not in st.session_state:

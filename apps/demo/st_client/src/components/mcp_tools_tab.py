@@ -7,7 +7,7 @@ import streamlit as st
 from ..services.mcp_client import MCPClient
 
 
-def render_mcp_tools_tab(environment: str, api_key: str = None):
+def render_mcp_tools_tab(api_key: str = None):
     """Render the MCP tools interface"""
     st.header("MCP Tools Interface")
     
@@ -16,7 +16,7 @@ def render_mcp_tools_tab(environment: str, api_key: str = None):
         return
     
     # Initialize MCP client
-    mcp_client = MCPClient(environment)
+    mcp_client = MCPClient()
     
     # Placeholder for MCP tools
     col1, col2 = st.columns([1, 2])

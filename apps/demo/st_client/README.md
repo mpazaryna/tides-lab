@@ -41,16 +41,16 @@ streamlit run app.py
 
 ## Usage
 
-1. **Select Environment**: Choose between Development (103), Staging (102), or Production (101)
-2. **Set Authentication**: Enter your User ID and optional Auth Token
-3. **Chat with Agent**: Use the chat interface or quick action buttons
-4. **Monitor Activity**: View recent messages and system metrics
+1. **Launch App**: Start the Streamlit interface
+2. **Enter Tide ID**: Get from MCP Tools tab or use default
+3. **Chat with Agent**: Use the chat interface to test agent responses
+4. **Test APIs**: Use API Tests tab for individual service testing
 
-## Environments
+## Environment Configuration
 
-- **103 - Development**: `tides-agent-103.mpazbot.workers.dev`
-- **102 - Staging**: `tides-agent-102.mpazbot.workers.dev`  
-- **101 - Production**: `tides-agent-101.mpazbot.workers.dev` (iOS team)
+The app is configured to use the stable testing environment:
+- **Agent Server**: `https://tides-agent-102.mpazbot.workers.dev`
+- **MCP Server**: `https://tides-006.mpazbot.workers.dev/mcp`
 
 ## Development
 

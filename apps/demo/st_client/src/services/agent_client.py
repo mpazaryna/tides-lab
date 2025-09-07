@@ -6,27 +6,27 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 import requests
 
-from ..config import ENVIRONMENTS, API_KEYS, TIDES_IDS
+from ..config import ENVIRONMENT_CONFIG, DEFAULT_API_KEY, DEFAULT_TIDE_ID
 
 
 class AgentClient:
     """Client for interacting with Tides Agent services"""
     
-    def __init__(self, environment: str, timeout: int = 30):
+    def __init__(self, environment: str = "Stable Testing", timeout: int = 30):
         """
-        Initialize the agent client
+        Initialize the agent client with stable environment configuration
         
         Args:
-            environment: Environment key (e.g., "103 - Development")
+            environment: Environment description (for display purposes)
             timeout: Request timeout in seconds
         """
         self.environment = environment
         self.timeout = timeout
-        # Hardcode agent URL
-        self.base_url = "https://tides-agent-102.mpazbot.workers.dev"
+        # Use environment config for agent URL
+        self.base_url = ENVIRONMENT_CONFIG["agent"]
         # API key will be set dynamically per request
         self.api_key = None
-        self.tides_id = "daily-tide-default"
+        self.tides_id = DEFAULT_TIDE_ID
     
     def call_service(self, service: str, api_key: str = None, tide_id: str = None, **kwargs) -> Dict[str, Any]:
         """
