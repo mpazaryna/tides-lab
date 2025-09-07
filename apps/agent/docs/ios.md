@@ -5,8 +5,8 @@
 The Tides Agent is a **separate Cloudflare Worker** from the main MCP server, designed specifically for productivity analysis and AI-powered insights. 
 
 **Architecture:**
-- **MCP Server**: `https://tides-101.mpazbot.workers.dev/mcp` (existing tide management)
-- **Tides Agent**: `https://tides-agent-101.mpazbot.workers.dev` (new productivity agent)
+- **MCP Server**: `${MCP_SERVER_URL}/mcp` (existing tide management)
+- **Tides Agent**: `${AGENT_BASE_URL}` (productivity agent)
 
 The agent acts as a **coordinator** that routes requests to internal micro-services for different productivity features.
 
@@ -14,7 +14,13 @@ The agent acts as a **coordinator** that routes requests to internal micro-servi
 
 ### Base URL
 ```
-https://tides-agent-101.mpazbot.workers.dev
+${AGENT_BASE_URL}
+```
+
+**Environment Variables:**
+```bash
+AGENT_BASE_URL=https://tides-agent-102.mpazbot.workers.dev
+MCP_SERVER_URL=https://tides-006.mpazbot.workers.dev
 ```
 
 ### Health Check (No Auth Required)
@@ -171,7 +177,7 @@ All responses follow this consistent format:
 ### Basic Setup
 
 ```typescript
-const AGENT_BASE_URL = 'https://tides-agent-101.mpazbot.workers.dev';
+const AGENT_BASE_URL = process.env.AGENT_BASE_URL || 'https://tides-agent-102.mpazbot.workers.dev';
 
 interface AgentRequest {
   api_key: string;
@@ -314,7 +320,7 @@ const answer = await prodService.askQuestion(
 );
 
 // Development mode example - explicit service override
-const devDirectResponse = await fetch('https://tides-agent-101.mpazbot.workers.dev/coordinator', {
+const devDirectResponse = await fetch(`${AGENT_BASE_URL}/coordinator`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -332,12 +338,12 @@ const devDirectResponse = await fetch('https://tides-agent-101.mpazbot.workers.d
 
 ### 1. Health Check
 ```bash
-curl https://tides-agent-101.mpazbot.workers.dev/
+curl ${AGENT_BASE_URL}/
 ```
 
 ### 2. Test Smart Insights Inference (Mock Data)
 ```bash
-curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
+curl -X POST ${AGENT_BASE_URL}/coordinator \
   -H "Content-Type: application/json" \
   -d '{
     "api_key": "YOUR_API_KEY",
@@ -349,7 +355,7 @@ curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
 
 ### 3. Test Smart Questions Inference (Mock Data)  
 ```bash
-curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
+curl -X POST ${AGENT_BASE_URL}/coordinator \
   -H "Content-Type: application/json" \
   -d '{
     "api_key": "YOUR_API_KEY", 
@@ -361,7 +367,7 @@ curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
 
 ### 4. Test Service Precedence (Development Override)
 ```bash
-curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
+curl -X POST ${AGENT_BASE_URL}/coordinator \
   -H "Content-Type: application/json" \
   -d '{
     "api_key": "YOUR_API_KEY",
@@ -375,7 +381,7 @@ curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
 
 ### 5. Test Ambiguous Request (Shows Suggestion)
 ```bash
-curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
+curl -X POST ${AGENT_BASE_URL}/coordinator \
   -H "Content-Type: application/json" \
   -d '{
     "api_key": "YOUR_API_KEY",

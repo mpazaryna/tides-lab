@@ -5,39 +5,38 @@
 ## 📚 Documentation Index
 
 ### Core Documentation
-- **[API Reference](api-reference.md)** - Complete API endpoint documentation with examples
-- **[iOS Integration Guide](ios-integration-guide.md)** - Frontend integration guide with TypeScript examples
-- **[Chat Agent Architecture](chat-agent-architecture.md)** - AI-powered chat service architecture specification
-
-### Implementation Reports
-- **[Chat Service Implementation Report](chat-service-implementation-report.md)** - TDD implementation report with live testing
-- **[iOS Mock Response Guide](ios-mock-response.md)** - Production response examples and testing guide
-- **[Documentation Audit Report](DOCUMENTATION-AUDIT-REPORT.md)** - Comprehensive documentation validation audit
+- **[API](api.md)** - API endpoint documentation
+- **[iOS](ios.md)** - iOS integration guide  
+- **[Chat](chat.md)** - Chat service implementation
 
 
 ## 🏗️ System Architecture
 
 ### Core Services (All Production Ready)
-1. **Insights Service** - Productivity analysis with R2 data integration
-2. **Optimize Service** - Schedule optimization recommendations  
-3. **Questions Service** - AI-powered productivity Q&A
+1. **Insights Service** - Productivity analysis using authentic R2 tide data (no mock responses)
+2. **Optimize Service** - Schedule optimization with sequential time blocking (fixed overlapping schedules) 
+3. **Questions Service** - AI-powered productivity Q&A with contextual responses
 4. **Preferences Service** - User settings and preferences management
-5. **Reports Service** - Comprehensive productivity reporting
-6. **Chat Service** - AI intent clarification and response enhancement
+5. **Reports Service** - Comprehensive productivity reporting with real data calculations
+6. **Chat Service** - Tide-aware conversational AI with contextual responses (85% confidence threshold)
 
 ### Technical Stack
 - **Platform**: Cloudflare Workers with Durable Objects
-- **Storage**: Environment-specific R2 buckets for tide data, KV for user preferences and auth
-- **Data Access**: Single R2 bucket per environment (101: tides-001-storage, 102: tides-002-storage, 103: tides-003-storage)
+- **Storage**: R2 bucket `tides-006-storage` for tide data, KV for user preferences and auth
 - **AI Integration**: Cloudflare Workers AI for chat responses
 - **Authentication**: SHA-256 hashed API keys with KV validation
 - **Architecture**: Microservices coordination with intelligent routing
 
-## 🚀 Quick Start
+## 🚀 Quick Start for iOS Team
 
-### Base URL
-```
-https://tides-agent-101.mpazbot.workers.dev
+### Production Environments
+- **Tides Agent**: `${AGENT_BASE_URL}`
+- **MCP Server**: `${MCP_SERVER_URL}/mcp`
+
+**Environment Variables:**
+```bash
+AGENT_BASE_URL=https://tides-agent-102.mpazbot.workers.dev
+MCP_SERVER_URL=https://tides-006.mpazbot.workers.dev
 ```
 
 ### Basic Request
@@ -82,35 +81,28 @@ https://tides-agent-101.mpazbot.workers.dev
 - **Uptime**: Production ready
 - **Environment**: Fully operational
 
-## 🗄️ Environment-Specific Storage Architecture
+## 🗄️ Storage Architecture
 
-The Tides Agent uses environment-specific R2 buckets for clean data isolation:
+Simple, unified storage approach for iOS team integration:
 
-### Environment Configuration
-- **Environment 101** (Production): `tides-001-storage` bucket
-- **Environment 102** (Staging): `tides-002-storage` bucket  
-- **Environment 103** (Development): `tides-003-storage` bucket
-
-### Data Access Strategy
-Each environment accesses only its designated bucket:
-
-1. **Isolation**: Each environment has dedicated storage
-2. **Simplicity**: Single `TIDES_R2` binding per environment
-3. **Predictability**: No fallback complexity, direct bucket access
+### Data Storage
+- **R2 Bucket**: `tides-006-storage` - All tide data and user content
+- **KV Storage**: User preferences and API key authentication
+- **Access Pattern**: Direct bucket access with path-based organization
 
 ### Usage Examples
 
 ```typescript
-// Get tide data from current environment bucket
+// Get tide data from R2 storage
 const data = await storageService.getTideData(userId, tideId);
 
-// Save tide data to current environment bucket
+// Save tide data to R2 storage  
 const success = await storageService.saveTideData(userId, tideId, tideData);
 
-// List user tides from current environment
+// List user tides
 const tides = await storageService.listUserTides(userId);
 
-// Check if tide exists in current environment
+// Check if tide exists
 const exists = await storageService.tideExists(userId, tideId);
 ```
 
@@ -130,15 +122,16 @@ The coordinator automatically routes requests to appropriate services:
 
 ## 📱 iOS Integration
 
-### Recommended Approach
-Use the coordinator endpoint with smart inference:
+### iOS Integration Example
 
 ```typescript
+const BASE_URL = process.env.AGENT_BASE_URL || 'https://tides-agent-102.mpazbot.workers.dev';
+
 const response = await fetch(`${BASE_URL}/coordinator`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    api_key: 'your-api-key',
+    api_key: 'tides_userId_randomId',
     tides_id: 'your-tide-id',
     message: 'Your productivity request'
     // No 'service' field needed - auto-inferred
@@ -146,16 +139,23 @@ const response = await fetch(`${BASE_URL}/coordinator`, {
 });
 ```
 
-### Legacy Direct Endpoints
-All services support direct access:
-- `POST /insights`
-- `POST /optimize` 
-- `POST /questions`
-- `POST /preferences`
-- `POST /reports`
-- `POST /chat`
+### Available Endpoint
+- `POST /coordinator` - All services accessed through intelligent routing
 
 ## 🧪 Testing
+
+### Streamlit Testing Interface
+**Primary testing method** - Visual interface for comprehensive agent testing:
+```bash
+cd apps/demo/st_client
+streamlit run app.py
+```
+
+**Features:**
+- **MCP Tools tab** - Get tide IDs using `tide_list` and other MCP tools
+- **API Tests tab** - Test individual services with point-and-click interface
+- **Agent Chat tab** - Test tide-aware conversational AI with contextual responses
+- **Monitoring tab** - View system status and metrics
 
 ### Unit Tests
 ```bash
@@ -164,12 +164,12 @@ npm test services           # Test services only
 npm test utils             # Test utilities only
 ```
 
-### Live Testing
+### Live Testing (Command Line)
 ```bash
 # Test coordinator with inference
-curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
+curl -X POST ${AGENT_BASE_URL}/coordinator \
   -H "Content-Type: application/json" \
-  -d '{"api_key":"your-key","tides_id":"your-tide","timeframe":"7d"}'
+  -d '{"api_key":"your-api-key","tides_id":"your-tide","timeframe":"7d"}'
 ```
 
 ## 📝 Development Guidelines
@@ -182,14 +182,14 @@ curl -X POST https://tides-agent-101.mpazbot.workers.dev/coordinator \
 
 ## 🔄 Recent Updates (September 2025)
 
-- ✅ All 6 services fully operational with production data
-- ✅ Chat service AI integration with Cloudflare Workers AI
-- ✅ Service inference engine with 70% confidence threshold
-- ✅ Comprehensive test coverage validation (195 tests)
-- ✅ Multi-environment deployment configuration (101, 102, 103)
-- ✅ **Environment-specific R2 storage implementation** - Simplified, isolated data access
-- ✅ **Unit test directory structure flattening** - Improved test organization
-- ✅ **Documentation updates** - Aligned with current implementation
+- ✅ **Simplified Deployment** - Stable iOS environments: Agent 102 + MCP Server 006
+- ✅ All 6 services fully operational with **authentic production data** (no mock responses)
+- ✅ **Tide-aware Chat Service** - Contextual AI responses using real tide data
+- ✅ **Conversational-first Chat** - 85% confidence threshold for natural interaction
+- ✅ **Data Integrity Overhaul** - Removed all mock/fabricated data from insights, reports, optimize services
+- ✅ **Single Coordinator Endpoint** - All services accessed through `/coordinator` with intelligent routing
+- ✅ **Streamlit Testing Interface** - Comprehensive testing tool for agent services
+- ✅ **Unified Storage** - Single R2 bucket `tides-006-storage` for all data
 
 ## 📞 Support
 
