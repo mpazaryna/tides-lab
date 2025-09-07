@@ -22,15 +22,20 @@ def render_api_tests_tab(agent_client: AgentClient, api_key: str = None):
     # Add tide_id input at the top
     tide_id = st.text_input(
         "🌊 Tide ID (from MCP tide_list):",
-        value="tide_1757218619970_gyrpyxie6bm",
-        help="Enter a tide ID from the MCP tide_list tool or use the default"
+        value="",
+        placeholder="tide_xxxxxxxxxx_yyyyyyy",
+        help="Enter a tide ID from the MCP tide_list tool - leave empty for daily-tide-default"
     )
     
-    # Test configuration
-    col1, col2 = st.columns([2, 1])
+    # Use default if empty
+    if not tide_id.strip():
+        tide_id = "daily-tide-default"
+    
+    # Main test controls
+    col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.subheader("Available Services")
+        st.subheader("Individual Service Test")
         
         # Service selection
         selected_service = st.selectbox(
@@ -40,27 +45,34 @@ def render_api_tests_tab(agent_client: AgentClient, api_key: str = None):
         )
         
         st.info(f"**Description:** {SERVICE_DEFINITIONS[selected_service]['description']}")
-    
-    with col2:
-        st.subheader("Test Parameters")
+        
+        # Service-specific parameters (only show if needed)
         test_params = _render_service_parameters(selected_service)
-    
-    st.markdown("---")
-    
-    # Test execution buttons
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button(f"🚀 Test {SERVICE_DEFINITIONS[selected_service]['name']}", type="primary"):
+        
+        # Individual test button
+        if st.button(f"🚀 Test {SERVICE_DEFINITIONS[selected_service]['name']}", type="primary", use_container_width=True):
             _execute_single_test(agent_client, selected_service, test_params, api_key, tide_id)
     
     with col2:
-        if st.button("📋 Quick Test Suite"):
-            _execute_test_suite(agent_client, api_key, tide_id)
+        st.subheader("Bulk Testing")
+        
+        st.markdown("**Quick Test Suite**")
+        st.markdown("Tests all core services with default parameters")
+        
+        # Add some spacing to align with left column
+        st.markdown("")
+        st.markdown("")
+        
+        # Bulk test controls
+        test_col1, test_col2 = st.columns([1, 1])
+        with test_col1:
+            if st.button("📋 Quick Test Suite", use_container_width=True):
+                _execute_test_suite(agent_client, api_key, tide_id)
+        with test_col2:
+            if st.button("🗑️ Clear Results", use_container_width=True):
+                _clear_test_results()
     
-    with col3:
-        if st.button("🗑️ Clear Results"):
-            _clear_test_results()
+    st.markdown("---")
     
     # Display test results
     _render_test_results()

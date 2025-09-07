@@ -354,9 +354,9 @@ export class ReportsService {
   }
 
   /**
-   * Generate charts data for analytics reports
+   * Generate mock charts data for analytics reports (unused - keeping for reference)
    */
-  private generateChartsData(): Record<string, any> {
+  private generateMockChartsData(): Record<string, any> {
     return {
       productivity_over_time: {
         labels: Array.from({length: 30}, (_, i) => {

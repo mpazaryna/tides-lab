@@ -113,22 +113,26 @@ class AgentClient:
                 result = response.json()
                 # Extract response text from various possible fields
                 if isinstance(result, dict):
-                    # Handle structured response with data field first
+                    # Handle chat service response structure: { success: true, data: { message: "...", ... } }
                     if "data" in result and isinstance(result["data"], dict):
                         data = result["data"]
+                        # First check for chat service message field
                         if "message" in data:
                             return data["message"]
+                        # Handle other service response formats
                         elif "response" in data:
                             return data["response"]
+                        elif "answer" in data:
+                            return data["answer"]
                     
-                    # Handle direct response fields
+                    # Handle direct response fields (for backward compatibility)
                     for field in ["response", "message", "text", "content"]:
                         if field in result:
                             return result[field]
                     
-                    # If it's a success response but no clear message
+                    # If it's a success response but no clear message, show raw data
                     if result.get("success") and "data" in result:
-                        return f"✅ Success: {str(result['data'])}"
+                        return f"🤖 Got response but couldn't extract message: {str(result['data'])[:500]}..."
                     
                     return f"🤖 Unexpected response format: {str(result)[:200]}..."
                 return str(result)

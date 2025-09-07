@@ -41,27 +41,175 @@ export class ChatService {
   }
 
   /**
-   * Process chat request - either route to appropriate service or clarify intent
-   * Smart routing instead of always asking clarification questions
+   * Process chat request - provide conversational responses with selective service routing
+   * Prioritizes conversation over service routing for natural interaction
    */
   async clarifyIntent(request: ChatRequest, userId: string): Promise<ChatResponse> {
     try {
-      // First, try to determine if this request can be routed to a specific service
+      // Check if this is clearly a direct service request (high confidence only)
       if (this.env.AI) {
         const serviceInference = await this.inferServiceWithAI(request);
         
-        if (serviceInference && serviceInference.service !== 'chat' && serviceInference.confidence > 60) {
-          // Route to the appropriate service instead of clarifying
-          return await this.routeToService(serviceInference.service, request, userId);
+        // Only route to services for very explicit, high-confidence requests
+        if (serviceInference && serviceInference.service !== 'chat' && serviceInference.confidence > 85) {
+          // Check if this is a direct service command vs conversational question
+          const message = request.message?.toLowerCase() || '';
+          const isDirectServiceRequest = 
+            message.includes('generate') || 
+            message.includes('create') || 
+            message.includes('update') ||
+            message.includes('run') ||
+            message.startsWith('get ') ||
+            message.startsWith('show me');
+          
+          if (isDirectServiceRequest) {
+            return await this.routeToService(serviceInference.service, request, userId);
+          }
         }
       }
       
-      // Only clarify if we truly can't determine intent
-      return await this.clarifyIntentWithAI(request, userId);
+      // Default to conversational AI response for natural interaction
+      return await this.generateConversationalResponse(request, userId);
     } catch (error) {
       console.error('[ChatService] Processing failed, using fallback:', error);
       return this.clarifyIntentFallback(request, userId);
     }
+  }
+
+  /**
+   * Generate conversational AI response for natural chat interaction
+   */
+  private async generateConversationalResponse(request: ChatRequest, userId: string): Promise<ChatResponse> {
+    const conversationId = request.conversation_id || `conv_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    
+    try {
+      // Try to get tide context if tide_id is provided
+      let tideContext = '';
+      if (request.tides_id && request.tides_id !== 'daily-tide-default') {
+        try {
+          const storage = new (await import('../storage.js')).StorageService(this.env);
+          const tideData = await storage.getTideDataFromAnySource(userId, request.tides_id);
+          
+          if (tideData) {
+            const sessions = tideData.flow_sessions || [];
+            const energy = tideData.energy_updates || [];
+            const tasks = tideData.task_links || [];
+            
+            tideContext = `\n\nContext about their current tide "${tideData.name}":
+- Flow sessions: ${sessions.length} sessions
+- Energy updates: ${energy.length} updates  
+- Linked tasks: ${tasks.length} tasks
+- Most recent activity: ${this.getRecentActivitySummary(sessions, energy, tasks)}`;
+          }
+        } catch (error) {
+          console.log('[ChatService] Could not fetch tide context:', error);
+          // Continue without tide context
+        }
+      }
+      
+      if (this.env.AI) {
+        // Create a conversational prompt that can discuss productivity intelligently
+        const conversationalPrompt = `You are a productivity coach having a conversation with a user about their work patterns and productivity. 
+
+User's question: "${request.message}"${tideContext}
+
+Guidelines:
+- Provide thoughtful, conversational responses
+- If you have tide context, reference their actual activity data naturally
+- If asked about insights or analysis, discuss what you can see from their data
+- Ask follow-up questions to understand their needs better
+- Give practical advice and suggestions based on their actual patterns
+- Keep responses concise but helpful (2-3 sentences)
+- Be encouraging and supportive
+- Don't just repeat the same information
+
+Respond naturally as if you're having a real conversation with someone about their productivity, using their actual data when available.`;
+
+        const aiResponse = await this.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+          messages: [
+            { role: 'system', content: 'You are a helpful productivity coach having a natural conversation.' },
+            { role: 'user', content: conversationalPrompt }
+          ],
+          max_tokens: 250
+        });
+
+        const responseText = aiResponse.response?.trim() || "I'm here to help with your productivity questions. What would you like to discuss?";
+        
+        return {
+          needs_clarification: false,
+          message: responseText,
+          conversation_id: conversationId
+        };
+      }
+    } catch (error) {
+      console.error('[ChatService] AI conversational response failed:', error);
+    }
+    
+    // Fallback conversational responses
+    return this.generateFallbackConversationalResponse(request, conversationId);
+  }
+
+  /**
+   * Get a summary of recent activity from tide data
+   */
+  private getRecentActivitySummary(sessions: any[], energy: any[], tasks: any[]): string {
+    const activities = [];
+    
+    if (sessions.length > 0) {
+      const totalMinutes = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
+      activities.push(`${totalMinutes} minutes of focused work`);
+    }
+    
+    if (energy.length > 0) {
+      const recent = energy[energy.length - 1];
+      activities.push(`latest energy level: ${recent.energy_level || 'unknown'}`);
+    }
+    
+    if (tasks.length > 0) {
+      const taskTypes = [...new Set(tasks.map(t => t.task_type))];
+      activities.push(`working on ${taskTypes.join(', ')} tasks`);
+    }
+    
+    return activities.length > 0 ? activities.join(', ') : 'no recent activity';
+  }
+
+  /**
+   * Generate fallback conversational responses when AI is unavailable
+   */
+  private generateFallbackConversationalResponse(request: ChatRequest, conversationId: string): ChatResponse {
+    const message = request.message?.toLowerCase() || '';
+    
+    // Provide context-aware fallback responses
+    if (message.includes('insight') || message.includes('analysis')) {
+      return {
+        needs_clarification: false,
+        message: "I'd be happy to discuss insights about your work patterns! What specific aspect of your productivity would you like to explore? Are you looking for patterns in your focus sessions, energy levels, or task completion?",
+        conversation_id: conversationId
+      };
+    }
+    
+    if (message.includes('adjust') || message.includes('improve')) {
+      return {
+        needs_clarification: false,
+        message: "There's always room for improvement! What area of your productivity feels like it needs the most attention right now? Focus time, energy management, or task organization?",
+        conversation_id: conversationId
+      };
+    }
+    
+    if (message.includes('honest') || message.includes('think')) {
+      return {
+        needs_clarification: false,
+        message: "I appreciate you wanting an honest perspective! Based on productivity research, consistency and self-awareness are key. What patterns have you noticed in your own work habits that you'd like to discuss?",
+        conversation_id: conversationId
+      };
+    }
+    
+    // Default conversational response
+    return {
+      needs_clarification: false,
+      message: "I'm here to chat about your productivity and work patterns. What's on your mind? Whether it's about focus, scheduling, or just reflecting on how things are going - I'm happy to discuss it!",
+      conversation_id: conversationId
+    };
   }
 
   /**

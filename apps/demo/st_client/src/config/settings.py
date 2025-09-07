@@ -48,45 +48,33 @@ TIDES_IDS: Dict[str, str] = {
 # Service definitions for API testing
 SERVICE_DEFINITIONS: Dict[str, Dict[str, Any]] = {
     "insights": {
-        "name": "📊 Productivity Insights",
+        "name": "Insights",
         "description": "Generate productivity insights and analytics",
         "params": ["timeframe"],
         "endpoint": "/coordinator"
     },
     "optimize": {
-        "name": "⚡ Schedule Optimization", 
+        "name": "Optimize", 
         "description": "Get personalized schedule recommendations",
         "params": ["timeframe"],
         "endpoint": "/coordinator"
     },
     "questions": {
-        "name": "❓ Productivity Questions",
+        "name": "Questions",
         "description": "Ask specific productivity questions",
         "params": ["question"],
         "endpoint": "/coordinator"
     },
-    "preferences": {
-        "name": "⚙️ User Preferences",
-        "description": "Manage user preferences and settings",
-        "params": [],
-        "endpoint": "/coordinator"
-    },
     "reports": {
-        "name": "📈 Generate Reports",
+        "name": "Reports",
         "description": "Create detailed productivity reports",
         "params": ["timeframe"],
         "endpoint": "/coordinator"
     },
     "chat": {
-        "name": "💬 Chat Service",
+        "name": "Chat",
         "description": "AI-powered conversation interface",
         "params": ["message"],
         "endpoint": "/chat"
-    },
-    "r2-test": {
-        "name": "🗄️ R2 Storage Test",
-        "description": "Test direct R2 file access",
-        "params": ["r2_path"],
-        "endpoint": "/coordinator"
     }
 }
