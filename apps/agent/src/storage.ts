@@ -65,6 +65,42 @@ export class StorageService {
   }
 
   /**
+   * Get tide data by authenticating API key first (like MCP server)
+   * This method matches the MCP server's authentication + data fetch pattern
+   */
+  async getTideDataWithAuth(apiKey: string, tidesId: string): Promise<{ tideData: TideData | null; userId: string | null }> {
+    try {
+      // First authenticate the API key to get user_id (same as agent auth)
+      const keyBuffer = new TextEncoder().encode(apiKey);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', keyBuffer);
+      const hashArray = new Uint8Array(hashBuffer);
+      const hashedKey = Array.from(hashArray, b => b.toString(16).padStart(2, '0')).join('');
+
+      // Query D1 database for the API key hash (same as agent auth)
+      const result = await this.env.DB.prepare(
+        'SELECT user_id, name FROM api_keys WHERE key_hash = ?'
+      ).bind(hashedKey).first();
+      
+      if (!result) {
+        console.log(`[StorageService] API key not found during tide fetch: ${hashedKey.substring(0, 10)}...`);
+        return { tideData: null, userId: null };
+      }
+
+      const userId = result.user_id as string;
+      console.log(`[StorageService] Fetching tide ${tidesId} for authenticated user: ${userId}`);
+      
+      // Now fetch the tide data using the authenticated user_id
+      const tideData = await this.getTideData(userId, tidesId);
+      
+      return { tideData, userId };
+
+    } catch (error) {
+      console.error(`[StorageService] Failed to get tide data with auth:`, error);
+      return { tideData: null, userId: null };
+    }
+  }
+
+  /**
    * Environment-aware tide data access (same as getTideData)
    */
   async getTideDataFromAnySource(userId: string, tidesId: string): Promise<TideData | null> {

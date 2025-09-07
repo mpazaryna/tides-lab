@@ -91,24 +91,24 @@
 
     "102": {
       "name": "tides-agent-102",
-      // D1 Database binding - Staging
+      // D1 Database binding - Staging (aligned with server env 006)
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "tides-102-db", 
-          "database_id": "0883f97a-2b95-4247-916d-04d021a739c2"
+          "database_name": "tides-006-db", 
+          "database_id": "a152ac95-647e-4260-9af1-77fbcec16e47"
         }
       ],
 
-      // KV namespace for authentication - Staging
+      // KV namespace for authentication - Staging (aligned with server env 006)
       "kv_namespaces": [
         {
           "binding": "TIDES_AUTH_KV",
-          "id": "28b1be3455f847079eb0ca5d75bacf13"
+          "id": "c4ec43a892e64119a2f7665897144560"
         }
       ],
 
-      // R2 bucket for tide storage - Staging
+      // R2 bucket for tide storage - Staging (aligned with server env 006)
       "r2_buckets": [
         {
           "binding": "TIDES_R2",
@@ -149,11 +149,11 @@
 
     "103": {
       "name": "tides-agent-103",
-      // D1 Database binding - Development
+      // D1 Database binding - Development (pointing to 003 worker DB)
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "tides-103-db",
+          "database_name": "tides-003-db",
           "database_id": "74b20aee-081d-4a09-af95-be55470fe4f0"
         }
       ],
@@ -166,7 +166,7 @@
         }
       ],
 
-      // R2 bucket for tide storage - Development
+      // R2 bucket for tide storage - Development (pointing to 003 storage)
       "r2_buckets": [
         {
           "binding": "TIDES_R2",
@@ -200,7 +200,7 @@
       // Environment variables - Development
       "vars": {
         "CLOUDFLARE_ACCOUNT_ID": "01bfa3fc31e4462e21428e9ca7d63e98",
-        "R2_BUCKET_NAME": "tides-103-storage",
+        "R2_BUCKET_NAME": "tides-003-storage",
         "ENVIRONMENT": "development"
       }
     }

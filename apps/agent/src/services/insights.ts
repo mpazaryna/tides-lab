@@ -135,13 +135,23 @@ export class InsightsService {
     const daySpan = Math.max(1, Math.ceil((Date.now() - cutoffDate.getTime()) / (1000 * 60 * 60 * 24)));
     const consistencyScore = Math.min(100, (relevantSessions.length / daySpan) * 20);
 
+    // Daily breakdown for weekly pattern
+    const dailyTotals = relevantSessions.reduce((totals, s) => {
+      const date = new Date(s.started_at).toDateString();
+      totals[date] = (totals[date] || 0) + (s.duration || 0);
+      return totals;
+    }, {} as Record<string, number>);
+
+    const sessionsByDay = Object.values(dailyTotals);
+
     return {
       totalSessions: relevantSessions.length,
       totalDuration,
       averageDuration,
       intensityDistribution,
       peakHours,
-      consistencyScore: Math.round(consistencyScore)
+      consistencyScore: Math.round(consistencyScore),
+      sessionsByDay: sessionsByDay // Add daily breakdown
     };
   }
 
@@ -312,17 +322,25 @@ export class InsightsService {
   }
 
   /**
-   * Generate weekly productivity pattern from data
+   * Generate weekly productivity pattern from actual session data
    */
   private generateWeeklyPattern(flowAnalysis: any, energyAnalysis: any): number[] {
-    // Generate realistic weekly pattern based on actual data
-    const baseScore = Math.round((flowAnalysis.consistencyScore + energyAnalysis.averageEnergy * 10) / 2);
-    return Array.from({ length: 7 }, (_, i) => {
-      // Weekend dip pattern
-      const weekendFactor = (i === 0 || i === 6) ? 0.8 : 1.0;
-      const variation = (Math.random() - 0.5) * 10; // ±5 point variation
-      return Math.min(100, Math.max(0, Math.round(baseScore * weekendFactor + variation)));
-    });
+    console.log(`[InsightsService] Generating weekly pattern from ${flowAnalysis.totalSessions} sessions`);
+    
+    if (flowAnalysis.totalSessions === 0) {
+      return [0, 0, 0, 0, 0, 0, 0];
+    }
+
+    // If we have actual sessions, show their real durations
+    // Otherwise, show a single day pattern
+    if (flowAnalysis.sessionsByDay && flowAnalysis.sessionsByDay.length > 0) {
+      // Use actual daily session totals (up to 7 days)
+      return flowAnalysis.sessionsByDay.slice(0, 7);
+    } else {
+      // Single day pattern - show total duration for the day with sessions
+      const totalMinutes = flowAnalysis.totalDuration;
+      return [totalMinutes, 0, 0, 0, 0, 0, 0]; // Show real duration on first day, zeros for others
+    }
   }
 
   /**

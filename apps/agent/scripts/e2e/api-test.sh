@@ -30,7 +30,7 @@ show_usage() {
     echo "Environments:"
     echo "  101  Production (tides-001-storage)"
     echo "  102  Staging (tides-006-storage)"
-    echo "  103  Development (tides-003-storage)"
+    echo "  103  Development (tides-103-storage)"
     echo ""
     echo "Services:"
     echo "  insights      Generate productivity insights"

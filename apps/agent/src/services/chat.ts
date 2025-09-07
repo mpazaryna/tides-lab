@@ -4,13 +4,33 @@
  */
 
 import type { Env, ChatRequest, ChatResponse } from '../types.js';
+import { ServiceInferrer } from '../service-inferrer.js';
+import { InsightsService } from './insights.js';
+import { OptimizeService } from './optimize.js';
+import { QuestionsService } from './questions.js';
+import { PreferencesService } from './preferences.js';
+import { ReportsService } from './reports.js';
 
 export class ChatService {
   private env: Env;
   private readonly CONFIDENCE_THRESHOLD = 70;
+  
+  // Service instances for routing
+  private insightsService: InsightsService;
+  private optimizeService: OptimizeService;
+  private questionsService: QuestionsService;
+  private preferencesService: PreferencesService;
+  private reportsService: ReportsService;
 
   constructor(env: Env) {
     this.env = env;
+    
+    // Initialize services for routing
+    this.insightsService = new InsightsService(env);
+    this.optimizeService = new OptimizeService(env);
+    this.questionsService = new QuestionsService(env);
+    this.preferencesService = new PreferencesService(env);
+    this.reportsService = new ReportsService(env);
   }
 
   /**
@@ -21,14 +41,25 @@ export class ChatService {
   }
 
   /**
-   * Generate clarification questions for unclear intent
-   * Now uses direct AI calls instead of runWithTools (which was causing errors)
+   * Process chat request - either route to appropriate service or clarify intent
+   * Smart routing instead of always asking clarification questions
    */
   async clarifyIntent(request: ChatRequest, userId: string): Promise<ChatResponse> {
     try {
+      // First, try to determine if this request can be routed to a specific service
+      if (this.env.AI) {
+        const serviceInference = await this.inferServiceWithAI(request);
+        
+        if (serviceInference && serviceInference.service !== 'chat' && serviceInference.confidence > 60) {
+          // Route to the appropriate service instead of clarifying
+          return await this.routeToService(serviceInference.service, request, userId);
+        }
+      }
+      
+      // Only clarify if we truly can't determine intent
       return await this.clarifyIntentWithAI(request, userId);
     } catch (error) {
-      console.error('[ChatService] AI clarification failed, using fallback:', error);
+      console.error('[ChatService] Processing failed, using fallback:', error);
       return this.clarifyIntentFallback(request, userId);
     }
   }
@@ -38,7 +69,7 @@ export class ChatService {
    */
   private async clarifyIntentFallback(request: ChatRequest, userId: string): Promise<ChatResponse> {
     // Generate conversation ID if not provided
-    const conversationId = request.conversation_id || `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const conversationId = request.conversation_id || `conv_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     return {
       needs_clarification: true,
@@ -49,11 +80,199 @@ export class ChatService {
   }
 
   /**
+   * Infer service using AI (similar to ServiceInferrer but for chat context)
+   */
+  private async inferServiceWithAI(request: ChatRequest): Promise<{ service: string; confidence: number }> {
+    const message = request.message || request.question || '';
+    
+    if (!message || message.length < 3) {
+      return { service: 'chat', confidence: 30 };
+    }
+
+    try {
+      const prompt = `Classify this user request into one of these services:
+
+SERVICES:
+- insights: productivity analytics, energy patterns, "how productive was I", performance data
+- optimize: schedule optimization, "when should I work", time management
+- questions: general productivity questions, advice, tips
+- preferences: settings, work hours, notification preferences
+- reports: comprehensive reports, data exports, summaries
+- chat: unclear/ambiguous requests needing clarification
+
+USER REQUEST: "${message}"
+
+Respond with ONLY the service name.`;
+
+      const response = await this.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 10,
+        temperature: 0.1
+      });
+
+      const aiService = response.response?.trim().toLowerCase() || 'chat';
+      const validServices = ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'];
+      const finalService = validServices.includes(aiService) ? aiService : 'chat';
+      
+      // Calculate confidence based on message clarity and length
+      let confidence = finalService === 'chat' ? 30 : 75;
+      if (message.length > 20 && finalService !== 'chat') confidence = 85;
+      
+      return { service: finalService, confidence };
+
+    } catch (error) {
+      console.error('[ChatService] AI service inference failed:', error);
+      return { service: 'chat', confidence: 30 };
+    }
+  }
+
+  /**
+   * Route request to appropriate service and return chat-formatted response
+   */
+  private async routeToService(serviceName: string, request: ChatRequest, userId: string): Promise<ChatResponse> {
+    const conversationId = request.conversation_id || `conv_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    
+    try {
+      let serviceResult: any;
+      
+      // Convert ChatRequest to appropriate service request format
+      const serviceRequest = {
+        api_key: request.api_key || '',
+        tides_id: request.tides_id || 'daily-tide-default',
+        message: request.message,
+        question: request.question || request.message,
+        timeframe: request.timeframe || 'today',
+        ...request.context
+      };
+
+      switch (serviceName) {
+        case 'insights':
+          serviceResult = await this.insightsService.generateInsights(serviceRequest, userId);
+          break;
+        case 'optimize':
+          serviceResult = await this.optimizeService.optimizeSchedule(serviceRequest, userId);
+          break;
+        case 'questions':
+          const questionsReq = {
+            ...serviceRequest,
+            question: serviceRequest.question || serviceRequest.message || 'General productivity question'
+          };
+          serviceResult = await this.questionsService.processQuestion(questionsReq, userId, request.api_key || '');
+          break;
+        case 'preferences':
+          if (serviceRequest.preferences) {
+            serviceResult = await this.preferencesService.updatePreferences(serviceRequest, userId);
+          } else {
+            serviceResult = await this.preferencesService.getPreferences(userId);
+          }
+          break;
+        case 'reports':
+          const reportsReq = {
+            ...serviceRequest,
+            report_type: 'summary' as const
+          };
+          serviceResult = await this.reportsService.generateReport(reportsReq, userId);
+          break;
+        default:
+          throw new Error(`Unknown service: ${serviceName}`);
+      }
+
+      // Convert service result to chat response format
+      return {
+        needs_clarification: false,
+        message: this.formatServiceResultAsMessage(serviceResult, serviceName),
+        service_result: serviceResult,
+        conversation_id: conversationId,
+        routed_to: serviceName
+      };
+
+    } catch (error) {
+      console.error(`[ChatService] Service routing to ${serviceName} failed:`, error);
+      
+      // Fallback to clarification on service errors
+      return {
+        needs_clarification: true,
+        message: `I'd like to help with your ${serviceName} request, but I'm having trouble processing it right now. Could you please rephrase your question?`,
+        suggestions: [`Try asking about ${serviceName} in a different way`, 'Check if your request has all necessary details'],
+        conversation_id: conversationId,
+        error: `Service ${serviceName} failed`
+      };
+    }
+  }
+
+  /**
+   * Format service result as a conversational message
+   */
+  private formatServiceResultAsMessage(result: any, serviceName: string): string {
+    if (!result) return "I processed your request, but didn't get any results back.";
+    
+    switch (serviceName) {
+      case 'insights':
+        if (result.productivity_score !== undefined) {
+          const score = result.productivity_score;
+          let message = `Your productivity score is ${score}`;
+          
+          if (result.trends?.daily_average) {
+            message += ` (daily average: ${result.trends.daily_average})`;
+          }
+          
+          if (result.improvement_areas && result.improvement_areas.length > 0) {
+            message += `\n\nKey improvement areas:\n• ${result.improvement_areas.join('\n• ')}`;
+          }
+          
+          if (result.recommendations && result.recommendations.length > 0) {
+            message += `\n\nRecommendations:\n• ${result.recommendations.join('\n• ')}`;
+          }
+          
+          return message;
+        }
+        break;
+        
+      case 'optimize':
+        if (result.schedule) {
+          return `Here's your optimized schedule:\n\n${this.formatSchedule(result.schedule)}`;
+        }
+        break;
+        
+      case 'questions':
+        if (result.answer) {
+          return result.answer;
+        }
+        break;
+        
+      case 'reports':
+        if (result.summary) {
+          return `Report generated:\n\n${result.summary}`;
+        }
+        break;
+        
+      case 'preferences':
+        return 'Your preferences have been updated successfully.';
+    }
+    
+    // Generic fallback
+    return typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+  }
+
+  /**
+   * Format schedule data for display
+   */
+  private formatSchedule(schedule: any): string {
+    if (!schedule) return 'No schedule data available.';
+    
+    if (Array.isArray(schedule)) {
+      return schedule.map((item, index) => `${index + 1}. ${item}`).join('\n');
+    }
+    
+    return JSON.stringify(schedule, null, 2);
+  }
+
+  /**
    * Generate AI-powered clarification questions for unclear intent
    */
   async clarifyIntentWithAI(request: ChatRequest, userId: string): Promise<ChatResponse> {
     // Generate conversation ID if not provided
-    const conversationId = request.conversation_id || `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const conversationId = request.conversation_id || `conv_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     
     try {
       // Prepare context for AI
@@ -100,7 +319,7 @@ User context: ${request.context?.user_time ? `Current time: ${request.context.us
       const aiMessage = response?.response || "I'd be happy to help! Could you tell me more about what you need?";
       
       // Generate contextual suggestions based on the request
-      const suggestions = this.generateContextualSuggestions(request, aiMessage);
+      const suggestions = this.generateContextualSuggestions(request);
 
       return {
         needs_clarification: true,

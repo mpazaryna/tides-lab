@@ -209,50 +209,49 @@ export class OptimizeService {
    */
   private generateOptimizedSchedule(_flowAnalysis: any, energyAnalysis: any, taskAnalysis: any, _preferences?: any) {
     const schedule = [];
+    let currentHour = energyAnalysis.highEnergyHours[0] || 9;
 
-    // Deep work during peak energy hours
-    const primaryPeakHour = energyAnalysis.highEnergyHours[0] || 9;
+    // Deep work during peak energy hours (2-hour block)
     schedule.push({
-      start: `${primaryPeakHour.toString().padStart(2, '0')}:00`,
-      end: `${(primaryPeakHour + 2).toString().padStart(2, '0')}:00`,
-      activity: `Deep Work - ${taskAnalysis.focusAreas[0] || 'High Priority Tasks'}`,
+      start: `${currentHour.toString().padStart(2, '0')}:00`,
+      end: `${(currentHour + 2).toString().padStart(2, '0')}:00`,
+      activity: `Deep Work - ${taskAnalysis.focusAreas[0] || 'development'}`,
       priority: 1
     });
+    currentHour += 2;
 
-    // Break after deep work
+    // Short break after deep work
     schedule.push({
-      start: `${(primaryPeakHour + 2).toString().padStart(2, '0')}:00`,
-      end: `${(primaryPeakHour + 2).toString().padStart(2, '0')}:15`,
+      start: `${currentHour.toString().padStart(2, '0')}:00`,
+      end: `${currentHour.toString().padStart(2, '0')}:15`,
       activity: 'Break',
       priority: 3
     });
 
-    // Secondary focus work
-    const secondaryHour = energyAnalysis.highEnergyHours[1] || 13;
-    if (secondaryHour !== primaryPeakHour) {
-      schedule.push({
-        start: `${secondaryHour.toString().padStart(2, '0')}:00`,
-        end: `${(secondaryHour + 1).toString().padStart(2, '0')}:30`,
-        activity: `Focused Work - ${taskAnalysis.focusAreas[1] || 'Collaborative Tasks'}`,
-        priority: 2
-      });
-    }
-
-    // Administrative tasks during low energy
-    const lowEnergyHour = energyAnalysis.lowEnergyHours[0] || 14;
+    // Administrative tasks (1-hour block) - start immediately after break
     schedule.push({
-      start: `${lowEnergyHour.toString().padStart(2, '0')}:00`,
-      end: `${(lowEnergyHour + 1).toString().padStart(2, '0')}:00`,
+      start: `${currentHour.toString().padStart(2, '0')}:15`,
+      end: `${(currentHour + 1).toString().padStart(2, '0')}:15`,
       activity: 'Administrative Tasks & Email',
       priority: 2
     });
+    currentHour += 1;
 
-    // Learning/Development
+    // Learning/Development (1-hour block)
     schedule.push({
-      start: `${(lowEnergyHour + 1).toString().padStart(2, '0')}:00`,
-      end: `${(lowEnergyHour + 2).toString().padStart(2, '0')}:00`,
+      start: `${currentHour.toString().padStart(2, '0')}:15`,
+      end: `${(currentHour + 1).toString().padStart(2, '0')}:15`,
       activity: 'Learning & Development',
       priority: 2
+    });
+    currentHour += 1;
+
+    // Longer break at the end
+    schedule.push({
+      start: `${currentHour.toString().padStart(2, '0')}:15`,
+      end: `${currentHour.toString().padStart(2, '0')}:30`,
+      activity: 'Break',
+      priority: 3
     });
 
     return schedule.sort((a, b) => a.start.localeCompare(b.start));

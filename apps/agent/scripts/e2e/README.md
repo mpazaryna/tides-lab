@@ -31,44 +31,34 @@
 - ✅ **Flexible options** - Custom parameters per service
 - ✅ **TDD support** - Direct R2 testing with `r2-test` service
 
-## Interactive Chat Demos (For UI Team)
+## 📱 Interactive Chat Demo (For iOS Team)
 
-### 🎯 `chat-demo.sh` - Simple Interactive CLI
-**Best for quick demos and UI team testing**
-
-```bash
-./e2e/chat-demo.sh
-```
-
-Features:
-- Simulates iOS app conversation flow
-- Number shortcuts for suggestions (type 1, 2, or 3)
-- Maintains conversation context
-- Shows which service handled the request
-- Clean, minimal interface
-
-Example flow:
-1. Type: "How am I doing?"
-2. See suggestions, type: "1" (for "View productivity insights")
-3. Get clarification or actual data
-
-Commands:
-- `quit` - Exit
-- `new` - Start new conversation
-- `1-3` - Select suggestion
-
-### 📱 `chat-cli.sh` - Full Featured CLI
-**More comprehensive iOS app simulation**
+### 🌐 **Web Chat Demo** - `../../demo/chat/` (Recommended)
+**Best for iOS developers - Visual, interactive chat interface**
 
 ```bash
-./e2e/chat-cli.sh
+cd ../../demo/chat/
+python3 -m http.server 8080
+# Open: http://localhost:8080
 ```
 
-Features:
-- Full color coding and formatting
-- Displays full service responses (insights, optimization, etc.)
-- Shows confidence scores and service routing
-- Fold text for better readability
+**Features:**
+- ✅ **Mobile-like interface** - Chat bubbles, suggestions, responsive design
+- ✅ **Real API integration** - See actual network requests in browser DevTools
+- ✅ **Environment switching** - Test against 101/102/103 environments
+- ✅ **Developer tools** - JSON response viewer, cURL export
+- ✅ **No setup required** - Just open HTML file in browser
+
+**Why better than terminal:**
+- Shows what the mobile chat should look like
+- iOS developers can inspect network requests (F12)
+- Interactive suggestions and conversation flow
+- Works on mobile devices for testing
+
+### ⚠️ Legacy Terminal Demos (Deprecated)
+~~Terminal-based chat interfaces moved to `legacy/` folder~~
+
+**Use the web demo instead** - it provides a much better representation of the mobile chat experience.
 
 ## ⚠️ Legacy Service Test Scripts (Deprecated)
 

@@ -18,7 +18,7 @@ export class QuestionsService {
   /**
    * Process a custom productivity question with contextual R2 data analysis
    */
-  async processQuestion(request: QuestionsRequest, userId: string): Promise<{
+  async processQuestion(request: QuestionsRequest, userId: string, apiKey?: string): Promise<{
     answer: string;
     confidence: number;
     related_insights: string[];
@@ -27,7 +27,17 @@ export class QuestionsService {
     console.log(`[QuestionsService] Processing question for tide: ${request.tides_id}`);
     console.log(`[QuestionsService] Question: ${request.question}`);
     
-    const tideData = await this.storage.getTideDataFromAnySource(userId, request.tides_id);
+    let tideData = null;
+    
+    // Use the new authenticated tide lookup if API key is provided
+    if (apiKey && request.tides_id) {
+      const { tideData: authTideData, userId: authUserId } = await this.storage.getTideDataWithAuth(apiKey, request.tides_id);
+      tideData = authTideData;
+      console.log(`[QuestionsService] Authenticated tide lookup: tide=${request.tides_id}, user=${authUserId}`);
+    } else {
+      // Fallback to old method for backwards compatibility
+      tideData = await this.storage.getTideDataFromAnySource(userId, request.tides_id);
+    }
     
     if (!tideData) {
       throw new Error(`No tide data found for user: ${userId}, tide: ${request.tides_id}`);

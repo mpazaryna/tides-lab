@@ -38,6 +38,7 @@ export interface ChatRequest extends AgentRequest {
   question?: string;
   message?: string;  // Support both question and message fields
   conversation_id?: string;
+  timeframe?: string;  // For routing to insights/reports services
   context?: {
     recent_messages?: Array<{ role: string; content: string }>;
     user_time?: string;
@@ -59,6 +60,9 @@ export interface ChatResponse {
     questions: string[];
     recommendations: string[];
   };
+  service_result?: any;
+  routed_to?: string;
+  error?: string;
 }
 
 export interface PreferencesRequest extends AgentRequest {

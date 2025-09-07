@@ -136,43 +136,36 @@ export class AuthService {
   }
 
   /**
-   * Validate API key against stored hash in KV
+   * Validate API key against stored hash in D1 database
    */
   async validateApiKey(apiKey: string): Promise<{ valid: boolean; userId?: string }> {
     try {
-      // TDD Test mode: Extract user ID directly from test API keys
-      if (apiKey.startsWith('tides_') && apiKey.includes('-')) {
-        const parts = apiKey.split('_');
-        if (parts.length >= 3) {
-          const userId = parts.slice(1, -1).join('_');
-          console.log(`[AuthService] Test mode - API key validated for user: ${userId}`);
-          return {
-            valid: true,
-            userId: userId
-          };
-        }
-      }
-
       // Hash the provided API key using SHA-256
       const keyBuffer = new TextEncoder().encode(apiKey);
       const hashBuffer = await crypto.subtle.digest('SHA-256', keyBuffer);
       const hashArray = new Uint8Array(hashBuffer);
       const hashedKey = Array.from(hashArray, b => b.toString(16).padStart(2, '0')).join('');
 
-      // Look up the hashed key in KV storage
-      const userData = await this.env.TIDES_AUTH_KV.get(hashedKey);
+      // Query D1 database for the API key hash
+      const result = await this.env.DB.prepare(
+        'SELECT user_id, name FROM api_keys WHERE key_hash = ?'
+      ).bind(hashedKey).first();
       
-      if (!userData) {
+      if (!result) {
         console.log(`[AuthService] API key not found: ${hashedKey.substring(0, 10)}...`);
         return { valid: false };
       }
 
-      const user = JSON.parse(userData);
-      console.log(`[AuthService] API key validated for user: ${user.user_id}`);
+      console.log(`[AuthService] API key validated for user: ${result.user_id}`);
+      
+      // Update last_used timestamp
+      await this.env.DB.prepare(
+        'UPDATE api_keys SET last_used = datetime("now") WHERE key_hash = ?'
+      ).bind(hashedKey).run();
       
       return {
         valid: true,
-        userId: user.user_id
+        userId: result.user_id as string
       };
 
     } catch (error) {

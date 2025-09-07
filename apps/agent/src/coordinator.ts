@@ -205,34 +205,34 @@ export class Coordinator implements DurableObject {
       switch (targetService) {
         case 'insights':
           const insightsResult = await this.insightsService.generateInsights(body as any, userId);
-          return this.buildSuccessResponse(insightsResult, 'insights', startTime, inferenceInfo);
+          return this.buildSuccessResponseWithTide(insightsResult, 'insights', startTime, inferenceInfo, body, userId);
 
         case 'optimize':
           const optimizeResult = await this.optimizeService.optimizeSchedule(body as any, userId);
-          return this.buildSuccessResponse(optimizeResult, 'optimize', startTime, inferenceInfo);
+          return this.buildSuccessResponseWithTide(optimizeResult, 'optimize', startTime, inferenceInfo, body, userId);
 
         case 'questions':
-          const questionsResult = await this.questionsService.processQuestion(body as any, userId);
-          return this.buildSuccessResponse(questionsResult, 'questions', startTime, inferenceInfo);
+          const questionsResult = await this.questionsService.processQuestion(body as any, userId, body.api_key);
+          return this.buildSuccessResponseWithTide(questionsResult, 'questions', startTime, inferenceInfo, body, userId);
 
         case 'preferences':
           if ('preferences' in body && body.preferences) {
             // Update preferences
             const updateResult = await this.preferencesService.updatePreferences(body as any, userId);
-            return this.buildSuccessResponse(updateResult, 'preferences', startTime, inferenceInfo);
+            return this.buildSuccessResponseWithTide(updateResult, 'preferences', startTime, inferenceInfo, body, userId);
           } else {
             // Get preferences
             const getResult = await this.preferencesService.getPreferences(userId);
-            return this.buildSuccessResponse(getResult, 'preferences', startTime, inferenceInfo);
+            return this.buildSuccessResponseWithTide(getResult, 'preferences', startTime, inferenceInfo, body, userId);
           }
 
         case 'reports':
           const reportsResult = await this.reportsService.generateReport(body as any, userId);
-          return this.buildSuccessResponse(reportsResult, 'reports', startTime, inferenceInfo);
+          return this.buildSuccessResponseWithTide(reportsResult, 'reports', startTime, inferenceInfo, body, userId);
 
         case 'chat':
           const chatResult = await this.chatService.clarifyIntent(body as any, userId);
-          return this.buildSuccessResponse(chatResult, 'chat', startTime, inferenceInfo);
+          return this.buildSuccessResponseWithTide(chatResult, 'chat', startTime, inferenceInfo, body, userId);
 
         default:
           return ResponseBuilder.error(
@@ -269,6 +269,57 @@ export class Coordinator implements DurableObject {
         } : undefined
       }
     };
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    });
+  }
+
+  /**
+   * Build success response with tide data included for debugging
+   */
+  private async buildSuccessResponseWithTide(data: any, service: string, startTime: number, inferenceInfo: any, requestBody: any, userId: string): Promise<Response> {
+    // Get tide data for debugging if tides_id is provided
+    let tideData = null;
+    if (requestBody.tides_id) {
+      try {
+        const storage = new (await import('./storage.js')).StorageService(this.env);
+        tideData = await storage.getTideDataFromAnySource(userId, requestBody.tides_id);
+      } catch (error) {
+        console.warn(`[Coordinator] Could not fetch tide data for debugging:`, error);
+      }
+    }
+
+    const response: any = {
+      success: true,
+      data,
+      metadata: {
+        service,
+        timestamp: new Date().toISOString(),
+        processing_time_ms: performance.now() - startTime,
+        inference: inferenceInfo.confidence < 100 ? {
+          confidence: inferenceInfo.confidence,
+          reasoning: inferenceInfo.reasoning
+        } : undefined
+      }
+    };
+
+    // Add tide data as separate top-level section for debugging
+    if (tideData) {
+      response.tide = {
+        id: tideData.id,
+        name: tideData.name,
+        flow_sessions: tideData.flow_sessions || [],
+        energy_updates: tideData.energy_updates || [],
+        task_links: tideData.task_links || []
+      };
+    }
 
     return new Response(JSON.stringify(response), {
       status: 200,

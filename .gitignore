@@ -56,6 +56,28 @@ apps/mobile/coverage/
 # Temporary files
 apps/mobile/.metro-health-check*
 
+# Python files (for Streamlit demo app)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
 # App-specific ignores are handled by individual apps
 .mcp.json
 /apps/agent/coverage
