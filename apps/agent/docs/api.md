@@ -1,353 +1,172 @@
 # Tides Agent API Reference
 
-## Base URL
-```
-https://tides-agent-101.mpazbot.workers.dev
+## Environment Variables
+
+```bash
+AGENT_BASE_URL=https://tides-agent-102.mpazbot.workers.dev
+MCP_SERVER_URL=https://tides-006.mpazbot.workers.dev
 ```
 
-**Note**: All services are also accessible through the `/coordinator` endpoint which provides intelligent service routing.
+## Available Endpoints
+
+### POST /coordinator
+**Primary endpoint** - All services (insights, optimize, questions, preferences, reports) use intelligent routing.
+
+### POST /chat  
+**Chat endpoint** - Conversational AI interface.
 
 ## Authentication
 
-All POST endpoints require authentication via request body:
+All requests require API key and tide ID in the request body:
 
 ```json
 {
-  "api_key": "tides_{userId}_{randomId}",
+  "api_key": "tides_userId_randomId", 
   "tides_id": "your-tide-id"
 }
 ```
 
-## Endpoints
+## Service Examples
 
-### Health & Status
+### Insights Service
 
-#### GET /
-Get agent status and available services.
+**Request:**
+```json
+{
+  "api_key": "tides_userId_randomId",
+  "tides_id": "daily-tide-default",
+  "service": "insights",
+  "timeframe": "7d"
+}
+```
 
-**Response:**
+**Endpoint:** `POST ${AGENT_BASE_URL}/coordinator`
+
+### Optimize Service
+
+**Request:**
+```json
+{
+  "api_key": "tides_userId_randomId", 
+  "tides_id": "daily-tide-default",
+  "service": "optimize",
+  "preferences": {"focus_time_blocks": 90}
+}
+```
+
+**Endpoint:** `POST ${AGENT_BASE_URL}/coordinator`
+
+### Questions Service
+
+**Request:**
+```json
+{
+  "api_key": "tides_userId_randomId",
+  "tides_id": "daily-tide-default", 
+  "service": "questions",
+  "question": "How can I improve my morning productivity?"
+}
+```
+
+**Endpoint:** `POST ${AGENT_BASE_URL}/coordinator`
+
+### Preferences Service
+
+**Request:**
+```json
+{
+  "api_key": "tides_userId_randomId",
+  "tides_id": "daily-tide-default",
+  "service": "preferences"
+}
+```
+
+**Endpoint:** `POST ${AGENT_BASE_URL}/coordinator`
+
+### Reports Service
+
+**Request:**
+```json
+{
+  "api_key": "tides_userId_randomId",
+  "tides_id": "daily-tide-default",
+  "service": "reports",
+  "report_type": "summary",
+  "period": "7d"
+}
+```
+
+**Endpoint:** `POST ${AGENT_BASE_URL}/coordinator`
+
+### Chat Service
+
+**Request:**
+```json
+{
+  "message": "How productive was I today?",
+  "userId": "demo_user",
+  "api_key": "tides_userId_randomId",
+  "tides_id": "daily-tide-default",
+  "timestamp": "2025-09-07T17:30:00.000Z"
+}
+```
+
+**Endpoint:** `POST ${AGENT_BASE_URL}/chat`
+
+## Response Format
+
+All successful responses follow this structure:
+
 ```json
 {
   "success": true,
   "data": {
-    "status": "healthy",
-    "services": ["insights", "optimize", "questions", "preferences", "reports", "chat"],
-    "version": "1.0.0",
-    "agent_id": "coordinator-id"
+    // Service-specific response data
   },
   "metadata": {
-    "service": "coordinator",
-    "timestamp": "2024-01-01T00:00:00.000Z",
-    "processing_time_ms": 0
+    "service": "service_name",
+    "timestamp": "2025-09-07T17:30:00.000Z",
+    "processing_time_ms": 123
   }
 }
 ```
-
-#### GET /health
-Simple health check.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": { "healthy": true },
-  "metadata": { /* ... */ }
-}
-```
-
-### Productivity Services
-
-#### POST /insights
-Generate productivity insights and analysis.
-
-**Request:**
-```json
-{
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "tide-123",
-  "timeframe": "7d",
-  "focus_areas": ["coding", "meetings"]
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "productivity_score": 87,
-    "trends": {
-      "daily_average": 82,
-      "weekly_pattern": [75, 80, 85, 78, 82, 68, 72],
-      "improvement_areas": ["Morning focus sessions", "Afternoon energy management"]
-    },
-    "recommendations": [
-      "Consider scheduling deep work during your peak hours (9-11 AM)",
-      "Take more frequent breaks to maintain energy levels"
-    ]
-  },
-  "metadata": { /* ... */ }
-}
-```
-
-#### POST /optimize
-Get schedule optimization recommendations.
-
-**Request:**
-```json
-{
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "tide-123",
-  "preferences": {
-    "work_hours": { "start": "09:00", "end": "17:00" },
-    "break_duration": 15
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "suggested_schedule": {
-      "time_blocks": [
-        {
-          "start": "09:00",
-          "end": "11:00", 
-          "activity": "Deep Work - High Priority Tasks",
-          "priority": 1
-        }
-      ]
-    },
-    "efficiency_gains": {
-      "estimated_time_saved": 45,
-      "focus_improvement": 25
-    }
-  },
-  "metadata": { /* ... */ }
-}
-```
-
-#### POST /questions
-Ask custom productivity questions with AI analysis.
-
-**Request:**
-```json
-{
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "tide-123",
-  "question": "How can I improve my morning productivity?",
-  "context": "remote work"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "answer": "Morning productivity can be significantly improved by establishing a consistent routine...",
-    "confidence": 92,
-    "related_insights": ["Peak performance hours: 9-11 AM", "Morning routine consistency boosts focus by 35%"],
-    "suggested_actions": ["Create a morning routine checklist", "Schedule deep work for 9-11 AM"]
-  },
-  "metadata": { /* ... */ }
-}
-```
-
-#### POST /preferences
-Get or update user preferences.
-
-**Get Preferences (no preferences field):**
-```json
-{
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "tide-123"
-}
-```
-
-**Update Preferences (with preferences field):**
-```json
-{
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "tide-123",
-  "preferences": {
-    "work_hours": { "start": "08:30", "end": "16:30" },
-    "break_duration": 20,
-    "focus_time_blocks": 120,
-    "notification_preferences": {
-      "insights": true,
-      "optimization": true,
-      "reminders": false
-    }
-  }
-}
-```
-
-**Response (both cases):**
-```json
-{
-  "success": true,
-  "data": {
-    "work_hours": { "start": "08:30", "end": "16:30" },
-    "break_duration": 20,
-    "focus_time_blocks": 120,
-    "notification_preferences": {
-      "insights": true,
-      "optimization": true, 
-      "reminders": false
-    }
-  },
-  "metadata": { /* ... */ }
-}
-```
-
-#### POST /reports
-Generate comprehensive productivity reports.
-
-**Request:**
-```json
-{
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "tide-123",
-  "report_type": "detailed",
-  "period": "30d"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "report_type": "detailed",
-    "period": "30d",
-    "summary": {
-      "total_productive_hours": 145,
-      "average_daily_score": 83,
-      "completed_tasks": 167,
-      "focus_sessions": 78
-    },
-    "detailed_metrics": {
-      "productivity_trends": {
-        "weekly_averages": [78, 82, 85, 79, 88, 76, 81]
-      },
-      "time_distribution": {
-        "deep_work": 45,
-        "meetings": 25,
-        "administrative": 15,
-        "breaks": 15
-      }
-    },
-    "recommendations": [
-      "Schedule your most challenging tasks during 9-11 AM when productivity peaks"
-    ]
-  },
-  "metadata": { /* ... */ }
-}
-```
-
-#### POST /chat
-AI-powered intent clarification and response enhancement.
-
-**Request:**
-```json
-{
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "tide-123",
-  "message": "I need help with my productivity",
-  "conversation_id": "conv_123456"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "needs_clarification": true,
-    "message": "I'd be happy to help! What specific aspect of productivity are you looking to improve?",
-    "suggestions": [
-      "View productivity insights for this week",
-      "Optimize tomorrow's schedule",
-      "Get tips for better focus",
-      "Update my work preferences"
-    ],
-    "conversation_id": "conv_123456"
-  },
-  "metadata": {
-    "service": "chat",
-    "timestamp": "2024-01-01T00:00:00.000Z",
-    "processing_time_ms": 561
-  }
-}
-```
-
-#### POST /coordinator
-Main coordinator endpoint with intelligent service routing (recommended).
-
-**Request:**
-```json
-{
-  "api_key": "tides_vm27ydanzrg_325FD3",
-  "tides_id": "tide-123",
-  "message": "Start me a flow session",
-  "service": "insights"  // Optional: explicit service override
-}
-```
-
-**Response:** *Routes to appropriate service based on request content or explicit service field*
 
 ## Error Responses
-
-All error responses follow this format:
 
 ```json
 {
   "success": false,
-  "error": "Error message describing what went wrong",
+  "error": "Error description",
   "metadata": {
-    "service": "service-name",
-    "timestamp": "2024-01-01T00:00:00.000Z",
+    "service": "service_name", 
+    "timestamp": "2025-09-07T17:30:00.000Z",
     "processing_time_ms": 0
   }
 }
 ```
 
-### Common Errors
+## cURL Examples
 
-| Status | Error | Description |
-|--------|-------|-------------|
-| 400 | "Request body is required" | Missing request body |
-| 400 | "Invalid JSON in request body" | Malformed JSON |
-| 401 | "api_key is required in request body" | Missing API key |
-| 401 | "tides_id is required in request body" | Missing tide ID |
-| 401 | "Invalid API key" | API key not found or invalid |
-| 404 | "POST /unknown not found" | Unknown endpoint |
-| 405 | "Method DELETE not allowed" | Unsupported HTTP method |
-| 500 | "Internal server error" | Server error |
+**Test insights service:**
+```bash
+curl -X POST ${AGENT_BASE_URL}/coordinator \
+  -H "Content-Type: application/json" \
+  -d '{
+    "api_key": "your-api-key",
+    "tides_id": "daily-tide-default",
+    "service": "insights",
+    "timeframe": "7d"
+  }'
+```
 
-## Rate Limits
-
-Currently no rate limiting is implemented, but standard Cloudflare Workers limits apply:
-- 100,000 requests per day (free tier)
-- 1000 requests per minute burst
-
-## CORS Support
-
-All endpoints include CORS headers:
-- `Access-Control-Allow-Origin: *`
-- `Access-Control-Allow-Methods: GET, POST, OPTIONS`
-- `Access-Control-Allow-Headers: Content-Type, Authorization`
-
-## Technical Status
-
-**Current Implementation Status:**
-- **Test Coverage**: 84.48% for services, 68.37% overall (187 passing tests)
-- **Service Status**: All 6 services fully operational
-- **AI Integration**: Chat service with Cloudflare Workers AI
-- **Performance**: Average response times 50-600ms depending on service
-- **Architecture**: Durable Objects with R2 storage for tide data
-
-**Last Updated**: September 2025
+**Test chat service:**
+```bash
+curl -X POST ${AGENT_BASE_URL}/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "How productive was I today?",
+    "api_key": "your-api-key", 
+    "tides_id": "daily-tide-default",
+    "userId": "demo_user"
+  }'
+```
