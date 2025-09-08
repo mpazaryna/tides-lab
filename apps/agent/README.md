@@ -9,9 +9,7 @@ AI-powered productivity intelligence layer built with Cloudflare Workers and adv
 - **InsightsService**: Productivity insights and analysis with real R2 tide data
 - **OptimizeService**: Schedule optimization recommendations with personalized algorithms  
 - **QuestionsService**: Custom Q&A with AI-powered responses
-- **PreferencesService**: User preferences management with KV storage
 - **ReportsService**: Comprehensive productivity reports with analytics
-- **ChatService**: AI-powered conversation and intent clarification
 
 The agent functions as an **intelligence layer** that analyzes existing productivity data rather than executing external tools. It uses Llama 3.1-8b-instruct for service inference and natural language understanding.
 
@@ -30,9 +28,7 @@ All endpoints require `api_key` and `tides_id` in the request body.
 - `POST /insights` - Generate productivity insights
 - `POST /optimize` - Get schedule optimization recommendations
 - `POST /questions` - Ask custom productivity questions
-- `POST /preferences` - Get/update user preferences
 - `POST /reports` - Generate productivity reports
-- `POST /chat` - AI-powered conversation and clarification
 
 ## Request Format
 
@@ -86,7 +82,7 @@ npm run test:coverage
 ```
 
 Tests include:
-- Unit tests for all 6 services (212 tests, 66.66% coverage)
+- Unit tests for all 4 services (insights, optimize, questions, reports)
 - Environment-specific storage integration tests
 - Coordinator routing and service inference tests
 - Authentication validation tests  
@@ -111,24 +107,29 @@ Each environment uses its own R2 bucket for isolated data storage.
 ### ✅ Phase 1: Foundation & Services
 - [x] Project structure and configuration
 - [x] Coordinator with request routing
-- [x] All 6 micro-services with production data
+- [x] Core 4 micro-services with production data (insights, optimize, questions, reports)
 - [x] Authentication and validation
-- [x] Comprehensive unit tests (212 tests, 66.66% coverage)
 - [x] Multi-environment deployment (101, 102, 103)
 
 ### ✅ Phase 2: Real Service Implementation (Complete)
 - [x] R2 storage integration for real tide data
-- [x] Workers AI integration for chat service
+- [x] Workers AI integration for questions service
 - [x] Environment-specific storage with production data
 - [x] Advanced question processing with AI
-- [x] User preferences storage in KV
 - [x] Rich report generation with analytics
 
-### 📋 Phase 3: Production Ready (Future)
+### 📋 Phase 3: Data Integration (Future)
+- [ ] User preferences via MCP tide tools integration
+- [ ] Real-time data synchronization with main MCP server
+- [ ] Enhanced analytics with cross-platform data
 - [ ] Error handling and recovery
-- [ ] Performance optimization  
-- [ ] Integration tests
-- [ ] Production deployment
+- [ ] Performance optimization
+
+### 📋 Phase 4: MCP Tools Integration (Future)
+- [ ] Integration with 8 core MCP tide tools
+- [ ] Bidirectional data flow (read analytics, write actions)
+- [ ] Tool orchestration for complex workflows
+- [ ] Cross-client action coordination
 
 ## Example Usage
 
@@ -174,6 +175,6 @@ The coordinator architecture enables expansion to a full agent ecosystem:
 4. **Execution Agent**: MCP tool orchestration for actions
 
 ### Documentation
-- **[API Reference](docs/api.md)**: Detailed service endpoints and examples
-- **[Architecture Guide](docs/architecture.md)**: Technical implementation details  
-- **[Integration Patterns](docs/integration.md)**: Frontend integration examples
+- **[API Reference](./docs/api.md)**: Detailed service endpoints and examples
+- **[Architecture Guide](./docs/architecture.md)**: Technical implementation details  
+- **[Integration Patterns](./docs/integration.md)**: Frontend integration examples
