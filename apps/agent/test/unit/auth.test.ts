@@ -11,7 +11,9 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     mockEnv = {
-      DB: {} as any,
+      DB: {
+        prepare: jest.fn()
+      } as any,
       TIDES_R2: {} as any,
       TIDES_AUTH_KV: {
         get: jest.fn(),
@@ -30,17 +32,25 @@ describe('AuthService', () => {
 
   describe('validateApiKey', () => {
     test('should validate correct API key', async () => {
-      const mockKV = mockEnv.TIDES_AUTH_KV as any;
-      mockKV.get.mockResolvedValue(JSON.stringify({
-        user_id: 'test-user-123',
-        created_at: '2024-01-01T00:00:00.000Z'
-      }));
+      const mockDB = mockEnv.DB as any;
+      
+      // First call is for SELECT query, second is for UPDATE query
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue({
+          user_id: 'test-user-123',
+          name: 'Test API Key'
+        })
+      }).mockReturnValueOnce({
+        bind: jest.fn().mockReturnThis(),
+        run: jest.fn().mockResolvedValue({})
+      });
 
       const result = await authService.validateApiKey('test-api-key');
       
       expect(result.valid).toBe(true);
       expect(result.userId).toBe('test-user-123');
-      expect(mockKV.get).toHaveBeenCalled();
+      expect(mockDB.prepare).toHaveBeenCalledTimes(2);
     });
 
     test('should reject invalid API key', async () => {
@@ -96,11 +106,19 @@ describe('AuthService', () => {
 
   describe('validateRequest', () => {
     test('should validate complete valid request', async () => {
-      const mockKV = mockEnv.TIDES_AUTH_KV as any;
-      mockKV.get.mockResolvedValue(JSON.stringify({
-        user_id: 'test-user-123',
-        created_at: '2024-01-01T00:00:00.000Z'
-      }));
+      const mockDB = mockEnv.DB as any;
+      
+      // Mock both SELECT and UPDATE queries
+      mockDB.prepare.mockReturnValueOnce({
+        bind: jest.fn().mockReturnThis(),
+        first: jest.fn().mockResolvedValue({
+          user_id: 'test-user-123',
+          name: 'Test API Key'
+        })
+      }).mockReturnValueOnce({
+        bind: jest.fn().mockReturnThis(),
+        run: jest.fn().mockResolvedValue({})
+      });
 
       const request = new Request('https://test.com/test', {
         method: 'POST',

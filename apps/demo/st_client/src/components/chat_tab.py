@@ -9,8 +9,9 @@ from ..services import AgentClient
 
 
 def render_chat_tab(agent_client: AgentClient, api_key: str = None):
-    """Render the chat interface tab"""
-    st.header("💬 Agent Chat Interface")
+    """Render the agent inference interface"""
+    st.header("🧠 Agent Inference")
+    st.markdown("Test agent's **intelligent routing** - send natural language and let AI determine which service to call")
     
     if not api_key:
         st.warning("⚠️ Please enter an API key in the sidebar to use the chat interface")
@@ -61,9 +62,30 @@ def render_chat_tab(agent_client: AgentClient, api_key: str = None):
     
     # Chat messages display
     if st.session_state.messages:
-        for message in st.session_state.messages:
+        for i, message in enumerate(st.session_state.messages):
             with st.chat_message(message["role"]):
                 st.write(message["content"])
+                
+                # Show debugging info for assistant responses (like Agent Services tab)
+                if message["role"] == "assistant" and "raw_response" in message:
+                    
+                    # Status indicators (like Agent Services tab)
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        status = "✅ Success" if message.get("status_code") == 200 else "❌ Failed"
+                        st.metric("Status", status)
+                    with col2:
+                        processing_time = message.get("processing_time_ms", 0)
+                        st.metric("Processing Time", f"{processing_time:.0f}ms")
+                    with col3:
+                        service = message.get("raw_response", {}).get("metadata", {}).get("service", "unknown")
+                        st.metric("Service", service)
+                    
+                    # Raw response display (like Agent Services tab)
+                    with st.expander("🔧 Raw API Response", expanded=False):
+                        st.json(message["raw_response"])
+                    
+                    st.markdown("---")  # Separator like Agent Services tab
     else:
         st.info("💬 Start a conversation by asking a question in the text area above or using the chat input below!")
     
@@ -74,12 +96,71 @@ def render_chat_tab(agent_client: AgentClient, api_key: str = None):
 
 def _process_chat_message(prompt: str, agent_client: AgentClient, api_key: str, tide_id: str):
     """Process a chat message and get agent response"""
+    from datetime import datetime
+    import requests
+    
     # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
     
-    # Get agent response
+    # Get agent response with full debugging info
     with st.spinner("🤔 Thinking..."):
-        response = agent_client.chat(prompt, api_key, st.session_state.user_id, tide_id)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        start_time = datetime.now()
+        
+        # Make direct request to get full response for debugging
+        try:
+            payload = {
+                "message": prompt,
+                "userId": st.session_state.user_id or "demo_user",
+                "api_key": api_key,
+                "tides_id": tide_id,
+                "timestamp": datetime.now().isoformat()
+                # No explicit service - let AI inference determine the right service
+            }
+            
+            response = requests.post(
+                f"{agent_client.base_url}/coordinator",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=agent_client.timeout
+            )
+            
+            end_time = datetime.now()
+            processing_time = (end_time - start_time).total_seconds() * 1000
+            
+            if response.status_code == 200:
+                full_response = response.json()
+                
+                # Extract formatted message using agent_client logic
+                formatted_response = agent_client.chat(prompt, api_key, st.session_state.user_id, tide_id)
+                
+                # Store both formatted and raw response
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": formatted_response,
+                    "raw_response": full_response,
+                    "processing_time_ms": processing_time,
+                    "status_code": response.status_code
+                })
+            else:
+                error_msg = f"❌ Agent error ({response.status_code}): {response.text[:200]}"
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": error_msg,
+                    "raw_response": {"error": response.text, "status_code": response.status_code},
+                    "processing_time_ms": processing_time,
+                    "status_code": response.status_code
+                })
+                
+        except Exception as e:
+            end_time = datetime.now()
+            processing_time = (end_time - start_time).total_seconds() * 1000
+            error_msg = f"❌ Connection failed: {str(e)}"
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": error_msg,
+                "raw_response": {"error": str(e)},
+                "processing_time_ms": processing_time,
+                "status_code": None
+            })
     
     st.rerun()

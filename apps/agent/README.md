@@ -1,17 +1,19 @@
 # Tides Agent
 
-Clean, microservices-based productivity agent built with Cloudflare Workers and Durable Objects.
+AI-powered productivity intelligence layer built with Cloudflare Workers and advanced service orchestration.
 
 ## Architecture
 
-Single **Coordinator** Durable Object that routes requests to internal micro-services:
+**Coordinator** that intelligently routes requests to specialized analytics services using AI inference:
 
 - **InsightsService**: Productivity insights and analysis with real R2 tide data
-- **OptimizeService**: Schedule optimization recommendations with personalized algorithms
+- **OptimizeService**: Schedule optimization recommendations with personalized algorithms  
 - **QuestionsService**: Custom Q&A with AI-powered responses
 - **PreferencesService**: User preferences management with KV storage
 - **ReportsService**: Comprehensive productivity reports with analytics
 - **ChatService**: AI-powered conversation and intent clarification
+
+The agent functions as an **intelligence layer** that analyzes existing productivity data rather than executing external tools. It uses Llama 3.1-8b-instruct for service inference and natural language understanding.
 
 ## API Endpoints
 
@@ -84,10 +86,10 @@ npm run test:coverage
 ```
 
 Tests include:
-- Unit tests for all 6 services (195 tests)
+- Unit tests for all 6 services (212 tests, 66.66% coverage)
 - Environment-specific storage integration tests
 - Coordinator routing and service inference tests
-- Authentication validation tests
+- Authentication validation tests  
 - Real tide data validation tests
 - Response format validation
 - E2E tests with live endpoints
@@ -97,9 +99,9 @@ Tests include:
 The agent supports multiple environments:
 
 ```bash
-npm run deploy:101    # Production (tides-001-storage)
-npm run deploy:102    # Staging (tides-002-storage) 
-npm run deploy:103    # Development (tides-003-storage)
+npm run deploy:101    # Production (tides-agent-101.mpazbot.workers.dev)
+npm run deploy:102    # Staging (tides-agent-102.mpazbot.workers.dev) 
+npm run deploy:103    # Development (tides-agent-103.mpazbot.workers.dev)
 ```
 
 Each environment uses its own R2 bucket for isolated data storage.
@@ -111,7 +113,7 @@ Each environment uses its own R2 bucket for isolated data storage.
 - [x] Coordinator with request routing
 - [x] All 6 micro-services with production data
 - [x] Authentication and validation
-- [x] Comprehensive unit tests (195 tests, 84.6% service coverage)
+- [x] Comprehensive unit tests (212 tests, 66.66% coverage)
 - [x] Multi-environment deployment (101, 102, 103)
 
 ### ✅ Phase 2: Real Service Implementation (Complete)
@@ -132,23 +134,46 @@ Each environment uses its own R2 bucket for isolated data storage.
 
 ```bash
 # Check agent status
-curl https://tides-agent.your-domain.workers.dev/
+curl https://tides-agent-102.mpazbot.workers.dev/
 
-# Generate insights
-curl -X POST https://tides-agent.your-domain.workers.dev/insights \
+# Natural language request (recommended)
+curl -X POST https://tides-agent-102.mpazbot.workers.dev/coordinator \
+  -H "Content-Type: application/json" \
+  -d '{
+    "api_key": "tides_vm27ydanzrg_325FD3",
+    "tides_id": "test-tide-123", 
+    "message": "Show me my productivity insights for the past week"
+  }'
+
+# Direct service endpoint
+curl -X POST https://tides-agent-102.mpazbot.workers.dev/insights \
   -H "Content-Type: application/json" \
   -d '{
     "api_key": "tides_vm27ydanzrg_325FD3",
     "tides_id": "test-tide-123",
     "timeframe": "7d"
   }'
-
-# Ask a question
-curl -X POST https://tides-agent.your-domain.workers.dev/questions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "api_key": "tides_vm27ydanzrg_325FD3", 
-    "tides_id": "test-tide-123",
-    "question": "How can I improve my morning productivity?"
-  }'
 ```
+
+## Intelligence Layer Architecture
+
+The Tides Agent operates as a **Cloudflare AI agent** following modern agent patterns:
+
+### Current State: Analytics Intelligence
+- **Data Analysis**: Read-only access to R2 productivity data
+- **AI-Powered Routing**: Llama 3.1-8b-instruct for service inference  
+- **Natural Language Processing**: Conversational interface for insights
+- **Separation of Concerns**: Intelligence layer separate from MCP tool execution
+
+### Future Vision: Multi-Agent Coordinator  
+The coordinator architecture enables expansion to a full agent ecosystem:
+
+1. **Calendar Agent**: Schedule analysis and optimization
+2. **Task Agent**: Cross-platform task management intelligence
+3. **Health Agent**: Energy correlation with biometric data
+4. **Execution Agent**: MCP tool orchestration for actions
+
+### Documentation
+- **[API Reference](docs/api.md)**: Detailed service endpoints and examples
+- **[Architecture Guide](docs/architecture.md)**: Technical implementation details  
+- **[Integration Patterns](docs/integration.md)**: Frontend integration examples

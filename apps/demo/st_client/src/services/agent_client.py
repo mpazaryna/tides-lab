@@ -77,6 +77,7 @@ class AgentClient:
     def chat(self, message: str, api_key: str = None, user_id: Optional[str] = None, tide_id: str = None) -> str:
         """
         Simple chat interface that returns response text
+        Uses the coordinator endpoint with AI inference (not direct /chat)
         
         Args:
             message: Message to send
@@ -100,10 +101,12 @@ class AgentClient:
                 "api_key": api_key,
                 "tides_id": actual_tide_id,
                 "timestamp": datetime.now().isoformat()
+                # No explicit service - let AI inference determine the right service
             }
             
+            # Use coordinator endpoint for AI-powered routing
             response = requests.post(
-                f"{self.base_url}/chat",
+                f"{self.base_url}/coordinator",
                 json=payload,
                 headers={"Content-Type": "application/json"},
                 timeout=self.timeout
@@ -113,26 +116,36 @@ class AgentClient:
                 result = response.json()
                 # Extract response text from various possible fields
                 if isinstance(result, dict):
-                    # Handle chat service response structure: { success: true, data: { message: "...", ... } }
+                    # Handle agent service response structure: { success: true, data: { ... }, metadata: { service: "..." } }
                     if "data" in result and isinstance(result["data"], dict):
                         data = result["data"]
-                        # First check for chat service message field
-                        if "message" in data:
+                        service = result.get("metadata", {}).get("service", "unknown")
+                        
+                        # Handle different service response formats
+                        if service == "insights" and "productivity_score" in data:
+                            return self._format_insights_response(data)
+                        elif service == "optimize" and "recommendations" in data:
+                            return self._format_optimize_response(data)
+                        elif service == "reports" and "summary" in data:
+                            return self._format_reports_response(data)
+                        elif "message" in data:
                             return data["message"]
-                        # Handle other service response formats
                         elif "response" in data:
                             return data["response"]
                         elif "answer" in data:
                             return data["answer"]
+                        else:
+                            # Format structured data nicely
+                            return self._format_structured_response(data, service)
                     
                     # Handle direct response fields (for backward compatibility)
                     for field in ["response", "message", "text", "content"]:
                         if field in result:
                             return result[field]
                     
-                    # If it's a success response but no clear message, show raw data
+                    # If it's a success response but no clear message, show formatted data
                     if result.get("success") and "data" in result:
-                        return f"🤖 Got response but couldn't extract message: {str(result['data'])[:500]}..."
+                        return self._format_structured_response(result["data"], "unknown")
                     
                     return f"🤖 Unexpected response format: {str(result)[:200]}..."
                 return str(result)
@@ -198,9 +211,73 @@ class AgentClient:
         else:
             raise ValueError(f"Unknown service: {service}")
     
+    def _format_insights_response(self, data: dict) -> str:
+        """Format insights service response for better readability"""
+        response = f"📊 **Productivity Insights**\n\n"
+        response += f"**Overall Score:** {data.get('productivity_score', 'N/A')}/100\n\n"
+        
+        if "trends" in data:
+            trends = data["trends"]
+            response += f"**Daily Average:** {trends.get('daily_average', 'N/A')}\n"
+            if "improvement_areas" in trends:
+                response += f"**Areas for Improvement:**\n"
+                for area in trends["improvement_areas"]:
+                    response += f"• {area}\n"
+                response += "\n"
+        
+        if "recommendations" in data:
+            response += f"**Recommendations:**\n"
+            for i, rec in enumerate(data["recommendations"], 1):
+                response += f"{i}. {rec}\n"
+        
+        return response
+    
+    def _format_optimize_response(self, data: dict) -> str:
+        """Format optimize service response for better readability"""
+        response = f"⚡ **Schedule Optimization**\n\n"
+        
+        if "recommendations" in data:
+            response += f"**Recommendations:**\n"
+            for i, rec in enumerate(data["recommendations"], 1):
+                response += f"{i}. {rec}\n"
+        
+        return response
+    
+    def _format_reports_response(self, data: dict) -> str:
+        """Format reports service response for better readability"""
+        response = f"📋 **Report Summary**\n\n"
+        response += data.get("summary", "No summary available")
+        return response
+    
+    def _format_structured_response(self, data: dict, service: str) -> str:
+        """Format any structured response in a readable way"""
+        response = f"🤖 **{service.title()} Service Response**\n\n"
+        
+        # Handle common fields
+        if "productivity_score" in data:
+            response += f"**Productivity Score:** {data['productivity_score']}/100\n"
+        
+        if "recommendations" in data:
+            response += f"**Recommendations:**\n"
+            recs = data["recommendations"][:5]  # Show first 5
+            for i, rec in enumerate(recs, 1):
+                response += f"{i}. {rec}\n"
+            if len(data["recommendations"]) > 5:
+                response += f"... and {len(data['recommendations']) - 5} more\n"
+        
+        if "message" in data:
+            response += f"\n**Message:** {data['message']}\n"
+        
+        if "answer" in data:
+            response += f"\n**Answer:** {data['answer']}\n"
+            
+        return response
+
     def _get_endpoint(self, service: str) -> str:
-        """Get the endpoint path for a service"""
-        if service == "chat":
-            return "/chat"
-        else:
-            return "/coordinator"
+        """Get the endpoint path for a service
+        
+        ALL services now use /coordinator for AI-powered routing
+        The legacy direct endpoints are deprecated
+        """
+        # Always use coordinator for AI inference
+        return "/coordinator"

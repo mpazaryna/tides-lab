@@ -1,4 +1,4 @@
-t/**
+/**
  * Preferences Service - Mock Implementation
  * Manages user preferences and settings
  */

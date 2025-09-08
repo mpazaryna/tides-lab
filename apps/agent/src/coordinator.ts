@@ -6,44 +6,26 @@
 import type { Env, AgentRequest } from './types.js';
 import { ResponseBuilder } from './responses.js';
 import { AuthService } from './auth.js';
-import { ServiceInferrer } from './service-inferrer.js';
-import { InsightsService } from './services/insights.js';
-import { OptimizeService } from './services/optimize.js';
-import { QuestionsService } from './services/questions.js';
-import { PreferencesService } from './services/preferences.js';
-import { ReportsService } from './services/reports.js';
-import { ChatService } from './services/chat.js';
+import { OrchestratorService } from './services/orchestrator.js';
 import { AITester } from './ai-test.js';
 
 export class Coordinator implements DurableObject {
   private state: DurableObjectState;
   private env: Env;
   
-  // Services
+  // Lightweight service layer - orchestrator handles all business logic
   private authService: AuthService;
-  private insightsService: InsightsService;
-  private optimizeService: OptimizeService;
-  private questionsService: QuestionsService;
-  private preferencesService: PreferencesService;
-  private reportsService: ReportsService;
-  private chatService: ChatService;
+  private orchestratorService: OrchestratorService;
   private aiTester: AITester;
-  private serviceInferrer: ServiceInferrer;
 
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
     
-    // Initialize services
+    // Initialize lightweight service layer
     this.authService = new AuthService(env);
-    this.insightsService = new InsightsService(env);
-    this.optimizeService = new OptimizeService(env);
-    this.questionsService = new QuestionsService(env);
-    this.preferencesService = new PreferencesService(env);
-    this.reportsService = new ReportsService(env);
-    this.chatService = new ChatService(env);
+    this.orchestratorService = new OrchestratorService(env);
     this.aiTester = new AITester(env);
-    this.serviceInferrer = new ServiceInferrer(env);
 
     console.log(`[Coordinator] Initialized for agent: ${state.id.toString()}`);
   }
@@ -95,8 +77,9 @@ export class Coordinator implements DurableObject {
         return ResponseBuilder.success(
           {
             status: 'healthy',
-            services: ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'],
-            version: '1.0.0',
+            architecture: 'coordinator → orchestrator → services',
+            available_services: ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'],
+            version: '2.0.0',
             agent_id: this.state.id.toString()
           },
           'coordinator',
@@ -129,7 +112,7 @@ export class Coordinator implements DurableObject {
   }
 
   /**
-   * Handle POST requests - route to appropriate service
+   * Handle POST requests - lightweight HTTP layer, delegates to orchestrator
    */
   private async handlePostRequest(request: Request, pathname: string, startTime: number): Promise<Response> {
     // Parse and validate request body
@@ -145,53 +128,8 @@ export class Coordinator implements DurableObject {
       return await this.handleR2TestRequest(body.r2_test_path, startTime);
     }
 
-    // Determine target service using intelligent inference
-    let targetService: string;
-    let inferenceInfo = { confidence: 100, reasoning: 'Explicit endpoint' };
-    
-    if (pathname === '/coordinator' || pathname === '/') {
-      // Use intelligent service inference with chat fallback for coordinator endpoint
-      const aiInference = await this.serviceInferrer.inferServiceWithAI(body);
-      const inferredService = aiInference.service;
-      
-      if (!inferredService) {
-        // This should rarely happen now with chat fallback, but keep for safety
-        const suggestion = ServiceInferrer.suggestService(body);
-        return ResponseBuilder.error(
-          `Could not determine service from request content. Suggested: ${suggestion.suggested} (${suggestion.confidence}% confidence). Reason: ${suggestion.reasoning}. Add 'service' field to be explicit.`,
-          400,
-          'coordinator'
-        );
-      }
-      
-      targetService = inferredService;
-      inferenceInfo = { 
-        confidence: aiInference.confidence, 
-        reasoning: body.service ? 'Explicit service field' : 'AI-powered semantic analysis' 
-      };
-      
-      console.log(`[Coordinator] Service inferred: ${targetService} (${aiInference.confidence}% confidence)`);
-    } else {
-      // Legacy direct endpoint support (for backwards compatibility)
-      targetService = pathname.substring(1); // Remove leading slash
-    }
-
-    // Validate service
-    const validServices = ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'];
-    if (!validServices.includes(targetService)) {
-      return ResponseBuilder.error(
-        `Invalid service: ${targetService}. Available services: ${validServices.join(', ')}`,
-        400,
-        'coordinator'
-      );
-    }
-
-    // Authentication using AuthService (includes test mode for TDD)
+    // Authentication
     console.log(`[Coordinator] Authenticating request`);
-    console.log(`[Coordinator] Request API key: ${body.api_key?.substring(0, 10)}...`);
-    console.log(`[Coordinator] Target service: ${targetService}`);
-    
-    // Validate API key using AuthService (supports test mode for TDD)
     const authResult = await this.authService.validateApiKey(body.api_key);
     if (!authResult.valid || !authResult.userId) {
       return ResponseBuilder.error('Invalid API key', 401, 'coordinator');
@@ -200,54 +138,23 @@ export class Coordinator implements DurableObject {
     const userId = authResult.userId;
     console.log(`[Coordinator] Authentication successful for user: ${userId}`);
 
-    // Route to appropriate service
+    // Delegate everything to orchestrator - it handles routing, inference, and execution
     try {
-      switch (targetService) {
-        case 'insights':
-          const insightsResult = await this.insightsService.generateInsights(body as any, userId);
-          return this.buildSuccessResponseWithTide(insightsResult, 'insights', startTime, inferenceInfo, body, userId);
-
-        case 'optimize':
-          const optimizeResult = await this.optimizeService.optimizeSchedule(body as any, userId);
-          return this.buildSuccessResponseWithTide(optimizeResult, 'optimize', startTime, inferenceInfo, body, userId);
-
-        case 'questions':
-          const questionsResult = await this.questionsService.processQuestion(body as any, userId, body.api_key);
-          return this.buildSuccessResponseWithTide(questionsResult, 'questions', startTime, inferenceInfo, body, userId);
-
-        case 'preferences':
-          if ('preferences' in body && body.preferences) {
-            // Update preferences
-            const updateResult = await this.preferencesService.updatePreferences(body as any, userId);
-            return this.buildSuccessResponseWithTide(updateResult, 'preferences', startTime, inferenceInfo, body, userId);
-          } else {
-            // Get preferences
-            const getResult = await this.preferencesService.getPreferences(userId);
-            return this.buildSuccessResponseWithTide(getResult, 'preferences', startTime, inferenceInfo, body, userId);
-          }
-
-        case 'reports':
-          const reportsResult = await this.reportsService.generateReport(body as any, userId);
-          return this.buildSuccessResponseWithTide(reportsResult, 'reports', startTime, inferenceInfo, body, userId);
-
-        case 'chat':
-          const chatResult = await this.chatService.clarifyIntent(body as any, userId);
-          return this.buildSuccessResponseWithTide(chatResult, 'chat', startTime, inferenceInfo, body, userId);
-
-        default:
-          return ResponseBuilder.error(
-            `Service ${targetService} not implemented`,
-            500,
-            'coordinator'
-          );
-      }
-
+      const result = await this.orchestratorService.handleRequest(body, userId, pathname);
+      return this.buildSuccessResponseWithTide(
+        result.data, 
+        result.service, 
+        startTime, 
+        result.inferenceInfo, 
+        body, 
+        userId
+      );
     } catch (error) {
-      console.error(`[Coordinator] Service error for ${targetService}:`, error);
+      console.error(`[Coordinator] Orchestrator error:`, error);
       return ResponseBuilder.error(
         error instanceof Error ? error.message : 'Service error',
         500,
-        targetService
+        'orchestrator'
       );
     }
   }

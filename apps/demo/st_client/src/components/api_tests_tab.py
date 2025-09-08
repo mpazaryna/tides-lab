@@ -11,9 +11,9 @@ from ..config import SERVICE_DEFINITIONS
 
 
 def render_api_tests_tab(agent_client: AgentClient, api_key: str = None):
-    """Render the API testing interface"""
-    st.header("🧪 API Testing Suite")
-    st.markdown("Point-and-click testing for all Tides agent services")
+    """Render the agent services testing interface"""
+    st.header("🤖 Agent Services")
+    st.markdown("Test agent services with **explicit routing** - specify exactly which service to call")
     
     if not api_key:
         st.warning("⚠️ Please enter an API key in the sidebar to run API tests")

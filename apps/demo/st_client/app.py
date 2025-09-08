@@ -34,8 +34,8 @@ def main():
     # Main content area with tabs (moved up)
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🔧 MCP Tools", 
-        "🧪 API Tests", 
-        "💬 Agent Chat",
+        "🤖 Agent Services", 
+        "🧠 Agent Inference",
         "📊 Monitoring",
         "❓ Help"
     ])

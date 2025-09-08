@@ -1,6 +1,11 @@
 /**
- * Chat Service - AI-Powered Implementation
- * Handles intent clarification and response enhancement
+ * Orchestrator Service - Intelligent Request Routing and Service Coordination
+ * 
+ * This service acts as the AI-powered intelligence layer that:
+ * - Analyzes natural language requests  
+ * - Determines appropriate service routing
+ * - Coordinates between different agent services
+ * - Provides conversational responses when specific services aren't needed
  */
 
 import type { Env, ChatRequest, ChatResponse } from '../types.js';
@@ -11,11 +16,12 @@ import { QuestionsService } from './questions.js';
 import { PreferencesService } from './preferences.js';
 import { ReportsService } from './reports.js';
 
-export class ChatService {
+export class OrchestratorService {
   private env: Env;
   private readonly CONFIDENCE_THRESHOLD = 70;
   
   // Service instances for routing
+  private serviceInferrer: ServiceInferrer;
   private insightsService: InsightsService;
   private optimizeService: OptimizeService;
   private questionsService: QuestionsService;
@@ -25,12 +31,99 @@ export class ChatService {
   constructor(env: Env) {
     this.env = env;
     
-    // Initialize services for routing
+    // Initialize all services for routing
+    this.serviceInferrer = new ServiceInferrer(env);
     this.insightsService = new InsightsService(env);
     this.optimizeService = new OptimizeService(env);
     this.questionsService = new QuestionsService(env);
     this.preferencesService = new PreferencesService(env);
     this.reportsService = new ReportsService(env);
+    
+    console.log(`[OrchestratorService] Initialized with all service instances`);
+  }
+
+  /**
+   * Main orchestrator method - handles all routing, inference, and service execution
+   * This consolidates the logic that was previously split between coordinator and orchestrator
+   */
+  async handleRequest(body: any, userId: string, pathname: string): Promise<{
+    data: any;
+    service: string;
+    inferenceInfo: { confidence: number; reasoning: string };
+  }> {
+    // Determine target service using intelligent inference or explicit routing
+    let targetService: string;
+    let inferenceInfo = { confidence: 100, reasoning: 'Explicit endpoint' };
+    
+    if (pathname === '/coordinator' || pathname === '/') {
+      // AI-powered service inference for coordinator endpoint
+      if (body.service) {
+        // Explicit service provided
+        targetService = body.service;
+        inferenceInfo = { confidence: 100, reasoning: 'Explicit service parameter' };
+      } else {
+        // Use AI inference
+        const aiInference = await this.serviceInferrer.inferServiceWithAI(body);
+        targetService = aiInference.service;
+        inferenceInfo = { 
+          confidence: aiInference.confidence, 
+          reasoning: 'AI-powered semantic analysis' 
+        };
+      }
+      
+      console.log(`[Orchestrator] Service determined: ${targetService} (${inferenceInfo.confidence}% confidence)`);
+    } else {
+      // Legacy direct endpoint support
+      targetService = pathname.substring(1); // Remove leading slash
+      console.warn(`[Orchestrator] Legacy direct endpoint: ${pathname}`);
+    }
+
+    // Validate service
+    const validServices = ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'];
+    if (!validServices.includes(targetService)) {
+      throw new Error(`Invalid service: ${targetService}. Available services: ${validServices.join(', ')}`);
+    }
+
+    // Route to appropriate service
+    let result;
+    switch (targetService) {
+      case 'insights':
+        result = await this.insightsService.generateInsights(body, userId);
+        break;
+
+      case 'optimize':
+        result = await this.optimizeService.optimizeSchedule(body, userId);
+        break;
+
+      case 'questions':
+        result = await this.questionsService.processQuestion(body, userId, body.api_key);
+        break;
+
+      case 'preferences':
+        if ('preferences' in body && body.preferences) {
+          result = await this.preferencesService.updatePreferences(body, userId);
+        } else {
+          result = await this.preferencesService.getPreferences(userId);
+        }
+        break;
+
+      case 'reports':
+        result = await this.reportsService.generateReport(body, userId);
+        break;
+
+      case 'chat':
+        result = await this.processRequest(body, userId);
+        break;
+
+      default:
+        throw new Error(`Service ${targetService} not implemented`);
+    }
+
+    return {
+      data: result,
+      service: targetService,
+      inferenceInfo
+    };
   }
 
   /**
@@ -41,34 +134,43 @@ export class ChatService {
   }
 
   /**
-   * Process chat request - provide conversational responses with selective service routing
-   * Prioritizes conversation over service routing for natural interaction
+   * Process and route requests intelligently based on content analysis
+   * Determines appropriate service routing or provides conversational responses
    */
-  async clarifyIntent(request: ChatRequest, userId: string): Promise<ChatResponse> {
+  async processRequest(request: ChatRequest, userId: string): Promise<ChatResponse> {
     try {
-      // Check if this is clearly a direct service request (high confidence only)
-      if (this.env.AI) {
-        const serviceInference = await this.inferServiceWithAI(request);
+      // IMPORTANT: Skip service inference if we're already in the chat service
+      // The coordinator has already done the AI inference and determined this should be chat
+      // Doing it again would be redundant and can cause timeouts
+      
+      // Check if user is asking for specific service data
+      const message = request.message?.toLowerCase() || '';
+      
+      // Common patterns that indicate service requests
+      const insightsPatterns = ['insights', 'productivity', 'analytics', 'performance', 'how productive', 'productivity score'];
+      const optimizePatterns = ['optimize', 'schedule', 'when should i work', 'best time'];
+      const preferencesPatterns = ['preferences', 'settings', 'my configuration'];
+      const reportsPatterns = ['report', 'summary', 'detailed analysis'];
+      
+      // Check if message matches service patterns
+      const wantsInsights = insightsPatterns.some(pattern => message.includes(pattern));
+      const wantsOptimize = optimizePatterns.some(pattern => message.includes(pattern));
+      const wantsPreferences = preferencesPatterns.some(pattern => message.includes(pattern));
+      const wantsReports = reportsPatterns.some(pattern => message.includes(pattern));
+      
+      if ((wantsInsights || wantsOptimize || wantsPreferences || wantsReports) && this.env.AI) {
+        // Use AI to confirm which service, but with lower threshold since we have pattern match
+        const serviceInference = await this.serviceInferrer.inferServiceWithAI(request);
         
-        // Only route to services for very explicit, high-confidence requests
-        if (serviceInference && serviceInference.service !== 'chat' && serviceInference.confidence > 85) {
-          // Check if this is a direct service command vs conversational question
-          const message = request.message?.toLowerCase() || '';
-          const isDirectServiceRequest = 
-            message.includes('generate') || 
-            message.includes('create') || 
-            message.includes('update') ||
-            message.includes('run') ||
-            message.startsWith('get ') ||
-            message.startsWith('show me');
-          
-          if (isDirectServiceRequest) {
-            return await this.routeToService(serviceInference.service, request, userId);
-          }
+        // Route to service if AI confirms (lower threshold since we have pattern match)
+        if (serviceInference && serviceInference.service !== 'chat' && serviceInference.confidence > 70) {
+          console.log(`[ChatService] Routing to ${serviceInference.service} based on pattern match and AI confirmation`);
+          return await this.routeToService(serviceInference.service, request, userId);
         }
       }
       
       // Default to conversational AI response for natural interaction
+      // This is the primary path when routed from coordinator
       return await this.generateConversationalResponse(request, userId);
     } catch (error) {
       console.error('[ChatService] Processing failed, using fallback:', error);
@@ -227,52 +329,6 @@ Respond naturally as if you're having a real conversation with someone about the
     };
   }
 
-  /**
-   * Infer service using AI (similar to ServiceInferrer but for chat context)
-   */
-  private async inferServiceWithAI(request: ChatRequest): Promise<{ service: string; confidence: number }> {
-    const message = request.message || request.question || '';
-    
-    if (!message || message.length < 3) {
-      return { service: 'chat', confidence: 30 };
-    }
-
-    try {
-      const prompt = `Classify this user request into one of these services:
-
-SERVICES:
-- insights: productivity analytics, energy patterns, "how productive was I", performance data
-- optimize: schedule optimization, "when should I work", time management
-- questions: general productivity questions, advice, tips
-- preferences: settings, work hours, notification preferences
-- reports: comprehensive reports, data exports, summaries
-- chat: unclear/ambiguous requests needing clarification
-
-USER REQUEST: "${message}"
-
-Respond with ONLY the service name.`;
-
-      const response = await this.env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 10,
-        temperature: 0.1
-      });
-
-      const aiService = response.response?.trim().toLowerCase() || 'chat';
-      const validServices = ['insights', 'optimize', 'questions', 'preferences', 'reports', 'chat'];
-      const finalService = validServices.includes(aiService) ? aiService : 'chat';
-      
-      // Calculate confidence based on message clarity and length
-      let confidence = finalService === 'chat' ? 30 : 75;
-      if (message.length > 20 && finalService !== 'chat') confidence = 85;
-      
-      return { service: finalService, confidence };
-
-    } catch (error) {
-      console.error('[ChatService] AI service inference failed:', error);
-      return { service: 'chat', confidence: 30 };
-    }
-  }
 
   /**
    * Route request to appropriate service and return chat-formatted response
