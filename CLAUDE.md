@@ -92,6 +92,12 @@ npm run build:mobile:ios
 **Mobile**: Bundle ID `com.tidesmobile`
 **Workers Envs**:
 
+**Agents** (`apps/agent/`):
+- env.101 → `tides-agent-101.mpazbot.workers.dev` (production - iOS team)
+- env.102 → `tides-agent-102.mpazbot.workers.dev` (staging)  
+- env.103 → `tides-agent-103.mpazbot.workers.dev` (development - AI integration)
+
+**Server** (`apps/server/`):
 - env.001 → `tides-001.mpazbot.workers.dev` (prod)
 - env.002 → `tides-002.mpazbot.workers.dev` (staging)
 - env.003 → `tides-003.mpazbot.workers.dev` (dev)
