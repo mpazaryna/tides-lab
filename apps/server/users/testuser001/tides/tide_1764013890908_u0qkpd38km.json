@@ -1,0 +1,50 @@
+{
+  "id": "tide_1764013890908_u0qkpd38km",
+  "name": "Daily Focus - 2025-11-24",
+  "flow_type": "daily",
+  "description": "Evening productivity session - focused work and task management",
+  "created_at": "2025-11-24T19:51:30.908Z",
+  "status": "active",
+  "flow_sessions": [
+    {
+      "id": "session_1764014171281_argdtn3ccf",
+      "tide_id": "tide_1764013890908_u0qkpd38km",
+      "intensity": "moderate",
+      "duration": 25,
+      "started_at": "2025-11-24T19:56:10.303Z",
+      "energy_level": "improving",
+      "work_context": "Post-gym energy boost - moving from blue mood to productive focus after taking positive action with workout and personal training scheduling"
+    }
+  ],
+  "energy_updates": [
+    {
+      "id": "energy_1764014457863_z7589dclz4p",
+      "tide_id": "tide_1764013890908_u0qkpd38km",
+      "energy_level": "content and relaxed",
+      "context": "Just finished a big work push and ready for a well-deserved break. Taking Rosie for an extended walk - she's recovering from her ear infection and the weather is nice. Perfect time to decompress and enjoy some fresh air together.",
+      "timestamp": "2025-11-24T20:00:56.908Z"
+    },
+    {
+      "id": "energy_1764016658891_lwplg9r9lk",
+      "tide_id": "tide_1764013890908_u0qkpd38km",
+      "energy_level": "clear and reflective",
+      "context": "Back from 30-minute walk with Rosie. Noticing how working with tides creates mental clarity and healthier feeling. Reflecting on the day's journey - from feeling down in the shower this morning to this much more open, clear state. The tide practice seems to unlock something in my mind and wellbeing.",
+      "timestamp": "2025-11-24T20:37:37.976Z"
+    },
+    {
+      "id": "energy_1764016797225_be7lo7d9xkl",
+      "tide_id": "tide_1764013890908_u0qkpd38km",
+      "energy_level": "grounded and insightful",
+      "context": "Recognizing my pattern of resilience - always landing on my feet feeling strong after down periods. Appreciating Tides as a non-judgmental teacher that understands my thinking patterns and is available through AI/MCP. It's like having a patient witness to my natural rhythms and recovery cycles.",
+      "timestamp": "2025-11-24T20:39:56.413Z"
+    },
+    {
+      "id": "energy_1764017280333_5pl3z371qgx",
+      "tide_id": "tide_1764013890908_u0qkpd38km",
+      "energy_level": "complete and satisfied",
+      "context": "Tide session complete! Great evening flow from initial post-gym energy through productive work, quality time with Rosie on her walk, and valuable insights about resilience patterns. Ending on a positive, grounded note. Session accomplished what it needed to.",
+      "timestamp": "2025-11-24T20:47:59.500Z"
+    }
+  ],
+  "task_links": []
+}
